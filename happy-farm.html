@@ -196,6 +196,12 @@
   .animal.ready .body{filter:drop-shadow(0 0 7px #ffd54f) drop-shadow(0 3px 1px #0004);}
   @keyframes hop{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
   @media(max-width:980px){.pen{width:470px;height:262px;left:60%;}.animal{font-size:26px;}}
+  /* 手機：隱藏多餘裝飾、避免擁擠（田與牧場改由 layout() 上下排列） */
+  @media(max-width:900px){
+    .barn,.cow,.hen,.tfar1,.tfar2,.tfar3,.scarecrow,.flowerbush,.flowerbush2{display:none;}
+    .tree1{top:24%;left:1%;font-size:40px;} .tree2{top:20%;right:1%;font-size:38px;}
+    .house{top:13%;right:3%;font-size:60px;} .penlabel{font-size:11px;}
+  }
 
   /* Modal / 通用 */
   .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
@@ -1003,8 +1009,32 @@ function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<spa
 let toastT;
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1400);}
 
+/* ============ 響應式版面：窄畫面改成田在上、牧場在下並自動縮放 ============ */
+function layout(){
+  const vw=window.innerWidth;
+  const field=document.querySelector(".field"), gg=document.querySelector(".groundgrid"),
+        fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
+  if(!field||!gg||!pen||!fs)return;
+  if(vw<900){ // 手機 / 窄畫面：上下堆疊
+    const fScale=Math.min(0.95,(vw*0.92)/707);
+    const tf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
+    field.style.left="50%"; field.style.top="31%"; field.style.transform=tf;
+    gg.style.left="50%";    gg.style.top="31%";    gg.style.transform=tf;
+    fs.style.left="50%";    fs.style.top="41%";    fs.style.width=(680*fScale).toFixed(0)+"px";
+    const pw=Math.min(560, vw*0.66);
+    pen.style.left="44%";   pen.style.top="71%";
+    pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
+  }else{ // 桌機 / 寬畫面：還原 CSS 預設（左右並排）
+    [field,gg,fs].forEach(el=>{el.style.left="";el.style.top="";el.style.transform="";el.style.width="";});
+    pen.style.left="";pen.style.top="";pen.style.width="";pen.style.height="";
+  }
+}
+window.addEventListener("resize",layout);
+window.addEventListener("orientationchange",function(){setTimeout(layout,200);});
+
 /* ============ start ============ */
 init();
+layout();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
 /* build-ok */
