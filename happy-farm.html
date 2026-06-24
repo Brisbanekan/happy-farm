@@ -210,9 +210,11 @@
   #scene.s-farm .pen{display:none;}
   #scene.s-ranch .field,#scene.s-ranch .fieldshadow,#scene.s-ranch .groundgrid,#scene.s-ranch .tools{display:none;}
   @media(max-width:760px){ .sceneswitch{top:auto;bottom:96px;} }
-  /* 拉霸機轉輪 */
-  .reel{width:64px;height:64px;border:3px solid #d9c9a6;border-radius:14px;background:#fffef6;
-    display:flex;align-items:center;justify-content:center;font-size:38px;box-shadow:inset 0 2px 6px #0001;}
+  /* 拉霸機 3×3 轉輪 */
+  .slotgrid{display:grid;grid-template-columns:repeat(3,58px);grid-auto-rows:58px;gap:6px;justify-content:center;margin:14px auto;}
+  .scell{width:58px;height:58px;border:3px solid #d9c9a6;border-radius:12px;background:#fffef6;
+    display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:inset 0 2px 5px #0001;transition:.2s;}
+  .scell.win{border-color:#ffca28;background:#fff7d6;box-shadow:0 0 12px #ffca28;transform:scale(1.06);}
   /* 底部按鈕變多：窄畫面可橫向捲動 */
   @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
@@ -384,16 +386,24 @@ const ANIMALS = {
 };
 const RANCH_REQ=[1,1,3,5,8,11]; // 每個牧場欄位的解鎖等級
 
-// 每日登入獎勵（7 天循環，第 7 天大獎）
+// 每日登入獎勵（7 天循環，第 7 天大獎）。g=金幣 c=鑽石 h=魅力 s=種子
 const DAILY_REWARDS=[
-  {g:300}, {g:500}, {g:800,c:1}, {g:1200}, {g:2000,c:2}, {g:3000,h:5}, {g:6000,c:5,h:10}
+  {g:300, s:{radish:3}},
+  {g:500, s:{cucumber:2}},
+  {g:800, c:1},
+  {g:1200, s:{tomato:3}},
+  {g:2000, c:2, h:3},
+  {g:3000, h:5, s:{corn:2}},
+  {g:6000, c:5, h:10, s:{strawberry:3}}
 ];
-// 拉霸機符號（w=權重，pay3=三個相同的金幣獎，credit3=三個相同的鑽石獎）
-const SLOT=[
-  {s:"🍒",w:34,pay3:400}, {s:"🍋",w:24,pay3:800}, {s:"🌽",w:18,pay3:1500},
-  {s:"🔔",w:12,pay3:3000}, {s:"⭐",w:7,pay3:6000}, {s:"💎",w:2.5,pay3:0,credit3:10}, {s:"7️⃣",w:0.5,pay3:50000}
+// 拉霸機（星城風格 3×3 多線）：w=權重，pay=每條線金幣獎，cred=每條線鑽石獎
+const SLOT_SYM=[
+  {s:"🍒",w:30,pay:30}, {s:"🍋",w:24,pay:50}, {s:"🍉",w:18,pay:90},
+  {s:"🔔",w:12,pay:180}, {s:"⭐",w:7,pay:400}, {s:"💎",w:2.6,cred:2}, {s:"7️⃣",w:0.4,pay:3000}
 ];
-const SLOT_COST=500;
+// 3×3 格子索引：0 1 2 / 3 4 5 / 6 7 8；5 條線（3 橫＋2 斜）
+const SLOT_LINES=[[0,1,2],[3,4,5],[6,7,8],[0,4,8],[6,4,2]];
+const SLOT_COST=50;
 // 股市：公司清單
 const STOCKS=[
   {t:"NTSMC",n:"農積電",base:600},{t:"NFAK",n:"農發科",base:150},{t:"NHAI",n:"農海",base:78},
@@ -543,7 +553,7 @@ function dailyCheck(){
   if(G.lastMarketDate!==today){ updateMarket(); G.lastMarketDate=today; }
   if(G.lastClaim!==today){ toast("🎁 每日登入獎勵可領取！"); log("🎁 今日登入獎勵可領取（點底部 🎁 每日）","b"); }
 }
-function rewardText(r){let a=[];if(r.g)a.push("🪙"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);return a.join(" ");}
+function rewardText(r){let a=[];if(r.g)a.push("🪙"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+CROPS[k].name+"×"+n));return a.join(" ");}
 function claimDaily(){
   const today=todayStr();
   if(G.lastClaim===today){toast("今天已經領過囉");return;}
@@ -555,6 +565,7 @@ function claimDaily(){
   if(r.g){G.gold+=r.g;parts.push("🪙"+r.g);}
   if(r.c){G.credit+=r.c;parts.push("💎"+r.c);}
   if(r.h){G.charm+=r.h;parts.push("❤️"+r.h);}
+  if(r.s)Object.entries(r.s).forEach(([k,n])=>{G.seeds[k]=(G.seeds[k]||0)+n;parts.push(CROPS[k].emoji+CROPS[k].name+"×"+n);});
   if(G.totalDays%30===0){G.credit+=10;parts.push("｜累積"+G.totalDays+"天額外 💎10");} // 累積里程碑
   log("🎁 連續第 "+G.streak+" 天登入，領取："+parts.join(" "),"g");
   toast("領取成功 "+parts.join(" "));
@@ -580,44 +591,49 @@ function openDaily(){
   h+='</div>';showM(h);
 }
 
-/* ============ 拉霸機 ============ */
-function pickSlot(){const tot=SLOT.reduce((a,x)=>a+x.w,0);let r=Math.random()*tot;for(const x of SLOT){if(r<x.w)return x;r-=x.w;}return SLOT[0];}
+/* ============ 拉霸機（3×3 多線，星城風格） ============ */
+function pickSlot(){const tot=SLOT_SYM.reduce((a,x)=>a+x.w,0);let r=Math.random()*tot;for(const x of SLOT_SYM){if(r<x.w)return x;r-=x.w;}return SLOT_SYM[0];}
 let slotSpinning=false;
 function openSlot(){
-  let rows=SLOT.map(x=>x.s+"×3 = "+(x.credit3?("💎"+x.credit3+"（稀有）"):("🪙"+x.pay3))).join(" ｜ ");
+  let payinfo=SLOT_SYM.map(x=>x.s+"×3 = "+(x.cred?("💎"+x.cred):("🪙"+x.pay))+"／線").join(" ｜ ");
+  let cells="";for(let i=0;i<9;i++)cells+='<div id="c'+i+'" class="scell">'+SLOT_SYM[i%SLOT_SYM.length].s+'</div>';
   let h='<h2>🎰 拉霸機 <button class="x" onclick="closeM()">×</button></h2><div class="body" style="text-align:center">'+
-    '<p class="hint">每抽 🪙'+SLOT_COST+'。三個相同符號中獎；💎 是稀有獎品、7️⃣ 是頭獎；兩個相同有安慰獎 🪙200。</p>'+
-    '<div style="display:flex;justify-content:center;gap:10px;margin:14px 0">'+
-      '<div id="r0" class="reel">🍒</div><div id="r1" class="reel">🍋</div><div id="r2" class="reel">🔔</div></div>'+
+    '<p class="hint">每抽 🪙'+SLOT_COST+'。3×3 共 5 條線（3 橫＋2 斜），任一條線三個相同就中獎，可同時中多條線！💎 給鑽石、7️⃣ 是頭獎。</p>'+
+    '<div class="slotgrid">'+cells+'</div>'+
     '<div id="slotres" style="min-height:24px;font-size:14px;font-weight:700;margin-bottom:10px">轉動看看手氣！</div>'+
-    '<button class="bigbtn" id="spinbtn" onclick="doSpin()">🎰 抽一次（🪙'+SLOT_COST+'）</button>'+
-    '<div style="margin-top:12px;font-size:11px;color:#8a7350;text-align:left;line-height:1.6">獎項：'+rows+'</div>'+
+    '<button class="bigbtn" onclick="doSpin()">🎰 抽一次（🪙'+SLOT_COST+'）</button>'+
+    '<div style="margin-top:12px;font-size:11px;color:#8a7350;text-align:left;line-height:1.6">每線獎金：'+payinfo+'</div>'+
   '</div>';showM(h);
 }
 function doSpin(){
   if(slotSpinning)return;
   if(G.gold<SLOT_COST){toast("金幣不足");return;}
   G.gold-=SLOT_COST;renderHUD();slotSpinning=true;
-  const final=[pickSlot(),pickSlot(),pickSlot()];
-  const els=[document.getElementById("r0"),document.getElementById("r1"),document.getElementById("r2")];
+  const grid=Array.from({length:9},()=>pickSlot());
+  const cells=[];for(let i=0;i<9;i++)cells.push(document.getElementById("c"+i));
+  cells.forEach(el=>{if(el)el.classList.remove("win");});
+  const res=document.getElementById("slotres");if(res)res.textContent="轉動中…";
   let ticks=0;
   const iv=setInterval(()=>{
-    els.forEach(el=>{if(el)el.textContent=SLOT[Math.floor(Math.random()*SLOT.length)].s;});
+    cells.forEach(el=>{if(el)el.textContent=SLOT_SYM[Math.floor(Math.random()*SLOT_SYM.length)].s;});
     ticks++;
-    if(ticks>=15){clearInterval(iv);els.forEach((el,i)=>{if(el)el.textContent=final[i].s;});settleSlot(final);slotSpinning=false;}
+    if(ticks>=16){clearInterval(iv);cells.forEach((el,i)=>{if(el)el.textContent=grid[i].s;});settleSlot(grid,cells);slotSpinning=false;}
   },70);
 }
-function settleSlot(final){
+function settleSlot(grid,cells){
+  let winGold=0,winCred=0;const winSet=new Set();
+  SLOT_LINES.forEach(line=>{
+    const a=grid[line[0]],b=grid[line[1]],c=grid[line[2]];
+    if(a.s===b.s&&b.s===c.s){ if(a.cred)winCred+=a.cred; else winGold+=a.pay||0; line.forEach(i=>winSet.add(i)); }
+  });
+  winSet.forEach(i=>{if(cells[i])cells[i].classList.add("win");});
+  if(winGold)G.gold+=winGold; if(winCred)G.credit+=winCred;
   const res=document.getElementById("slotres");
   let msg,col="#999";
-  if(final[0].s===final[1].s&&final[1].s===final[2].s){
-    const x=final[0];
-    if(x.credit3){G.credit+=x.credit3;msg="🎉 三個 "+x.s+"！稀有大獎 💎"+x.credit3;col="#1565c0";log(msg,"b");}
-    else{G.gold+=x.pay3;msg="🎉 三個 "+x.s+"！贏得 🪙"+x.pay3;col="#2e7d32";log(msg,"g");}
-    toast(msg);
-  }else if(final[0].s===final[1].s||final[1].s===final[2].s||final[0].s===final[2].s){
-    G.gold+=200;msg="兩個相同，安慰獎 🪙200";col="#8a6d3b";
-  }else{msg="沒中，再接再厲！";}
+  if(winGold||winCred){
+    let p=[];if(winGold)p.push("🪙"+winGold);if(winCred)p.push("💎"+winCred);
+    msg="🎉 中獎！"+p.join(" ＋ ");col="#2e7d32";toast(msg);log("拉霸中獎 "+p.join(" "),winCred?"b":"g");
+  }else msg="沒中，再來一次！";
   if(res)res.innerHTML='<span style="color:'+col+'">'+msg+'</span>';
   renderHUD();saveGame();
 }
@@ -625,13 +641,13 @@ function settleSlot(final){
 /* ============ 股市 ============ */
 function updateMarket(){
   STOCKS.forEach(s=>{const st=G.stocks[s.t];if(!st)return;st.prev=st.price;
-    const chg=-0.08+Math.random()*0.18; // 每日 -8%~+10%
+    const chg=-0.10+Math.random()*0.20; // 每日 -10%~+10%
     st.price=Math.max(5,Math.round(st.price*(1+chg)));
   });
 }
 function openStocks(){
   let h='<h2>📈 農場股市 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
-    '<p class="hint">買進股票，每天隨機變動（約 -8%～+10%），低買高賣賺價差。股價每天更新一次（紅漲綠跌）。</p>';
+    '<p class="hint">買進股票，每天隨機變動（-10%～+10%），低買高賣賺價差。股價每天更新一次（紅漲綠跌）。</p>';
   let totVal=0,totCost=0;
   STOCKS.forEach(s=>{const st=G.stocks[s.t];const chg=st.prev?((st.price-st.prev)/st.prev*100):0;
     const val=st.shares*st.price; const pl=val-st.cost; totVal+=val; totCost+=st.cost;
