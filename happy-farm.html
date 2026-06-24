@@ -34,7 +34,7 @@
             mask-image:radial-gradient(closest-side,#000 42%,transparent 78%);
   }
   /* 太陽 + 雲 */
-  .sun{position:absolute;top:14px;left:50%;width:60px;height:60px;border-radius:50%;
+  .sun{position:absolute;top:14px;left:85%;width:60px;height:60px;border-radius:50%;
     background:radial-gradient(#fff3a8,#ffd54f);box-shadow:0 0 0 8px #ffe08055,0 0 24px #ffd54f;z-index:1;
     animation:sunpulse 4s ease-in-out infinite;}
   .sun::before,.sun::after{content:"";position:absolute;top:22px;width:7px;height:7px;border-radius:50%;background:#7a4a00;}
@@ -202,6 +202,14 @@
     .tree1{top:24%;left:1%;font-size:40px;} .tree2{top:20%;right:1%;font-size:38px;}
     .house{top:13%;right:3%;font-size:60px;} .penlabel{font-size:11px;}
   }
+  /* 場景切換（農場 / 牧場） */
+  .sceneswitch{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:2px;
+    background:#fffef6ea;border:2px solid #d9c9a6;border-radius:24px;padding:3px;box-shadow:0 3px 8px #0003;}
+  .sceneswitch button{border:none;background:none;border-radius:20px;padding:7px 18px;font-size:14px;font-weight:800;cursor:pointer;color:#9a8763;white-space:nowrap;}
+  .sceneswitch button.on{background:#aed581;color:#33691e;box-shadow:0 1px 3px #0002;}
+  #scene.s-farm .pen{display:none;}
+  #scene.s-ranch .field,#scene.s-ranch .fieldshadow,#scene.s-ranch .groundgrid,#scene.s-ranch .tools{display:none;}
+  @media(max-width:760px){ .sceneswitch{top:auto;bottom:96px;} }
 
   /* Modal / 通用 */
   .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
@@ -244,7 +252,7 @@
 </style>
 </head>
 <body>
-<div id="scene">
+<div id="scene" class="s-farm">
   <!-- 地面 -->
   <div class="ground"></div>
   <div class="horizon"></div>
@@ -287,6 +295,12 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- 場景切換 -->
+  <div class="sceneswitch">
+    <button id="tabFarm" class="on" onclick="setScene('farm')">🌾 農場</button>
+    <button id="tabRanch" onclick="setScene('ranch')">🐮 牧場</button>
   </div>
 
   <!-- 田地 -->
@@ -392,7 +406,7 @@ let syncCode = (()=>{try{return localStorage.getItem(CODE_KEY)||"";}catch(e){ret
 
 function freshGame(){
   G.gold=200;G.credit=5;G.level=1;G.xp=0;G.charm=0;G.tool="hand";
-  G.seeds={radish:3};G.harvest={};G.dog=null;G.ferts={f1:0,f2:0,bigspray:0};G.lastDaily="";G.ts=0;
+  G.seeds={radish:3};G.harvest={};G.dog=null;G.ferts={f1:0,f2:0,bigspray:0};G.lastDaily="";G.ts=0;G.scene="farm";
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
   G.ranch=[];
   G.friends=FRIEND_NAMES.map(f=>({name:f[0],av:f[1],plots:Array.from({length:6},()=>makeFriendPlot())}));
@@ -408,6 +422,7 @@ function normalizeState(){
   if(!G.harvest)G.harvest={};
   if(!Array.isArray(G.ranch))G.ranch=[];
   G.ranch=G.ranch.filter(s=>s&&ANIMALS[s.a]); // 過濾舊版空欄位/無效動物
+  if(G.scene!=="ranch")G.scene="farm";
 }
 function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){}cloudPush(false);}
 function loadGame(){
@@ -1009,32 +1024,40 @@ function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<spa
 let toastT;
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1400);}
 
-/* ============ 響應式版面：窄畫面改成田在上、牧場在下並自動縮放 ============ */
+/* ============ 場景切換（農場 / 牧場）＋ 響應式置中縮放 ============ */
+function setScene(s){
+  G.scene = (s==="ranch")?"ranch":"farm";
+  const sc=document.getElementById("scene");
+  if(sc){sc.classList.toggle("s-farm",G.scene==="farm");sc.classList.toggle("s-ranch",G.scene==="ranch");}
+  const tf=document.getElementById("tabFarm"), tr=document.getElementById("tabRanch");
+  if(tf)tf.classList.toggle("on",G.scene==="farm");
+  if(tr)tr.classList.toggle("on",G.scene==="ranch");
+  layout(); saveGame();
+}
 function layout(){
   const vw=window.innerWidth;
   const field=document.querySelector(".field"), gg=document.querySelector(".groundgrid"),
         fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
   if(!field||!gg||!pen||!fs)return;
-  if(vw<900){ // 手機 / 窄畫面：上下堆疊
-    const fScale=Math.min(0.95,(vw*0.92)/707);
-    const tf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
-    field.style.left="50%"; field.style.top="31%"; field.style.transform=tf;
-    gg.style.left="50%";    gg.style.top="31%";    gg.style.transform=tf;
-    fs.style.left="50%";    fs.style.top="41%";    fs.style.width=(680*fScale).toFixed(0)+"px";
-    const pw=Math.min(560, vw*0.66);
-    pen.style.left="44%";   pen.style.top="71%";
-    pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
-  }else{ // 桌機 / 寬畫面：還原 CSS 預設（左右並排）
-    [field,gg,fs].forEach(el=>{el.style.left="";el.style.top="";el.style.transform="";el.style.width="";});
-    pen.style.left="";pen.style.top="";pen.style.width="";pen.style.height="";
-  }
+  const narrow=vw<760;
+  // 農場：田置中，窄畫面縮放以塞進寬度
+  const fScale = narrow ? Math.max(0.42, Math.min(1,(vw*0.96)/720)) : Math.min(1,(vw*0.62)/720);
+  const ftf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
+  field.style.left=gg.style.left="50%";
+  field.style.top=gg.style.top="52%";
+  field.style.transform=gg.style.transform=ftf;
+  fs.style.left="50%"; fs.style.top="66%"; fs.style.width=(680*fScale).toFixed(0)+"px";
+  // 牧場：圍欄置中放大
+  const pw=Math.min(720, vw*(narrow?0.94:0.74));
+  pen.style.left="50%"; pen.style.top="53%";
+  pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
 }
 window.addEventListener("resize",layout);
 window.addEventListener("orientationchange",function(){setTimeout(layout,200);});
 
 /* ============ start ============ */
 init();
-layout();
+setScene(G.scene||"farm");
 setInterval(tick,1500);
 setTimeout(walkDog,700);
 /* build-ok */
