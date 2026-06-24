@@ -210,6 +210,16 @@
   #scene.s-farm .pen{display:none;}
   #scene.s-ranch .field,#scene.s-ranch .fieldshadow,#scene.s-ranch .groundgrid,#scene.s-ranch .tools{display:none;}
   @media(max-width:760px){ .sceneswitch{top:auto;bottom:96px;} }
+  /* 登入畫面 */
+  .loginmask{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(#aee6ff,#bfe39a 55%,#8fce5a);}
+  .loginmask.on{display:flex;}
+  .loginbox{background:#fffdf5;border:3px solid #d7ccc8;border-radius:22px;padding:28px 26px;max-width:340px;width:88%;
+    text-align:center;box-shadow:0 12px 30px #0004;}
+  .loginbox h2{color:#3e2723;}
+  .googlebtn{display:inline-flex;align-items:center;gap:8px;border:2px solid #cdbb95;background:#fff;border-radius:14px;
+    padding:11px 20px;font-size:15px;font-weight:800;color:#3e2723;cursor:pointer;box-shadow:0 3px 0 #d7ccc8;}
+  .googlebtn:active{transform:translateY(2px);box-shadow:0 1px 0 #d7ccc8;}
   /* 左側功能按鈕（每日 / 拉霸 / 股市） */
   .leftbar{position:absolute;top:50%;left:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:20;}
   .leftbar .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;
@@ -366,6 +376,24 @@
 <div class="mask" id="mask"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 
+<!-- 登入畫面（啟用帳號登入時才顯示） -->
+<div class="loginmask" id="loginMask">
+  <div class="loginbox">
+    <div style="font-size:48px">🌻</div>
+    <h2 style="margin:6px 0">開心農場</h2>
+    <p style="font-size:13px;color:#6b5a44;margin:0 0 16px;line-height:1.6">登入後你的農場進度會綁定帳號，<br>換手機或電腦登同一個帳號就能接續。</p>
+    <button class="googlebtn" onclick="googleLogin()">
+      <span style="font-size:18px">🔵</span> 使用 Google 登入
+    </button>
+    <div id="loginMsg" style="font-size:12px;color:#c62828;margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+
+<!-- Firebase SDK（帳號登入用；沒設定時不影響遊戲） -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
 <script>
 /* ============ 資料設定 ============ */
 const CROPS = {
@@ -446,6 +474,61 @@ function newPlot(unlocked){return {unlocked:unlocked,state:"untilled",crop:null,
 const CLOUD_DB = "";
 /* ==================================== */
 
+/* ====== 帳號登入設定（Google 一鍵登入；登入即進度，跨裝置） ======
+   到 Firebase 專案 → 專案設定 → 你的應用程式，把網頁設定貼到下面（保留引號）。
+   範例：
+   const FIREBASE_CONFIG = {
+     apiKey:"AIza...", authDomain:"happy-farm-xxxx.firebaseapp.com",
+     databaseURL:"https://happy-farm-xxxx-default-rtdb.firebaseio.com",
+     projectId:"happy-farm-xxxx", appId:"1:123:web:abc"
+   };
+   留空 {} = 不啟用帳號登入，遊戲照舊（本機存檔）。 */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDUiN3c9pSiVu3Zj3r-qqNu6MyMyR9wjJo",
+  authDomain: "happyfarm-9a755.firebaseapp.com",
+  databaseURL: "https://happyfarm-9a755-default-rtdb.firebaseio.com",
+  projectId: "happyfarm-9a755",
+  storageBucket: "happyfarm-9a755.firebasestorage.app",
+  messagingSenderId: "529999689085",
+  appId: "1:529999689085:web:a58e014c5a8849bb2b4814"
+};
+/* ============================================================== */
+let fbAuth=null, fbDB=null, fbUser=null, fbSaveTimer=null;
+function accountMode(){return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&window.firebase);}
+function showLogin(m){const el=document.getElementById("loginMask");if(el)el.classList.add("on");const mm=document.getElementById("loginMsg");if(mm)mm.textContent=m||"";}
+function hideLogin(){const el=document.getElementById("loginMask");if(el)el.classList.remove("on");}
+function googleLogin(){
+  if(!fbAuth){showLogin("尚未設定 Firebase");return;}
+  const p=new firebase.auth.GoogleAuthProvider();
+  fbAuth.signInWithPopup(p).catch(function(e){ showLogin("登入失敗："+(e&&e.message||e)); });
+}
+function logoutAccount(){ if(fbAuth)fbAuth.signOut(); }
+function initAuth(){
+  if(!accountMode())return false;
+  try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
+  fbAuth=firebase.auth(); fbDB=firebase.database();
+  fbAuth.onAuthStateChanged(function(user){
+    fbUser=user||null;
+    if(user){ hideLogin(); loadUserCloud(user.uid); }
+    else { showLogin(); }
+  });
+  return true;
+}
+function loadUserCloud(uid){
+  if(!fbDB)return;
+  fbDB.ref("users/"+uid).once("value").then(function(snap){
+    const d=snap.val();
+    if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); log("☁️ 已載入你的帳號農場進度。","g"); }
+    else { freshGame(); log("☁️ 歡迎新農場主！進度會自動綁定你的帳號。","g"); }
+    dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
+  }).catch(function(){ render(); });
+}
+function saveUserCloud(){
+  if(!fbDB||!fbUser)return;
+  clearTimeout(fbSaveTimer);
+  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))); }catch(e){} }, 1500);
+}
+
 const SAVE_KEY="happyfarm_save_v1";
 const CODE_KEY="happyfarm_code";
 let syncCode = (()=>{try{return localStorage.getItem(CODE_KEY)||"";}catch(e){return "";}})();
@@ -479,7 +562,7 @@ function normalizeState(){
   STOCKS.forEach(s=>{const st=G.stocks[s.t]; if(!st||typeof st.price!=="number")G.stocks[s.t]={price:s.base,prev:s.base,shares:0,cost:0};});
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
 }
-function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){}cloudPush(false);}
+function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
 function loadGame(){
   try{
     const s=localStorage.getItem(SAVE_KEY);if(!s)return false;
@@ -1135,6 +1218,17 @@ function openHelp(){
 /* ============ 雲端同步面板 ============ */
 function openCloud(){
   let h='<h2>☁️ 雲端同步 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
+  if(accountMode()){
+    if(fbUser){
+      const nm=(fbUser.displayName||fbUser.email||"已登入");
+      h+='<p class="hint">✅ 已用帳號登入：<b>'+nm+'</b><br>進度會自動綁定這個帳號並雲端同步，換裝置登入同一個 Google 帳號即可接續。</p>'+
+        '<div style="text-align:center"><button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a" onclick="logoutAccount()">登出</button></div>';
+    }else{
+      h+='<p class="hint">尚未登入。請先用 Google 登入以綁定並同步進度。</p>'+
+        '<div style="text-align:center"><button class="pbtn" onclick="googleLogin()">使用 Google 登入</button></div>';
+    }
+    h+='</div>';showM(h);return;
+  }
   if(!cloudOn()){
     h+='<p class="hint">尚未啟用雲端同步。<br><br>請依一起提供的「<b>雲端同步設定教學</b>」：在 Firebase 免費建立 Realtime Database，把網址貼到本檔最上方的 <code>CLOUD_DB</code>，再放到 GitHub Pages 上線。完成後手機和電腦開同一個網址，就能用代碼跨裝置同步。</p>';
   }else{
@@ -1240,6 +1334,7 @@ window.addEventListener("orientationchange",function(){setTimeout(layout,200);})
 /* ============ start ============ */
 init();
 setScene(G.scene||"farm");
+initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
 /* build-ok */
