@@ -497,7 +497,7 @@ const FIREBASE_CONFIG = {
   appId: "1:529999689085:web:a58e014c5a8849bb2b4814"
 };
 /* ============================================================== */
-let fbAuth=null, fbDB=null, fbUser=null, fbSaveTimer=null;
+let fbAuth=null, fbDB=null, fbUser=null, fbSaveTimer=null, cloudReady=false;
 function accountMode(){return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&window.firebase);}
 function showLogin(m){const el=document.getElementById("loginMask");if(el)el.classList.add("on");const mm=document.getElementById("loginMsg");if(mm)mm.textContent=m||"";}
 function hideLogin(){const el=document.getElementById("loginMask");if(el)el.classList.remove("on");}
@@ -520,15 +520,23 @@ function initAuth(){
 }
 function loadUserCloud(uid){
   if(!fbDB)return;
+  cloudReady=false;                 // 載入完成前先鎖住雲端寫入，避免覆蓋
+  const localTs = G.ts||0;          // 本機目前進度的時間戳
   fbDB.ref("users/"+uid).once("value").then(function(snap){
     const d=snap.val();
-    if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); log("☁️ 已載入你的帳號農場進度。","g"); }
-    else { normalizeState(); log("☁️ 首次以此帳號登入：沿用本機目前進度並上傳雲端綁定帳號。","g"); }
+    if(d&&Array.isArray(d.plots) && (d.ts||0) >= localTs){
+      Object.assign(G,d); normalizeState(); log("☁️ 已載入你的帳號雲端進度。","g");
+    } else if(d&&Array.isArray(d.plots)){
+      normalizeState(); log("☁️ 本機進度較新，保留並上傳雲端（不會被舊雲端覆蓋）。","b");
+    } else {
+      normalizeState(); log("☁️ 首次以此帳號登入：沿用本機進度並上傳雲端綁定帳號。","g");
+    }
+    cloudReady=true;
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
-  }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); render(); });
+  }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); cloudReady=true; render(); });
 }
 function saveUserCloud(){
-  if(!fbDB||!fbUser)return;
+  if(!fbDB||!fbUser||!cloudReady)return;   // 尚未載入完成前不寫入
   clearTimeout(fbSaveTimer);
   fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); }); }catch(e){} }, 1500);
 }
