@@ -12,7 +12,7 @@
     background:#88c057;-webkit-user-select:none;user-select:none;overflow:hidden;
   }
   #scene{
-    position:relative;width:100vw;height:100vh;overflow:hidden;
+    position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;
     background:linear-gradient(#aee6ff 0 22%, #cdeeff 22% 26%, #8fce5a 26% 100%);
   }
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
@@ -523,14 +523,14 @@ function loadUserCloud(uid){
   fbDB.ref("users/"+uid).once("value").then(function(snap){
     const d=snap.val();
     if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); log("☁️ 已載入你的帳號農場進度。","g"); }
-    else { freshGame(); log("☁️ 歡迎新農場主！進度會自動綁定你的帳號。","g"); }
+    else { normalizeState(); log("☁️ 首次以此帳號登入：沿用本機目前進度並上傳雲端綁定帳號。","g"); }
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
-  }).catch(function(){ render(); });
+  }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); render(); });
 }
 function saveUserCloud(){
   if(!fbDB||!fbUser)return;
   clearTimeout(fbSaveTimer);
-  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))); }catch(e){} }, 1500);
+  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); }); }catch(e){} }, 1500);
 }
 
 const SAVE_KEY="happyfarm_save_v1";
@@ -1334,9 +1334,9 @@ function layout(){
         fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
   if(!field||!gg||!pen||!fs)return;
   const narrow=vw<760;
-  // 農場：田一律置中；依「可用寬度」（窄畫面扣掉左右按鈕列）等比縮放
-  const avail = narrow ? (vw-128) : (vw*0.62);
-  const fScale = Math.max(0.42, Math.min(1, avail/720));
+  // 農場：田一律置中；窄畫面預留左右按鈕列空間，縮小避免重疊
+  const avail = narrow ? (vw-168) : (vw*0.62);
+  const fScale = Math.max(0.33, Math.min(1, avail/700));
   const ftf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
   field.style.left=gg.style.left="50%";
   field.style.top=gg.style.top= narrow ? "45%" : "52%";
