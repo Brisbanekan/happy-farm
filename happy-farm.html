@@ -518,16 +518,18 @@ function initAuth(){
   });
   return true;
 }
+// 進度分數：用來比較兩份存檔誰「進度比較多」，多的勝出（避免空白存檔覆蓋有進度的）
+function progScore(s){ if(!s)return -1; return (s.level||0)*1e7 + (s.totalDays||0)*1e4 + (s.credit||0)*1e3 + Math.min(s.gold||0,1e6) + (s.charm||0)*100; }
 function loadUserCloud(uid){
   if(!fbDB)return;
-  cloudReady=false;                 // 載入完成前先鎖住雲端寫入，避免覆蓋
-  const localTs = G.ts||0;          // 本機目前進度的時間戳
+  cloudReady=false;                       // 載入完成前先鎖住雲端寫入，避免覆蓋
+  const localScore = progScore(G);         // 本機目前進度分數
   fbDB.ref("users/"+uid).once("value").then(function(snap){
     const d=snap.val();
-    if(d&&Array.isArray(d.plots) && (d.ts||0) >= localTs){
+    if(d&&Array.isArray(d.plots) && progScore(d) >= localScore){
       Object.assign(G,d); normalizeState(); log("☁️ 已載入你的帳號雲端進度。","g");
     } else if(d&&Array.isArray(d.plots)){
-      normalizeState(); log("☁️ 本機進度較新，保留並上傳雲端（不會被舊雲端覆蓋）。","b");
+      normalizeState(); log("☁️ 本機進度較多，保留本機並上傳（避免被較舊雲端覆蓋）。","b");
     } else {
       normalizeState(); log("☁️ 首次以此帳號登入：沿用本機進度並上傳雲端綁定帳號。","g");
     }
