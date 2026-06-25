@@ -475,7 +475,7 @@ function newPlot(unlocked){return {unlocked:unlocked,state:"untilled",crop:null,
    在 Firebase 免費建立 Realtime Database 後，把網址貼進下面（保留引號）。
    例如： const CLOUD_DB = "https://happy-farm-xxxx-default-rtdb.firebaseio.com";
    留空字串 = 只用本機存檔（不跨裝置）。設定教學見一起提供的「雲端同步設定教學」檔。 */
-const CLOUD_DB = "https://happyfarm-9a755-default-rtdb.firebaseio.com";
+const CLOUD_DB = "";
 /* ==================================== */
 
 /* ====== 帳號登入設定（Google 一鍵登入；登入即進度，跨裝置） ======
@@ -540,7 +540,24 @@ function loadUserCloud(uid){
 function saveUserCloud(){
   if(!fbDB||!fbUser||!cloudReady)return;   // 尚未載入完成前不寫入
   clearTimeout(fbSaveTimer);
-  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); }); }catch(e){} }, 1500);
+  // 防抖 0.6 秒（必須小於遊戲心跳 1.5 秒，否則計時器會被一直重置而永遠不存）
+  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e),"r"); }); }catch(e){} }, 600);
+}
+function cloudSaveNow(){
+  if(!fbDB||!fbUser){toast("尚未登入");return;}
+  clearTimeout(fbSaveTimer); G.ts=Date.now();
+  fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G)))
+    .then(function(){ toast("已存到雲端 ☁️"); log("☁️ 已手動覆寫雲端存檔。","g"); })
+    .catch(function(e){ alert("雲端存檔失敗："+(e&&e.message||e)); });
+}
+function cloudLoadNow(){
+  if(!fbDB||!fbUser){toast("尚未登入");return;}
+  if(!confirm("用雲端進度覆蓋這台裝置目前的進度？"))return;
+  fbDB.ref("users/"+fbUser.uid).once("value").then(function(snap){
+    const d=snap.val();
+    if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); setScene(G.scene||"farm"); render(); toast("已從雲端讀取"); log("☁️ 已從雲端覆蓋本機進度。","b"); closeM(); }
+    else toast("雲端目前沒有存檔");
+  }).catch(function(e){ alert("讀取失敗："+(e&&e.message||e)); });
 }
 
 const SAVE_KEY="happyfarm_save_v1";
@@ -1250,6 +1267,11 @@ function openCloud(){
     if(fbUser){
       const nm=(fbUser.displayName||fbUser.email||"已登入");
       h+='<p class="hint">✅ 已用帳號登入：<b>'+nm+'</b><br>進度會自動綁定這個帳號並雲端同步，換裝置登入同一個 Google 帳號即可接續。</p>'+
+        '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">'+
+          '<button class="pbtn gold" onclick="cloudSaveNow()">⬆️ 立即存到雲端</button>'+
+          '<button class="pbtn blue" onclick="cloudLoadNow()">⬇️ 從雲端讀取</button>'+
+        '</div>'+
+        '<p class="hint" style="margin-top:0">「立即存到雲端」會用<b>這台裝置目前的進度</b>覆寫雲端；換裝置前先在進度最新的那台按一下最保險。</p>'+
         '<div style="text-align:center"><button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a" onclick="logoutAccount()">登出</button></div>';
     }else{
       h+='<p class="hint">尚未登入。請先用 Google 登入以綁定並同步進度。</p>'+
