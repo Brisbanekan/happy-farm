@@ -95,12 +95,13 @@
   }
   .grid{
     display:grid;grid-template-columns:repeat(7,97px);grid-auto-rows:97px;gap:3px;
-    background:#4a3019;padding:6px;border-radius:6px;
-    box-shadow:0 0 0 5px #6b4a2f, 0 0 0 8px #8a6038;
+    background:#86bf54;padding:4px;border-radius:10px;box-shadow:0 0 0 3px #7caf48;
+    touch-action:none;
   }
+  .field,.groundgrid,.fieldshadow{touch-action:none;}
   @media(max-width:560px){.grid{grid-template-columns:repeat(3,70px);grid-auto-rows:70px;}}
   .plot{
-    position:relative;border-radius:3px;cursor:pointer;z-index:1;
+    position:relative;border-radius:3px;cursor:pointer;z-index:1;touch-action:none;
     background:
       radial-gradient(circle at 50% 45%, #8a6240 0 42%, transparent 44%),
       repeating-linear-gradient(95deg,#7a5436 0 9px,#6b4a2f 9px 18px);
@@ -111,7 +112,7 @@
   .plot.untilled{background:radial-gradient(circle at 50% 40%,#9c7a52,#876641);box-shadow:inset 0 0 0 1px #5a3c2244,inset 0 -4px 6px #00000022;}
   .plot.dry{filter:brightness(1.3) saturate(.55) sepia(.2);}
   .plot.ripe{z-index:3;box-shadow:inset 0 -5px 7px #00000033,0 0 0 3px #ffe06b,0 0 16px #ffca28;animation:ripepop 1.6s ease-in-out infinite;}
-  .plot.locked{background:radial-gradient(circle at 50% 40%,#a4dd6e,#86c451);cursor:pointer;box-shadow:inset 0 0 0 1px #6aa83f99,inset 0 -4px 6px #00000022;}
+  .plot.locked{background:radial-gradient(circle at 50% 40%,#9bd45f,#82bd4c);cursor:pointer;box-shadow:inset 0 0 0 1px #6aa83f44;}
   @keyframes ripepop{0%,100%{box-shadow:inset 0 -5px 7px #00000033,0 0 0 3px #ffe06b,0 0 12px #ffca28;}50%{box-shadow:inset 0 -5px 7px #00000033,0 0 0 4px #fff0a0,0 0 20px #ffd54f;}}
   .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
   .plot.ripe .crop{animation:cropbounce 1.4s ease-in-out infinite;}
@@ -1421,18 +1422,28 @@ function panDown(e){
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
-  if(!dragActive)return; const p=e.touches?e.touches[0]:e;
+  if(!dragActive)return;
+  const p=e.touches?e.touches[0]:e;
   const dx=p.clientX-dragSX, dy=p.clientY-dragSY;
-  if(Math.abs(dx)+Math.abs(dy)>8)panMoved=true;
-  if(panMoved){ panX=Math.max(-maxPanX,Math.min(maxPanX,panSX+dx)); panY=Math.max(-maxPanY,Math.min(maxPanY,panSY+dy)); applyField(); if(e.cancelable)e.preventDefault(); }
+  if(Math.abs(dx)+Math.abs(dy)>6)panMoved=true;
+  if(e.touches&&e.cancelable)e.preventDefault();          // 觸控拖移時阻止頁面捲動（iOS 關鍵）
+  if(panMoved){
+    panX=Math.max(-maxPanX,Math.min(maxPanX,panSX+dx));
+    panY=Math.max(-maxPanY,Math.min(maxPanY,panSY+dy));
+    applyField();
+    if(!e.touches&&e.cancelable)e.preventDefault();
+  }
 }
 function panUp(){ if(dragActive&&panMoved)lastPanEnd=Date.now(); dragActive=false; }
 function initPan(){
   const sc=document.getElementById("scene"); if(!sc)return;
-  sc.addEventListener("pointerdown",panDown);
-  window.addEventListener("pointermove",panMove,{passive:false});
-  window.addEventListener("pointerup",panUp);
-  window.addEventListener("pointercancel",panUp);
+  sc.addEventListener("touchstart",panDown,{passive:false});
+  sc.addEventListener("touchmove",panMove,{passive:false});
+  sc.addEventListener("touchend",panUp);
+  sc.addEventListener("touchcancel",panUp);
+  sc.addEventListener("mousedown",panDown);
+  window.addEventListener("mousemove",panMove);
+  window.addEventListener("mouseup",panUp);
 }
 
 /* ============ start ============ */
