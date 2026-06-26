@@ -12,7 +12,7 @@
     background:#88c057;-webkit-user-select:none;user-select:none;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;
   }
   #scene{
-    position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;
+    position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
     background:linear-gradient(#aee6ff 0 22%, #cdeeff 22% 26%, #8fce5a 26% 100%);
   }
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
@@ -46,13 +46,13 @@
   .cloud.c2{top:11%;left:-30%;font-size:36px;animation-duration:30s;}
   @keyframes drift{from{transform:translateX(0);}to{transform:translateX(135vw);}}
   /* 站在地面上的直立裝飾（billboard） */
-  .deco{position:absolute;pointer-events:none;line-height:1;text-align:center;z-index:3;
+  .deco{position:absolute;pointer-events:none;line-height:1;text-align:center;z-index:1;
     transform-origin:bottom center;filter:drop-shadow(0 5px 2px #00000026);}
   .deco::after{content:"";position:absolute;left:50%;bottom:-5px;width:64%;height:12px;
     transform:translateX(-50%);background:radial-gradient(closest-side,#00000038,transparent);border-radius:50%;z-index:-1;}
   /* 遠景（小、靠近地平線） */
   .house{top:25%;right:6%;font-size:80px;animation:bob 5s ease-in-out infinite;}
-  #dog{position:absolute;left:80%;top:82%;z-index:3;font-size:42px;pointer-events:none;
+  #dog{position:absolute;left:80%;top:82%;z-index:1;font-size:42px;pointer-events:none;
     transform:translate(-50%,-50%);filter:drop-shadow(0 4px 2px #00000022);}
   #dog::after{content:"";position:absolute;left:50%;bottom:-3px;width:58%;height:9px;transform:translateX(-50%);
     background:radial-gradient(closest-side,#00000033,transparent);border-radius:50%;z-index:-1;}
@@ -464,6 +464,8 @@ const FERTS = {
 };
 const FRIEND_NAMES=[["阿明","🧑‍🌾"],["小美","👩‍🌾"],["大雄","👨‍🌾"],["May","💁‍♀️"]];
 
+/* 跨平台一致的金幣圖示（用於彈窗 innerHTML；iOS 的 🪙 會變銀色） */
+const CO='<span class="coinico"></span>';
 /* ============ 遊戲狀態 ============ */
 let G = {
   gold:200, credit:5, level:1, xp:0, charm:0,
@@ -1044,6 +1046,7 @@ function renderGrid(){
 
 /* ============ 點田地 ============ */
 function tapPlot(i){
+  if(Date.now()-lastPanEnd<250)return;   // 剛拖移過就不算點擊
   const p=G.plots[i];const t=G.tool;
   if(t==="till"){
     if(p.state==="untilled"){p.state="tilled";gainXp(1);log("翻土完成，可以播種了。");}
@@ -1127,13 +1130,13 @@ function openShop(tab){
     keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||G.charm<cr;
       let req=[];if(G.level<c.lvl)req.push("Lv."+c.lvl);if(G.charm<cr)req.push("❤️"+cr);
       let btn;
-      if(locked){ btn='<button class="pbtn gold" disabled>🪙'+c.cost+'</button>'; }
+      if(locked){ btn='<button class="pbtn gold" disabled>'+CO+c.cost+'</button>'; }
       else { btn='<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',-1)">−</button>'+
         '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
-        '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（🪙'+c.cost+'/個）</button></div>'; }
-      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 🪙'+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
+        '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
+      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
   }
   h+='<p class="hint">🪙金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
 }
@@ -1154,7 +1157,7 @@ function openInv(tab){
     if(ks.length===0)h+='<p class="hint">倉庫是空的，去收成作物吧。</p>';
     else{ks.forEach(k=>{const c=CROPS[k];const cnt=G.harvest[k];
       h+='<div class="invitem"><span class="e">'+c.emoji+'</span>'+
-        '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">單價 🪙'+c.sell+'</div></div>'+
+        '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">單價 '+CO+c.sell+'</div></div>'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
           '<button class="pbtn" style="padding:5px 9px" onclick="sqStep(\''+k+'\',-1)">−</button>'+
           '<input type="number" id="sq_'+k+'" value="1" min="1" max="'+cnt+'" oninput="sqClamp(\''+k+'\')" style="width:48px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
@@ -1239,12 +1242,12 @@ function dogUpCost(lv){return 3000*(lv||1);}
 function openDog(){
   let h='<h2>🐕 養狗 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 🪙 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
   if(!G.dog){
-    h+='<div class="shopitem"><span class="e">🐶</span><div class="meta"><b>看門狗 Lv.1</b><div>購買後守護你的農場</div></div><button class="pbtn gold" onclick="buyDog(\'gold\')" '+(G.gold>=1500?'':'disabled')+'>🪙1500</button> <button class="pbtn blue" onclick="buyDog(\'blue\')" '+(G.credit>=3?'':'disabled')+'>💎3</button></div>';
+    h+='<div class="shopitem"><span class="e">🐶</span><div class="meta"><b>看門狗 Lv.1</b><div>購買後守護你的農場</div></div><button class="pbtn gold" onclick="buyDog(\'gold\')" '+(G.gold>=1500?'':'disabled')+'>'+CO+'1500</button> <button class="pbtn blue" onclick="buyDog(\'blue\')" '+(G.credit>=3?'':'disabled')+'>💎3</button></div>';
   }else{
     const lv=G.dog.level||1; const ch=Math.round(dogBiteChance(lv)*100);
-    h+='<div class="shopitem"><span class="e">🐕</span><div class="meta"><b>你的看門狗 Lv.'+lv+'</b><div>咬中機率約 '+ch+'%｜對方掉落金額隨等級提高<br>狀態：'+(G.dog.fed?"✅ 已餵食，會咬偷菜賊":"⚠️ 未餵食，無法咬人")+'</div></div><button class="pbtn" onclick="feedDog()">餵食 (🪙300)</button></div>';
+    h+='<div class="shopitem"><span class="e">🐕</span><div class="meta"><b>你的看門狗 Lv.'+lv+'</b><div>咬中機率約 '+ch+'%｜對方掉落金額隨等級提高<br>狀態：'+(G.dog.fed?"✅ 已餵食，會咬偷菜賊":"⚠️ 未餵食，無法咬人")+'</div></div><button class="pbtn" onclick="feedDog()">餵食 ('+CO+'300)</button></div>';
     if(lv<5){const cost=dogUpCost(lv);
-      h+='<div class="shopitem"><span class="e">⬆️</span><div class="meta"><b>升級到 Lv.'+(lv+1)+'</b><div>咬中機率 '+ch+'% → '+Math.round(dogBiteChance(lv+1)*100)+'%，掉落金額更多</div></div><button class="pbtn gold" onclick="upgradeDog()" '+(G.gold>=cost?'':'disabled')+'>🪙'+cost+'</button></div>';
+      h+='<div class="shopitem"><span class="e">⬆️</span><div class="meta"><b>升級到 Lv.'+(lv+1)+'</b><div>咬中機率 '+ch+'% → '+Math.round(dogBiteChance(lv+1)*100)+'%，掉落金額更多</div></div><button class="pbtn gold" onclick="upgradeDog()" '+(G.gold>=cost?'':'disabled')+'>'+CO+cost+'</button></div>';
     }else h+='<p class="hint">看門狗已達最高 Lv.5 🎉</p>';
   }
   h+='</div>';showM(h);
@@ -1374,37 +1377,68 @@ function setScene(s){
   if(tr)tr.classList.toggle("on",G.scene==="ranch");
   layout(); saveGame();
 }
+let panX=0, panY=0, fieldScale=1, maxPanX=0, maxPanY=0;
+function applyField(){
+  const f=document.querySelector(".field"), gg=document.querySelector(".groundgrid"), fs=document.querySelector(".fieldshadow");
+  const t="translate("+panX.toFixed(0)+"px,"+panY.toFixed(0)+"px) translate(-50%,-50%) scale("+fieldScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
+  if(f)f.style.transform=t; if(gg)gg.style.transform=t;
+  if(fs)fs.style.transform="translate("+panX.toFixed(0)+"px,"+panY.toFixed(0)+"px) translate(-50%,-50%)";
+}
 function layout(){
   const vw=window.innerWidth, vh=window.innerHeight;
   const field=document.querySelector(".field"), gg=document.querySelector(".groundgrid"),
         fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
   if(!field||!gg||!pen||!fs)return;
   const narrow=vw<760;
-  // 可操作區：扣掉左右按鈕列、上方狀態列、下方功能列（含場景切換）
-  const sideBars = narrow ? 140 : 150;
-  const topBottom = narrow ? 200 : 170;
-  const availW = Math.max(180, vw - sideBars);
-  const availH = Math.max(150, vh - topBottom);
-  // 田自然尺寸約 725×362（壓扁菱形）；同時依寬與高縮放，確保整片田都進得了畫面
-  const fScale = Math.max(0.3, Math.min(1, Math.min(availW/725, availH/362)));
-  const ftf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
-  field.style.left=gg.style.left="50%";
-  field.style.top=gg.style.top= narrow ? "46%" : "50%";
-  field.style.transform=gg.style.transform=ftf;
-  fs.style.left="50%"; fs.style.top= narrow ? "58%" : "63%"; fs.style.width=(680*fScale).toFixed(0)+"px";
-  // 牧場：圍欄置中，依寬與高縮放
-  const pAvailW = vw - (narrow?30:110);
-  const pScale = Math.min(1, Math.min(pAvailW/610, availH/340));
-  const pw=Math.max(240, 610*pScale);
-  pen.style.left="50%"; pen.style.top= narrow ? "48%" : "50%";
+  const sideBars=narrow?140:150, topBottom=narrow?200:175;
+  const availW=Math.max(180,vw-sideBars), availH=Math.max(150,vh-topBottom);
+  const fitScale=Math.min(availW/725, availH/362);
+  // 至少 0.6 讓格子好點；放不下時就維持較大、靠手指拖移瀏覽
+  fieldScale=Math.max(0.45, Math.min(1, Math.max(fitScale, 0.62)));
+  field.style.left=gg.style.left="50%"; field.style.top=gg.style.top= narrow?"47%":"50%";
+  fs.style.left="50%"; fs.style.top= narrow?"61%":"63%"; fs.style.width=(680*fieldScale).toFixed(0)+"px";
+  // 拖移範圍：田比可視區大多少就能拖多少
+  maxPanX=Math.max(0,(725*fieldScale-availW)/2+50);
+  maxPanY=Math.max(0,(362*fieldScale-availH)/2+50);
+  panX=Math.max(-maxPanX,Math.min(maxPanX,panX));
+  panY=Math.max(-maxPanY,Math.min(maxPanY,panY));
+  applyField();
+  // 牧場
+  const pAvailW=vw-(narrow?30:110);
+  const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
+  const pw=Math.max(240,610*pScale);
+  pen.style.left="50%"; pen.style.top= narrow?"48%":"50%";
   pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
 }
 window.addEventListener("resize",layout);
 window.addEventListener("orientationchange",function(){setTimeout(layout,200);});
 
+/* ====== 拖移瀏覽田地（手指/滑鼠拖曳平移，點擊不受影響） ====== */
+let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
+function panDown(e){
+  const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
+  if(maxPanX<=0&&maxPanY<=0)return;            // 不需要拖移就不攔截
+  const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
+}
+function panMove(e){
+  if(!dragActive)return; const p=e.touches?e.touches[0]:e;
+  const dx=p.clientX-dragSX, dy=p.clientY-dragSY;
+  if(Math.abs(dx)+Math.abs(dy)>8)panMoved=true;
+  if(panMoved){ panX=Math.max(-maxPanX,Math.min(maxPanX,panSX+dx)); panY=Math.max(-maxPanY,Math.min(maxPanY,panSY+dy)); applyField(); if(e.cancelable)e.preventDefault(); }
+}
+function panUp(){ if(dragActive&&panMoved)lastPanEnd=Date.now(); dragActive=false; }
+function initPan(){
+  const sc=document.getElementById("scene"); if(!sc)return;
+  sc.addEventListener("pointerdown",panDown);
+  window.addEventListener("pointermove",panMove,{passive:false});
+  window.addEventListener("pointerup",panUp);
+  window.addEventListener("pointercancel",panUp);
+}
+
 /* ============ start ============ */
 init();
 setScene(G.scene||"farm");
+initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
