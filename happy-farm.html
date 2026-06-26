@@ -2,14 +2,14 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>開心農場 Happy Farm</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
   body{
     font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#3e2723;
-    background:#88c057;-webkit-user-select:none;user-select:none;overflow:hidden;
+    background:#88c057;-webkit-user-select:none;user-select:none;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;
   }
   #scene{
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;
@@ -125,9 +125,9 @@
   .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2);}
   .progress>i{display:block;height:100%;background:linear-gradient(90deg,#ffe082,#ffb300);}
   .signpost{
-    position:absolute;font-size:11px;font-weight:800;color:#5a3a1a;background:#f3e2b8;
-    border:2px solid #b88a3e;border-radius:8px;padding:3px 7px;white-space:nowrap;
-    transform:rotate(-45deg) scaleY(2);box-shadow:0 2px 0 #8a6020;
+    position:absolute;left:50%;top:50%;font-size:8.5px;line-height:1.15;font-weight:800;color:#5a3a1a;background:#f3e2b8ee;
+    border:2px solid #b88a3e;border-radius:7px;padding:2px 5px;white-space:nowrap;
+    transform-origin:center;transform:translate(-50%,-50%) rotate(-45deg) scaleY(2);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
   }
 
   /* 左上 HUD */
@@ -147,6 +147,10 @@
   .coin{display:flex;align-items:center;gap:4px;background:#fffbe6;border:2px solid #f0c544;border-radius:14px;padding:2px 9px;font-size:13px;font-weight:800;color:#7a5a10;box-shadow:0 2px 4px #0002;}
   .coin.blue{background:#e7f3ff;border-color:#7bb8ee;color:#1c5a96;}
   .coin.charm{background:#ffe9ef;border-color:#f3a3bb;color:#b03a5e;}
+  /* 跨平台一致的金幣圖示（iOS 的 🪙 會變銀色，改用 CSS 畫） */
+  .coinico{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-3px;
+    background:radial-gradient(circle at 35% 30%,#fff0a8,#f5c026 62%,#d4920f);
+    border:1.5px solid #c9870c;box-shadow:inset 0 -1px 1px #00000026, inset 0 1px 1px #ffffff66;}
 
   /* 右側直立工具列 */
   .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:20;}
@@ -1001,7 +1005,7 @@ function sellAnimal(i){
   openRanch();
 }
 function renderHUD(){
-  document.getElementById("goldChip").textContent="🪙 "+G.gold;
+  document.getElementById("goldChip").innerHTML='<span class="coinico"></span> '+G.gold;
   document.getElementById("creditChip").textContent="💎 "+G.credit;
   document.getElementById("charmChip").textContent="❤️ "+G.charm;
   document.getElementById("lvBadge").textContent=G.level;
@@ -1122,11 +1126,21 @@ function openShop(tab){
   }else{
     keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||G.charm<cr;
       let req=[];if(G.level<c.lvl)req.push("Lv."+c.lvl);if(G.charm<cr)req.push("❤️"+cr);
-      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 🪙'+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div><button class="pbtn gold" onclick="buySeed(\''+k+'\')" '+((!locked&&G.gold>=c.cost)?'':'disabled')+'>🪙'+c.cost+'</button></div>';});
+      let btn;
+      if(locked){ btn='<button class="pbtn gold" disabled>🪙'+c.cost+'</button>'; }
+      else { btn='<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end">'+
+        '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',-1)">−</button>'+
+        '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
+        '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
+        '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（🪙'+c.cost+'/個）</button></div>'; }
+      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 🪙'+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
   }
   h+='<p class="hint">🪙金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
 }
-function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();openShop(c.type);}
+function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();saveGame();openShop(c.type);}
+function bqClamp(k){const el=document.getElementById("bq_"+k);if(!el)return;let n=parseInt(el.value)||1;if(n<1)n=1;el.value=n;}
+function bqStep(k,d){const el=document.getElementById("bq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;if(n<1)n=1;el.value=n;}
+function buySeedQty(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)){toast("尚未解鎖");return;}const el=document.getElementById("bq_"+k);let n=Math.max(1,parseInt(el&&el.value)||1);const maxAfford=Math.floor(G.gold/c.cost);if(maxAfford<1){toast("金幣不足");return;}if(n>maxAfford){n=maxAfford;toast("金幣只夠買 "+n+" 個");}G.gold-=c.cost*n;G.seeds[k]=(G.seeds[k]||0)+n;toast("買了 "+c.name+" 種子 ×"+n);renderHUD();saveGame();openShop(c.type);}
 function buyFert(k){const f=FERTS[k];if(f.cur==="blue"){if(G.credit<f.cost)return;G.credit-=f.cost;}else{if(G.gold<f.cost)return;G.gold-=f.cost;}G.ferts[k]=(G.ferts[k]||0)+1;toast("買了 "+f.name);renderHUD();openShop("fert");}
 
 /* ============ 倉庫 / 種子 ============ */
@@ -1361,22 +1375,28 @@ function setScene(s){
   layout(); saveGame();
 }
 function layout(){
-  const vw=window.innerWidth;
+  const vw=window.innerWidth, vh=window.innerHeight;
   const field=document.querySelector(".field"), gg=document.querySelector(".groundgrid"),
         fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
   if(!field||!gg||!pen||!fs)return;
   const narrow=vw<760;
-  // 農場：田一律置中；窄畫面預留左右按鈕列空間，縮小避免重疊
-  const avail = narrow ? (vw-168) : (vw*0.62);
-  const fScale = Math.max(0.33, Math.min(1, avail/700));
+  // 可操作區：扣掉左右按鈕列、上方狀態列、下方功能列（含場景切換）
+  const sideBars = narrow ? 140 : 150;
+  const topBottom = narrow ? 200 : 170;
+  const availW = Math.max(180, vw - sideBars);
+  const availH = Math.max(150, vh - topBottom);
+  // 田自然尺寸約 725×362（壓扁菱形）；同時依寬與高縮放，確保整片田都進得了畫面
+  const fScale = Math.max(0.3, Math.min(1, Math.min(availW/725, availH/362)));
   const ftf="translate(-50%,-50%) scale("+fScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
   field.style.left=gg.style.left="50%";
-  field.style.top=gg.style.top= narrow ? "45%" : "52%";
+  field.style.top=gg.style.top= narrow ? "46%" : "50%";
   field.style.transform=gg.style.transform=ftf;
-  fs.style.left="50%"; fs.style.top= narrow ? "58%" : "66%"; fs.style.width=(680*fScale).toFixed(0)+"px";
-  // 牧場：圍欄置中放大
-  const pw=Math.min(720, vw*(narrow?0.9:0.74));
-  pen.style.left="50%"; pen.style.top= narrow ? "47%" : "53%";
+  fs.style.left="50%"; fs.style.top= narrow ? "58%" : "63%"; fs.style.width=(680*fScale).toFixed(0)+"px";
+  // 牧場：圍欄置中，依寬與高縮放
+  const pAvailW = vw - (narrow?30:110);
+  const pScale = Math.min(1, Math.min(pAvailW/610, availH/340));
+  const pw=Math.max(240, 610*pScale);
+  pen.style.left="50%"; pen.style.top= narrow ? "48%" : "50%";
   pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
 }
 window.addEventListener("resize",layout);
