@@ -155,10 +155,23 @@
   .coin{display:flex;align-items:center;gap:4px;background:#fffbe6;border:2px solid #f0c544;border-radius:14px;padding:2px 9px;font-size:13px;font-weight:800;color:#7a5a10;box-shadow:0 2px 4px #0002;}
   .coin.blue{background:#e7f3ff;border-color:#7bb8ee;color:#1c5a96;}
   .coin.charm{background:#ffe9ef;border-color:#f3a3bb;color:#b03a5e;}
-  /* 跨平台一致的金幣圖示（iOS 的 🪙 會變銀色，改用 CSS 畫） */
+  /* 跨平台一致的金幣圖示（iOS 的 <span class=coinico></span> 會變銀色，改用 CSS 畫） */
   .coinico{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-3px;
     background:radial-gradient(circle at 35% 30%,#fff0a8,#f5c026 62%,#d4920f);
     border:1.5px solid #c9870c;box-shadow:inset 0 -1px 1px #00000026, inset 0 1px 1px #ffffff66;}
+
+  /* ===== 手機畫面模擬器（開發預覽用） ===== */
+  #simBtn{position:fixed;left:10px;bottom:10px;z-index:99999;background:#fffef6;border:2px solid #f3d9a8;
+    border-radius:20px;padding:6px 12px;font-size:13px;font-weight:800;color:#3e2723;
+    box-shadow:0 2px 6px #0003;cursor:pointer;opacity:.85;}
+  #simBtn:hover{opacity:1;}
+  #simBtn.on{background:#3e2723;color:#fff;border-color:#3e2723;opacity:1;}
+  body.sim{background:#262b36;display:flex;align-items:center;justify-content:center;}
+  body.sim #scene{width:390px;height:844px;flex:none;border:11px solid #14171d;border-radius:42px;
+    box-shadow:0 16px 50px #000a, inset 0 0 0 2px #2c313c;overflow:hidden;}
+  /* 模擬瀏海 */
+  body.sim #scene::before{content:"";position:absolute;left:50%;top:0;transform:translateX(-50%);
+    width:150px;height:26px;background:#14171d;border-radius:0 0 16px 16px;z-index:9000;pointer-events:none;}
 
   /* 右側直立工具列 */
   .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:20;}
@@ -292,6 +305,7 @@
 </style>
 </head>
 <body>
+<button id="simBtn" onclick="toggleSim()">📱 手機預覽</button>
 <div id="scene" class="s-farm">
   <!-- 地面 -->
   <div class="ground"></div>
@@ -329,7 +343,7 @@
           <div class="xpbar"><i id="xpFill"></i><span id="xpText">0/50</span></div>
         </div>
         <div class="coins">
-          <div class="coin" id="goldChip">🪙 200</div>
+          <div class="coin" id="goldChip"><span class=coinico></span> 200</div>
           <div class="coin blue" id="creditChip">💎 5</div>
           <div class="coin charm" id="charmChip">❤️ 0</div>
         </div>
@@ -472,8 +486,8 @@ const FERTS = {
 };
 const FRIEND_NAMES=[["阿明","🧑‍🌾"],["小美","👩‍🌾"],["大雄","👨‍🌾"],["May","💁‍♀️"]];
 
-/* 跨平台一致的金幣圖示（用於彈窗 innerHTML；iOS 的 🪙 會變銀色） */
-const CO='<span class="coinico"></span>';
+/* 跨平台一致的金幣圖示（用於彈窗 innerHTML；iOS 的 <span class=coinico></span> 會變銀色） */
+const CO='<span class=coinico></span>';
 /* ============ 遊戲狀態 ============ */
 let G = {
   gold:200, credit:5, level:1, xp:0, charm:0,
@@ -692,7 +706,7 @@ function dailyCheck(){
   if(G.lastMarketDate!==today){ updateMarket(); G.lastMarketDate=today; }
   if(G.lastClaim!==today){ toast("🎁 每日登入獎勵可領取！"); log("🎁 今日登入獎勵可領取（點底部 🎁 每日）","b"); }
 }
-function rewardText(r){let a=[];if(r.g)a.push("🪙"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+CROPS[k].name+"×"+n));return a.join(" ");}
+function rewardText(r){let a=[];if(r.g)a.push("<span class=coinico></span>"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+CROPS[k].name+"×"+n));return a.join(" ");}
 function claimDaily(){
   const today=todayStr();
   if(G.lastClaim===today){toast("今天已經領過囉");return;}
@@ -701,7 +715,7 @@ function claimDaily(){
   G.lastClaim=today;
   const r=DAILY_REWARDS[(G.streak-1)%7];
   let parts=[];
-  if(r.g){G.gold+=r.g;parts.push("🪙"+r.g);}
+  if(r.g){G.gold+=r.g;parts.push("<span class=coinico></span>"+r.g);}
   if(r.c){G.credit+=r.c;parts.push("💎"+r.c);}
   if(r.h){G.charm+=r.h;parts.push("❤️"+r.h);}
   if(r.s)Object.entries(r.s).forEach(([k,n])=>{G.seeds[k]=(G.seeds[k]||0)+n;parts.push(CROPS[k].emoji+CROPS[k].name+"×"+n);});
@@ -720,7 +734,7 @@ function openDaily(){
     const big=(i===6); const done=claimedToday&&(i+1)<=pos;
     h+='<div style="border:2px solid '+(big?"#f0b429":"#e6dcc8")+';border-radius:12px;padding:7px 3px;text-align:center;background:'+(done?"#eef7e0":"#fff")+'">'+
       '<div style="font-size:11px;font-weight:800;color:#8a7350">第'+(i+1)+'天</div>'+
-      '<div style="font-size:20px">'+(big?"🎁":"🪙")+'</div>'+
+      '<div style="font-size:20px">'+(big?"🎁":"<span class=coinico></span>")+'</div>'+
       '<div style="font-size:10px;line-height:1.3">'+rewardText(r)+'</div>'+(done?'<div style="font-size:10px;color:#2e7d32">✅</div>':'')+'</div>';
   });
   h+='</div>';
@@ -734,13 +748,13 @@ function openDaily(){
 function pickSlot(){const tot=SLOT_SYM.reduce((a,x)=>a+x.w,0);let r=Math.random()*tot;for(const x of SLOT_SYM){if(r<x.w)return x;r-=x.w;}return SLOT_SYM[0];}
 let slotSpinning=false;
 function openSlot(){
-  let payinfo=SLOT_SYM.map(x=>x.s+"×3 = "+(x.cred?("💎"+x.cred):("🪙"+x.pay))+"／線").join(" ｜ ");
+  let payinfo=SLOT_SYM.map(x=>x.s+"×3 = "+(x.cred?("💎"+x.cred):("<span class=coinico></span>"+x.pay))+"／線").join(" ｜ ");
   let cells="";for(let i=0;i<9;i++)cells+='<div id="c'+i+'" class="scell">'+SLOT_SYM[i%SLOT_SYM.length].s+'</div>';
   let h='<h2>🎰 拉霸機 <button class="x" onclick="closeM()">×</button></h2><div class="body" style="text-align:center">'+
-    '<p class="hint">每抽 🪙'+SLOT_COST+'。3×3 共 5 條線（3 橫＋2 斜），任一條線三個相同就中獎，可同時中多條線！💎 給鑽石、7️⃣ 是頭獎。</p>'+
+    '<p class="hint">每抽 <span class=coinico></span>'+SLOT_COST+'。3×3 共 5 條線（3 橫＋2 斜），任一條線三個相同就中獎，可同時中多條線！💎 給鑽石、7️⃣ 是頭獎。</p>'+
     '<div class="slotgrid">'+cells+'</div>'+
     '<div id="slotres" style="min-height:24px;font-size:14px;font-weight:700;margin-bottom:10px">轉動看看手氣！</div>'+
-    '<button class="bigbtn" onclick="doSpin()">🎰 抽一次（🪙'+SLOT_COST+'）</button>'+
+    '<button class="bigbtn" onclick="doSpin()">🎰 抽一次（<span class=coinico></span>'+SLOT_COST+'）</button>'+
     '<div style="margin-top:12px;font-size:11px;color:#8a7350;text-align:left;line-height:1.6">每線獎金：'+payinfo+'</div>'+
   '</div>';showM(h);
 }
@@ -770,7 +784,7 @@ function settleSlot(grid,cells){
   const res=document.getElementById("slotres");
   let msg,col="#999";
   if(winGold||winCred){
-    let p=[];if(winGold)p.push("🪙"+winGold);if(winCred)p.push("💎"+winCred);
+    let p=[];if(winGold)p.push("<span class=coinico></span>"+winGold);if(winCred)p.push("💎"+winCred);
     msg="🎉 中獎！"+p.join(" ＋ ");col="#2e7d32";toast(msg);log("拉霸中獎 "+p.join(" "),winCred?"b":"g");
   }else msg="沒中，再來一次！";
   if(res)res.innerHTML='<span style="color:'+col+'">'+msg+'</span>';
@@ -792,22 +806,22 @@ function openStocks(){
     const val=st.shares*st.price; const pl=val-st.cost; totVal+=val; totCost+=st.cost;
     const col=chg>0?"#c62828":(chg<0?"#2e7d32":"#888");
     h+='<div class="shopitem"><div style="flex:1;min-width:0"><b>'+s.n+'</b> <span style="font-size:10px;color:#aaa">'+s.t+'</span>'+
-      '<div style="font-size:12px">🪙'+st.price+' <span style="color:'+col+';font-weight:700">'+(chg>=0?"▲":"▼")+Math.abs(chg).toFixed(1)+'%</span>'+
-      (st.shares?'<br>持有 '+st.shares+' 股｜市值 🪙'+val+'｜損益 <span style="color:'+(pl>=0?"#c62828":"#2e7d32")+'">'+(pl>=0?"+":"")+Math.round(pl)+'</span>':'')+'</div></div>'+
+      '<div style="font-size:12px"><span class=coinico></span>'+st.price+' <span style="color:'+col+';font-weight:700">'+(chg>=0?"▲":"▼")+Math.abs(chg).toFixed(1)+'%</span>'+
+      (st.shares?'<br>持有 '+st.shares+' 股｜市值 <span class=coinico></span>'+val+'｜損益 <span style="color:'+(pl>=0?"#c62828":"#2e7d32")+'">'+(pl>=0?"+":"")+Math.round(pl)+'</span>':'')+'</div></div>'+
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'+
         '<div style="display:flex;gap:4px"><button class="pbtn gold" onclick="buyStock(\''+s.t+'\',1)">買1</button><button class="pbtn gold" onclick="buyStock(\''+s.t+'\',10)">買10</button></div>'+
         '<div style="display:flex;gap:4px"><button class="pbtn" onclick="sellStock(\''+s.t+'\',1)">賣1</button><button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a" onclick="sellStock(\''+s.t+'\',999999)">全賣</button></div>'+
       '</div></div>';
   });
-  h+='<div style="text-align:center;font-weight:800;margin-top:8px">總市值 🪙'+Math.round(totVal)+'（總損益 '+(totVal-totCost>=0?"+":"")+Math.round(totVal-totCost)+'）</div>';
+  h+='<div style="text-align:center;font-weight:800;margin-top:8px">總市值 <span class=coinico></span>'+Math.round(totVal)+'（總損益 '+(totVal-totCost>=0?"+":"")+Math.round(totVal-totCost)+'）</div>';
   h+='</div>';showM(h);
 }
 function buyStock(t,qty){const st=G.stocks[t];if(!st)return;const cost=st.price*qty;if(G.gold<cost){toast("金幣不足");return;}
-  G.gold-=cost;st.shares+=qty;st.cost+=cost;log("買進 "+stockName(t)+" ×"+qty+"，共 🪙"+cost);renderHUD();saveGame();openStocks();}
+  G.gold-=cost;st.shares+=qty;st.cost+=cost;log("買進 "+stockName(t)+" ×"+qty+"，共 <span class=coinico></span>"+cost);renderHUD();saveGame();openStocks();}
 function sellStock(t,qty){const st=G.stocks[t];if(!st)return;qty=Math.min(qty,st.shares);if(qty<=0){toast("沒有持股");return;}
   const gain=st.price*qty; const avg=st.shares?st.cost/st.shares:0; st.cost-=avg*qty; st.shares-=qty;
   if(st.shares<=0){st.shares=0;st.cost=0;} G.gold+=gain;
-  log("賣出 "+stockName(t)+" ×"+qty+"，得 🪙"+gain,"g");renderHUD();saveGame();openStocks();}
+  log("賣出 "+stockName(t)+" ×"+qty+"，得 <span class=coinico></span>"+gain,"g");renderHUD();saveGame();openStocks();}
 function init(){
   const loaded=loadGame();
   if(!loaded)freshGame();
@@ -967,7 +981,7 @@ function tapAnimal(i){
   if(s.ready){
     G.gold+=a.yield;gainXp(a.xp);s.ready=false;s.prod=0;
     if(penNodes[i])penNodes[i].classList.remove("ready");
-    log("收成 "+a.emoji+a.name+" 的 "+a.prod+" ＝ 🪙"+a.yield,"g");toast("🪙 +"+a.yield);
+    log("收成 "+a.emoji+a.name+" 的 "+a.prod+" ＝ <span class=coinico></span>"+a.yield,"g");toast("<span class=coinico></span> +"+a.yield);
     renderHUD();saveGame();
   }else toast(a.emoji+a.name+" 生產中…");
 }
@@ -984,19 +998,19 @@ function openRanch(){
     h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
     G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
       h+='<div class="shopitem"><span class="e">'+a.emoji+'</span><div class="meta"><b>'+a.name+'</b>'+
-        '<div>'+(s.ready?'✅ 可收成 🪙'+a.yield:'生產中…')+'</div></div>'+
-        '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 🪙'+sellRefund(s.a)+'</button></div>';
+        '<div>'+(s.ready?'✅ 可收成 <span class=coinico></span>'+a.yield:'生產中…')+'</div></div>'+
+        '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 <span class=coinico></span>'+sellRefund(s.a)+'</button></div>';
     });
     h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
   }
   h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">購買動物</div>'+
-    '<p class="hint">動物會在圍欄裡走動並定時生產，產物出現時點一下動物即可收成換 🪙。售出可回收一半購買金。'+
+    '<p class="hint">動物會在圍欄裡走動並定時生產，產物出現時點一下動物即可收成換 <span class=coinico></span>。售出可回收一半購買金。'+
     (G.ranch.length>=cap?'<br><span class="locktag">牧場已滿，提升等級可增加容量。</span>':'')+'</p>';
   Object.entries(ANIMALS).forEach(([k,a])=>{
     const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
     h+='<div class="shopitem"><span class="e">'+a.emoji+'</span><div class="meta"><b>'+a.name+'</b>'+
-      '<div>每 '+a.time+'s 產 '+a.prod+' ＝ 🪙'+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
-      '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'>🪙'+a.cost+'</button></div>';
+      '<div>每 '+a.time+'s 產 '+a.prod+' ＝ <span class=coinico></span>'+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
+      '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'><span class=coinico></span>'+a.cost+'</button></div>';
   });
   h+='</div>';showM(h);
 }
@@ -1011,11 +1025,11 @@ function sellAnimal(i){
   const s=G.ranch[i];if(!s)return;const a=ANIMALS[s.a];const refund=sellRefund(s.a);
   G.ranch.splice(i,1);G.gold+=refund;
   clearPen();renderPen();renderHUD();saveGame();
-  log("售出 "+a.emoji+a.name+"，回收 🪙"+refund,"g");toast("售出 +🪙"+refund);
+  log("售出 "+a.emoji+a.name+"，回收 <span class=coinico></span>"+refund,"g");toast("售出 +<span class=coinico></span>"+refund);
   openRanch();
 }
 function renderHUD(){
-  document.getElementById("goldChip").innerHTML='<span class="coinico"></span> '+G.gold;
+  document.getElementById("goldChip").innerHTML='<span class=coinico></span> '+G.gold;
   document.getElementById("creditChip").textContent="💎 "+G.credit;
   document.getElementById("charmChip").textContent="❤️ "+G.charm;
   document.getElementById("lvBadge").textContent=G.level;
@@ -1030,7 +1044,7 @@ function renderGrid(){
     if(!p.unlocked){
       d.className="plot locked";
       const firstLocked=G.plots.findIndex(x=>!x.unlocked);
-      if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · 🪙'+L.price+'</div>';}
+      if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</div>';}
       d.onclick=()=>buyLand(i);grid.appendChild(d);return;
     }
     let cls="plot";let inner="";
@@ -1121,7 +1135,7 @@ function buyLand(i){
   if(i!==firstLocked){toast("請先購買前面的農地");return;}
   if(G.level<L.lvl){toast("需要 Lv."+L.lvl+" 才能購買");return;}
   if(G.gold<L.price){toast("金幣不足");return;}
-  G.gold-=L.price;p.unlocked=true;log("購買新農地（🪙"+L.price+"），農場變大了！","g");render();
+  G.gold-=L.price;p.unlocked=true;log("購買新農地（<span class=coinico></span>"+L.price+"），農場變大了！","g");render();
 }
 
 /* ============ 商店 ============ */
@@ -1132,7 +1146,7 @@ function openShop(tab){
     '<button class="'+(tab==='flower'?'on':'')+'" onclick="openShop(\'flower\')">🌸 花卉</button>'+
     '<button class="'+(tab==='fert'?'on':'')+'" onclick="openShop(\'fert\')">🧴 道具/肥料</button></div>';
   if(tab==="fert"){
-    Object.entries(FERTS).forEach(([k,f])=>{const cur=f.cur==="blue"?"💎":"🪙";const can=f.cur==="blue"?G.credit>=f.cost:G.gold>=f.cost;
+    Object.entries(FERTS).forEach(([k,f])=>{const cur=f.cur==="blue"?"💎":"<span class=coinico></span>";const can=f.cur==="blue"?G.credit>=f.cost:G.gold>=f.cost;
       h+='<div class="shopitem"><span class="e">'+f.emoji+'</span><div class="meta"><b>'+f.name+'</b><div>'+f.desc+'</div></div><button class="pbtn '+(f.cur==="blue"?"blue":"gold")+'" onclick="buyFert(\''+k+'\')" '+(can?'':'disabled')+'>'+cur+f.cost+'</button></div>';});
   }else{
     keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||G.charm<cr;
@@ -1146,7 +1160,7 @@ function openShop(tab){
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
       h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
   }
-  h+='<p class="hint">🪙金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
+  h+='<p class="hint"><span class=coinico></span>金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
 }
 function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();saveGame();openShop(c.type);}
 function bqClamp(k){const el=document.getElementById("bq_"+k);if(!el)return;let n=parseInt(el.value)||1;if(n<1)n=1;el.value=n;}
@@ -1185,10 +1199,10 @@ function openInv(tab){
 function sqClamp(k){const el=document.getElementById("sq_"+k);if(!el)return;let n=parseInt(el.value)||1;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sqStep(k,d){const el=document.getElementById("sq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sellQtyInput(k){const el=document.getElementById("sq_"+k);let n=parseInt(el&&el.value)||1;sellQty(k,n);}
-function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));G.gold+=CROPS[k].sell*n;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 🪙"+(CROPS[k].sell*n));renderHUD();saveGame();openInv("harvest");}
+function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));G.gold+=CROPS[k].sell*n;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+(CROPS[k].sell*n));renderHUD();saveGame();openInv("harvest");}
 function sellOne(k){sellQty(k,1);}
 function sellAll(k){if(!G.harvest[k])return;G.gold+=CROPS[k].sell*G.harvest[k];delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
-function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=CROPS[k].sell*G.harvest[k]);G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 🪙"+t,"g");toast("🪙 +"+t);renderHUD();saveGame();openInv("harvest");}
+function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=CROPS[k].sell*G.harvest[k]);G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
 function selectSeed(k){window.__plantSel=k;G.tool="plant";renderTools();toast("已選 "+CROPS[k].name+"，點翻好的田播種");closeM();}
 
 /* ============ 肥料 ============ */
@@ -1236,7 +1250,7 @@ function friendTap(idx){
   if(G.tool==="hand"){
     if(!p.ripe){toast("還沒成熟，不能偷");return;}
     if(p.stolen>=2){toast("這塊已被偷光了");return;}
-    if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 🪙"+fine,"r");toast("被狗咬！掉錢 😱");}
+    if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 <span class=coinico></span>"+fine,"r");toast("被狗咬！掉錢 😱");}
     else{const q=1+Math.floor(Math.random()*3);p.stolen++;const c=CROPS[p.crop];G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);log("偷到 "+f.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);}
   }else if(G.tool==="water"){if(p.dry){p.dry=false;gainXp(1);toast("幫忙澆水 +經驗");}else toast("不缺水");}
   else if(G.tool==="weed"){if(p.weed){p.weed=false;gainXp(1);toast("幫忙除草 +經驗");}else toast("沒雜草");}
@@ -1248,7 +1262,7 @@ function friendTap(idx){
 function dogBiteChance(lv){return Math.min(0.9, 0.30+((lv||1)-1)*0.13);} // Lv1=30%…Lv5=82%
 function dogUpCost(lv){return 3000*(lv||1);}
 function openDog(){
-  let h='<h2>🐕 養狗 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 🪙 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
+  let h='<h2>🐕 養狗 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 <span class=coinico></span> 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
   if(!G.dog){
     h+='<div class="shopitem"><span class="e">🐶</span><div class="meta"><b>看門狗 Lv.1</b><div>購買後守護你的農場</div></div><button class="pbtn gold" onclick="buyDog(\'gold\')" '+(G.gold>=1500?'':'disabled')+'>'+CO+'1500</button> <button class="pbtn blue" onclick="buyDog(\'blue\')" '+(G.credit>=3?'':'disabled')+'>💎3</button></div>';
   }else{
@@ -1270,10 +1284,10 @@ function openHelp(){
   '<b>基本循環</b><br>🔨 翻土 → 🌱 播種 → 💧 照顧 → 等成熟 → ✋ 收成 → 🏚️ 倉庫賣錢 → ⭐ 升級 → 🛒 買高級種子 / 🪧 Buy Land 買新農地。<br><br>'+
   '<b>作物五階段</b>：種子🌰→發芽🌱→小葉🌿→大葉☘️→結果（顯示作物本體，發光代表成熟）。<br><br>'+
   '<b>照顧</b>：地會變乾💧、長草🌿、生蟲🐜，會拖慢成長。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。<br><br>'+
-  '<b>兩種貨幣</b>：🪙金幣買大部分；💎藍幣是課金幣。<br><br>'+
+  '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
   '<b>偷菜</b>：👑好友 → 進別人農場，✋偷成熟作物（每塊最多 2 次），也可幫忙賺經驗。<br><br>'+
   '<b>養狗</b>：🐕餵食後會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
-  '<b>🐾 小牧場</b>：田旁邊的圍欄，按右上角 ＋ 放入動物（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）。動物會在圍欄裡走來走去並定時生產，產物出現在頭上時點一下動物即可收成換 🪙。可同時養多隻，容量隨等級提升。<br><br>'+
+  '<b>🐾 小牧場</b>：田旁邊的圍欄，按右上角 ＋ 放入動物（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）。動物會在圍欄裡走來走去並定時生產，產物出現在頭上時點一下動物即可收成換 <span class=coinico></span>。可同時養多隻，容量隨等級提升。<br><br>'+
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
   '<b>💎 鑽石怎麼來</b>：每次升級 +💎1；每天首次登入 +💎2。鑽石可買高級肥料、大蟲殺蟲劑、看門狗。<br><br>'+
   '<b>❤️ 魅力怎麼來</b>：種花收成（康乃馨 +1、鬱金香 +2）、每次升級 +❤️2、每日登入 +❤️3。<br><br>'+
@@ -1355,7 +1369,7 @@ function tick(){
     }
   });
   if(Math.random()<0.12){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.dry&&!p.weed&&!p.bug);if(pl.length){const p=pl[Math.floor(Math.random()*pl.length)];const r=Math.random();if(r<.4)p.dry=true;else if(r<.7)p.weed=true;else{if(Math.random()<.12){p.bug=5;p.bugBig=true;log("出現大毛毛蟲🐛！需噴 5 次","r");}else p.bug=1;}}}
-  if(Math.random()<0.35){const rp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&p.ripe&&p.stolen<2);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(G.dog&&G.dog.fed&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;G.dog.fed=Math.random()<.5;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 🪙"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
+  if(Math.random()<0.35){const rp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&p.ripe&&p.stolen<2);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(G.dog&&G.dog.fed&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;G.dog.fed=Math.random()<.5;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 <span class=coinico></span>"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
   if(Math.random()<0.3){const f=G.friends[Math.floor(Math.random()*G.friends.length)];f.plots[Math.floor(Math.random()*f.plots.length)]=makeFriendPlot();}
   // 牧場動物生產
   if(Array.isArray(G.ranch))G.ranch.forEach(s=>{
@@ -1371,9 +1385,9 @@ function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
 let logCount=0;
-function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<span class="'+cls+'">'+t+'</span>';else p.textContent=t;const l=document.getElementById("logList");l.prepend(p);logCount++;if(logCount>60&&l.lastChild)l.removeChild(l.lastChild);}
+function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<span class="'+cls+'">'+t+'</span>';else p.innerHTML=t;const l=document.getElementById("logList");l.prepend(p);logCount++;if(logCount>60&&l.lastChild)l.removeChild(l.lastChild);}
 let toastT;
-function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1400);}
+function toast(t){const el=document.getElementById("toast");el.innerHTML=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1400);}
 
 /* ============ 場景切換（農場 / 牧場）＋ 響應式置中縮放 ============ */
 function setScene(s){
@@ -1385,6 +1399,23 @@ function setScene(s){
   if(tr)tr.classList.toggle("on",G.scene==="ranch");
   layout(); saveGame();
 }
+/* ====== 手機畫面模擬器（開發預覽）：用邏輯視口讓世界依手機尺寸重新置中 ====== */
+let SIM=false, simScale=1;
+const SIM_W=390, SIM_H=844;
+function VW(){ return SIM?SIM_W:window.innerWidth; }
+function VH(){ return SIM?SIM_H:window.innerHeight; }
+function applySimScale(){
+  const sc=document.getElementById("scene"); if(!sc)return;
+  if(SIM){ simScale=Math.min(1,(window.innerHeight-40)/SIM_H,(window.innerWidth-40)/SIM_W);
+    sc.style.transform="scale("+simScale.toFixed(3)+")"; }
+  else { simScale=1; sc.style.transform=""; }
+}
+function toggleSim(){
+  SIM=!SIM; document.body.classList.toggle("sim",SIM);
+  const b=document.getElementById("simBtn"); if(b){b.classList.toggle("on",SIM); b.textContent=SIM?"🖥️ 結束預覽":"📱 手機預覽";}
+  applySimScale(); layout(); centerField();
+}
+
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
 let panX=0, panY=0;
 const WORLD_W=1400, WORLD_H=1000, FX=700, FY=560;
@@ -1395,14 +1426,15 @@ function buildWorld(){
   sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,#dog").forEach(function(n){world.appendChild(n);});
 }
 function clampPan(){
-  const vw=window.innerWidth, vh=window.innerHeight;
+  const vw=VW(), vh=VH();
   if(WORLD_W<=vw) panX=Math.round((vw-WORLD_W)/2); else panX=Math.max(vw-WORLD_W, Math.min(0, panX));
   if(WORLD_H<=vh) panY=Math.round((vh-WORLD_H)/2); else panY=Math.max(vh-WORLD_H, Math.min(0, panY));
 }
 function applyWorld(){ const w=document.getElementById("world"); if(w)w.style.transform="translate("+Math.round(panX)+"px,"+Math.round(panY)+"px)"; }
-function centerField(){ panX=window.innerWidth/2-FX; panY=window.innerHeight/2-FY; clampPan(); applyWorld(); }
+function centerField(){ panX=VW()/2-FX; panY=VH()/2-FY; clampPan(); applyWorld(); }
 function layout(){
-  const vw=window.innerWidth, vh=window.innerHeight, pen=document.getElementById("pen");
+  applySimScale();
+  const vw=VW(), vh=VH(), pen=document.getElementById("pen");
   if(pen){ const narrow=vw<760; const availH=Math.max(150,vh-175);
     const pAvailW=vw-(narrow?30:110); const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
     const pw=Math.max(240,610*pScale);
@@ -1424,7 +1456,8 @@ function panDown(e){
 function panMove(e){
   if(!dragActive)return;
   const p=e.touches?e.touches[0]:e;
-  const dx=p.clientX-dragSX, dy=p.clientY-dragSY;
+  const k=SIM?simScale:1;
+  const dx=(p.clientX-dragSX)/k, dy=(p.clientY-dragSY)/k;
   if(Math.abs(dx)+Math.abs(dy)>6)panMoved=true;
   if(e.touches&&e.cancelable)e.preventDefault();          // 觸控拖移時阻止頁面捲動（iOS 關鍵）
   if(panMoved){
