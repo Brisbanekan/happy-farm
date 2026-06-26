@@ -99,7 +99,7 @@
     touch-action:none;
   }
   .field,.groundgrid,.fieldshadow{touch-action:none;}
-  @media(max-width:560px){.grid{grid-template-columns:repeat(3,70px);grid-auto-rows:70px;}}
+  /* 注意：手機不要改欄數，否則田會被轉置（方向顛倒）且與地面格線對不上 */
   .plot{
     position:relative;border-radius:3px;cursor:pointer;z-index:1;touch-action:none;
     background:
