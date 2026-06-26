@@ -13,8 +13,15 @@
   }
   #scene{
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
-    background:linear-gradient(#aee6ff 0 22%, #cdeeff 22% 26%, #8fce5a 26% 100%);
+    background:#8bca54;
   }
+  /* 可平移的「世界」：天空＋草地＋田地＋裝飾全在裡面一起連動 */
+  #world{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;transform-origin:0 0;will-change:transform;
+    background:linear-gradient(#aee6ff 0 150px,#cdeeff 150px 176px,#9bd35f 176px 252px,#8bca54 252px 1000px);}
+  #world .ground,#world .horizon{display:none;}
+  #world .groundgrid{left:700px;top:560px;}
+  #world .field{left:700px;top:560px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
+  #world .fieldshadow{left:700px;top:642px;width:680px;transform:translate(-50%,-50%);}
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
     background:
@@ -213,7 +220,7 @@
   .sceneswitch button{border:none;background:none;border-radius:20px;padding:7px 18px;font-size:14px;font-weight:800;cursor:pointer;color:#9a8763;white-space:nowrap;}
   .sceneswitch button.on{background:#aed581;color:#33691e;box-shadow:0 1px 3px #0002;}
   #scene.s-farm .pen{display:none;}
-  #scene.s-ranch .field,#scene.s-ranch .fieldshadow,#scene.s-ranch .groundgrid,#scene.s-ranch .tools{display:none;}
+  #scene.s-ranch #world,#scene.s-ranch .tools{display:none;}
   @media(max-width:760px){ .sceneswitch{top:auto;bottom:96px;} }
   /* 登入畫面 */
   .loginmask{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
@@ -1378,38 +1385,31 @@ function setScene(s){
   if(tr)tr.classList.toggle("on",G.scene==="ranch");
   layout(); saveGame();
 }
-let panX=0, panY=0, fieldScale=1, maxPanX=0, maxPanY=0;
-function applyField(){
-  const f=document.querySelector(".field"), gg=document.querySelector(".groundgrid"), fs=document.querySelector(".fieldshadow");
-  const t="translate("+panX.toFixed(0)+"px,"+panY.toFixed(0)+"px) translate(-50%,-50%) scale("+fieldScale.toFixed(3)+") scaleY(.5) rotate(45deg)";
-  if(f)f.style.transform=t; if(gg)gg.style.transform=t;
-  if(fs)fs.style.transform="translate("+panX.toFixed(0)+"px,"+panY.toFixed(0)+"px) translate(-50%,-50%)";
+/* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
+let panX=0, panY=0;
+const WORLD_W=1400, WORLD_H=1000, FX=700, FY=560;
+function buildWorld(){
+  const sc=document.getElementById("scene"); if(!sc||document.getElementById("world"))return;
+  const world=document.createElement("div"); world.id="world";
+  sc.insertBefore(world, sc.firstChild);
+  sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,#dog").forEach(function(n){world.appendChild(n);});
 }
-function layout(){
+function clampPan(){
   const vw=window.innerWidth, vh=window.innerHeight;
-  const field=document.querySelector(".field"), gg=document.querySelector(".groundgrid"),
-        fs=document.querySelector(".fieldshadow"), pen=document.getElementById("pen");
-  if(!field||!gg||!pen||!fs)return;
-  const narrow=vw<760;
-  const sideBars=narrow?140:150, topBottom=narrow?200:175;
-  const availW=Math.max(180,vw-sideBars), availH=Math.max(150,vh-topBottom);
-  const fitScale=Math.min(availW/725, availH/362);
-  // 至少 0.6 讓格子好點；放不下時就維持較大、靠手指拖移瀏覽
-  fieldScale=Math.max(0.45, Math.min(1, Math.max(fitScale, 0.62)));
-  field.style.left=gg.style.left="50%"; field.style.top=gg.style.top= narrow?"47%":"50%";
-  fs.style.left="50%"; fs.style.top= narrow?"61%":"63%"; fs.style.width=(680*fieldScale).toFixed(0)+"px";
-  // 拖移範圍：田比可視區大多少就能拖多少
-  maxPanX=Math.max(0,(725*fieldScale-availW)/2+50);
-  maxPanY=Math.max(0,(362*fieldScale-availH)/2+50);
-  panX=Math.max(-maxPanX,Math.min(maxPanX,panX));
-  panY=Math.max(-maxPanY,Math.min(maxPanY,panY));
-  applyField();
-  // 牧場
-  const pAvailW=vw-(narrow?30:110);
-  const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
-  const pw=Math.max(240,610*pScale);
-  pen.style.left="50%"; pen.style.top= narrow?"48%":"50%";
-  pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
+  if(WORLD_W<=vw) panX=Math.round((vw-WORLD_W)/2); else panX=Math.max(vw-WORLD_W, Math.min(0, panX));
+  if(WORLD_H<=vh) panY=Math.round((vh-WORLD_H)/2); else panY=Math.max(vh-WORLD_H, Math.min(0, panY));
+}
+function applyWorld(){ const w=document.getElementById("world"); if(w)w.style.transform="translate("+Math.round(panX)+"px,"+Math.round(panY)+"px)"; }
+function centerField(){ panX=window.innerWidth/2-FX; panY=window.innerHeight/2-FY; clampPan(); applyWorld(); }
+function layout(){
+  const vw=window.innerWidth, vh=window.innerHeight, pen=document.getElementById("pen");
+  if(pen){ const narrow=vw<760; const availH=Math.max(150,vh-175);
+    const pAvailW=vw-(narrow?30:110); const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
+    const pw=Math.max(240,610*pScale);
+    pen.style.left="50%"; pen.style.top= narrow?"48%":"50%";
+    pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
+  }
+  clampPan(); applyWorld();
 }
 window.addEventListener("resize",layout);
 window.addEventListener("orientationchange",function(){setTimeout(layout,200);});
@@ -1417,8 +1417,8 @@ window.addEventListener("orientationchange",function(){setTimeout(layout,200);})
 /* ====== 拖移瀏覽田地（手指/滑鼠拖曳平移，點擊不受影響） ====== */
 let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
 function panDown(e){
+  if(G.scene!=="farm")return;
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
-  if(maxPanX<=0&&maxPanY<=0)return;            // 不需要拖移就不攔截
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
@@ -1428,9 +1428,7 @@ function panMove(e){
   if(Math.abs(dx)+Math.abs(dy)>6)panMoved=true;
   if(e.touches&&e.cancelable)e.preventDefault();          // 觸控拖移時阻止頁面捲動（iOS 關鍵）
   if(panMoved){
-    panX=Math.max(-maxPanX,Math.min(maxPanX,panSX+dx));
-    panY=Math.max(-maxPanY,Math.min(maxPanY,panSY+dy));
-    applyField();
+    panX=panSX+dx; panY=panSY+dy; clampPan(); applyWorld();
     if(!e.touches&&e.cancelable)e.preventDefault();
   }
 }
@@ -1447,8 +1445,10 @@ function initPan(){
 }
 
 /* ============ start ============ */
+buildWorld();
 init();
 setScene(G.scene||"farm");
+centerField();
 initPan();
 initAuth();
 setInterval(tick,1500);
