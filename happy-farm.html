@@ -20,9 +20,9 @@
     background:#8bca54 url(background/background.jpg) center/cover no-repeat;}
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
-  #world .groundgrid{left:700px;top:560px;}
-  #world .field{left:700px;top:560px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
-  #world .fieldshadow{left:700px;top:642px;width:680px;transform:translate(-50%,-50%);}
+  #world .groundgrid{display:none;}
+  #world .field{left:455px;top:665px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
+  #world .fieldshadow{left:455px;top:752px;width:700px;transform:translate(-50%,-50%);}
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
     background:
@@ -103,25 +103,25 @@
   }
   .grid{
     display:grid;grid-template-columns:repeat(7,97px);grid-auto-rows:97px;gap:3px;
-    background:#86bf54;padding:4px;border-radius:10px;box-shadow:0 0 0 3px #7caf48;
+    background:transparent;padding:0;
     touch-action:none;
   }
   .field,.groundgrid,.fieldshadow{touch-action:none;}
   /* 注意：手機不要改欄數，否則田會被轉置（方向顛倒）且與地面格線對不上 */
   .plot{
-    position:relative;border-radius:3px;cursor:pointer;z-index:1;touch-action:none;
-    background:
-      radial-gradient(circle at 50% 45%, #8a6240 0 42%, transparent 44%),
-      repeating-linear-gradient(95deg,#7a5436 0 9px,#6b4a2f 9px 18px);
-    box-shadow:inset 0 0 0 1px #5a3c2266, inset 0 -5px 7px #00000033;
+    position:relative;cursor:pointer;z-index:1;touch-action:none;background:transparent;
     display:flex;align-items:center;justify-content:center;transition:filter .15s,transform .08s;
   }
+  /* 等角地磚：用反向變換抵銷 field 的 rotate/scale，讓菱形貼圖正立並無縫拼接 */
+  .plot::before{content:"";position:absolute;left:50%;top:50%;width:142px;height:71px;margin-left:-71px;margin-top:-35.5px;
+    transform:rotate(-45deg) scaleY(2);background:center/100% 100% no-repeat;z-index:-1;pointer-events:none;}
+  .plot.t-grass::before{background-image:url(background/grass.png);}
+  .plot.t-dirt::before{background-image:url(background/lend.png);}
   .plot:active{filter:brightness(1.12);}
-  .plot.untilled{background:radial-gradient(circle at 50% 40%,#9c7a52,#876641);box-shadow:inset 0 0 0 1px #5a3c2244,inset 0 -4px 6px #00000022;}
-  .plot.dry{filter:brightness(1.3) saturate(.55) sepia(.2);}
-  .plot.ripe{z-index:3;box-shadow:inset 0 -5px 7px #00000033,0 0 0 3px #ffe06b,0 0 16px #ffca28;animation:ripepop 1.6s ease-in-out infinite;}
-  .plot.locked{background:radial-gradient(circle at 50% 40%,#9bd45f,#82bd4c);cursor:pointer;box-shadow:inset 0 0 0 1px #6aa83f44;}
-  @keyframes ripepop{0%,100%{box-shadow:inset 0 -5px 7px #00000033,0 0 0 3px #ffe06b,0 0 12px #ffca28;}50%{box-shadow:inset 0 -5px 7px #00000033,0 0 0 4px #fff0a0,0 0 20px #ffd54f;}}
+  .plot.dry{filter:brightness(1.22) saturate(.62) sepia(.18);}
+  .plot.ripe{z-index:3;}
+  .plot.ripe::before{animation:ripeglow 1.6s ease-in-out infinite;}
+  @keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
   .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
   .plot.ripe .crop{animation:cropbounce 1.4s ease-in-out infinite;}
   @keyframes cropsway{0%,100%{rotate:-5deg;}50%{rotate:5deg;}}
@@ -246,7 +246,7 @@
   /* 動物：用圖像取代 emoji，在整個牧場世界內走動 */
   #penGround{position:absolute;inset:0;z-index:2;}
   .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
-  .animal img.abody{display:block;height:64px;width:auto;filter:drop-shadow(0 4px 2px #0004);transition:transform .3s;pointer-events:none;}
+  .animal img.abody{display:block;height:64px;width:auto;filter:drop-shadow(0 4px 2px #0004);pointer-events:none;}
   .animal .bubble{position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-size:22px;opacity:0;
     transition:opacity .25s;pointer-events:none;}
   .animal.ready .bubble{opacity:1;animation:bob 1.1s ease-in-out infinite;}
@@ -969,7 +969,9 @@ function walkAnimal(i){
   const dpx=(p.x-ox)/100*W, dpy=(p.y-oy)/100*H;
   const dist=Math.hypot(dpx,dpy);
   let dur=dist/ANIMAL_SPEED; dur=Math.max(0.6,Math.min(dur,5));
-  // 移動時不做左右翻轉
+  // 水平轉向：依行進方向即時鏡像（無翻面動畫）
+  const body=el.querySelector(".abody");
+  if(body&&Math.abs(p.x-ox)>0.3)body.style.transform="scaleX("+(p.x<ox?-1:1)+")";
   el.style.transition="left "+dur.toFixed(2)+"s linear, top "+dur.toFixed(2)+"s linear";
   s.x=p.x;s.y=p.y;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.zIndex=Math.round(p.y);
   scheduleWalk(i, dur*1000 + 700 + Math.random()*1800); // 抵達後停一下再走
@@ -1041,18 +1043,17 @@ function renderGrid(){
   G.plots.forEach((p,i)=>{
     const d=document.createElement("div");
     if(!p.unlocked){
-      d.className="plot locked";
+      d.className="plot locked t-grass";   // 未開墾＝草地貼圖
       const firstLocked=G.plots.findIndex(x=>!x.unlocked);
       if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</div>';}
       d.onclick=()=>buyLand(i);grid.appendChild(d);return;
     }
-    let cls="plot";let inner="";
+    let cls="plot t-dirt";let inner="";   // 可種植的田＝褐色土地貼圖
     if(p.state==="planted"){
       const c=CROPS[p.crop];const total=c.grow;
       if(p.ripe){inner='<span class="crop">'+c.grown+'</span>';cls+=" ripe";}
       else{const idx=p.grow<total*0.45?0:1;const fs=idx===0?22:30;inner='<span class="crop" style="font-size:'+fs+'px">'+STAGE[idx]+'</span><div class="progress"><i style="width:'+Math.min(100,p.grow/total*100)+'%"></i></div>';}
     }
-    else cls+=" untilled";   // 空地：直接可播種（已移除翻土）
     if(p.dry)cls+=" dry";
     d.className=cls;
     d.innerHTML=inner
@@ -1416,7 +1417,7 @@ function toggleSim(){
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
 let panX=0, panY=0;
-const WORLD_W=1400, WORLD_H=1000, FX=700, FY=560;
+const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 預設視角焦點（讓左下田地與上方景色都看得到）
 function buildWorld(){
   const sc=document.getElementById("scene"); if(!sc||document.getElementById("world"))return;
   const world=document.createElement("div"); world.id="world";
