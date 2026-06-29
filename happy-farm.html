@@ -15,10 +15,11 @@
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
     background:#8bca54;
   }
-  /* 可平移的「世界」：天空＋草地＋田地＋裝飾全在裡面一起連動 */
+  /* 可平移的「世界」：背景改用素材圖；田地與動物疊在上面 */
   #world{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;transform-origin:0 0;will-change:transform;
-    background:linear-gradient(#aee6ff 0 150px,#cdeeff 150px 176px,#9bd35f 176px 252px,#8bca54 252px 1000px);}
-  #world .ground,#world .horizon{display:none;}
+    background:#8bca54 url(background/background.jpg) center/cover no-repeat;}
+  /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
+  #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{left:700px;top:560px;}
   #world .field{left:700px;top:560px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
   #world .fieldshadow{left:700px;top:642px;width:680px;transform:translate(-50%,-50%);}
@@ -235,23 +236,13 @@
   #scene.s-farm .pen{display:none;}
   #scene.s-ranch #world,#scene.s-ranch .tools{display:none;}
 
-  /* ===== 牧場場景：與農場同尺寸(1400×1000)的可平移開放牧場 ===== */
+  /* ===== 牧場場景：與農場同尺寸(1400×1000)，背景改用素材圖 ===== */
   #ranchBg{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;display:none;overflow:hidden;
     transform-origin:0 0;will-change:transform;
-    background:linear-gradient(#bfeaff 0 170px,#d8f3ff 170px 210px,#bfe39a 210px 250px,#a3d56e 250px 360px,#8ec457 360px 1000px);}
+    background:#8bca54 url(background/background.jpg) center/cover no-repeat;}
   #scene.s-ranch #ranchBg{display:block;}
-  #ranchBg .rsun{position:absolute;top:46px;left:120px;width:66px;height:66px;border-radius:50%;
-    background:radial-gradient(circle at 38% 38%,#fff7b8,#ffd23f);box-shadow:0 0 30px #ffd23f99;}
-  #ranchBg .rcloud{position:absolute;font-size:50px;opacity:.95;filter:drop-shadow(0 2px 2px #0001);}
-  #ranchBg .rhill{position:absolute;border-radius:50%/100% 100% 0 0;background:#9ccc63;filter:blur(1px);}
-  #ranchBg .rhill.h1{left:-60px;width:760px;height:170px;top:250px;background:#a7d36e;}
-  #ranchBg .rhill.h2{right:-90px;width:820px;height:200px;top:225px;background:#94c759;}
-  #ranchBg .rbarn{position:absolute;left:70px;top:300px;font-size:120px;filter:drop-shadow(0 8px 5px #0003);}
-  #ranchBg .rtree{position:absolute;filter:drop-shadow(0 7px 4px #0003);}
-  #ranchBg .rtree.t1{right:90px;top:285px;font-size:86px;} #ranchBg .rtree.t2{right:250px;top:330px;font-size:64px;}
-  #ranchBg .rtree.t3{left:430px;top:300px;font-size:60px;} #ranchBg .rtree.t4{right:520px;top:300px;font-size:52px;}
-  #ranchBg .rpond{position:absolute;left:980px;top:720px;width:260px;height:96px;border-radius:50%;
-    background:radial-gradient(circle at 40% 35%,#bfe9ff,#7cc6ef 70%,#5aa9d8);box-shadow:inset 0 4px 10px #ffffff66,0 4px 8px #0002;}
+  /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本 CSS 場景裝飾避免重複 */
+  #ranchBg .rsun,#ranchBg .rcloud,#ranchBg .rhill,#ranchBg .rbarn,#ranchBg .rtree,#ranchBg .rpond{display:none;}
   /* 動物：用圖像取代 emoji，在整個牧場世界內走動 */
   #penGround{position:absolute;inset:0;z-index:2;}
   .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
@@ -936,8 +927,8 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 /* ============ 小牧場（圍欄＋會走動的動物） ============ */
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
 let penNodes=[], penTimers=[];
-// 動物在整個牧場世界(1400×1000)的草地範圍內走動（座標為 #penGround 的百分比）
-const RANCH_X0=6, RANCH_X1=93, RANCH_Y0=37, RANCH_Y1=90;
+// 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
+const RANCH_X0=5, RANCH_X1=95, RANCH_Y0=53, RANCH_Y1=80;
 function clampRanch(x,y){return {x:Math.max(RANCH_X0,Math.min(RANCH_X1,x)), y:Math.max(RANCH_Y0,Math.min(RANCH_Y1,y))};}
 function penPos(){return {x:RANCH_X0+Math.random()*(RANCH_X1-RANCH_X0), y:RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0)};}
 // 從目前位置往附近走一小步（仍在草地範圍內）
@@ -978,8 +969,7 @@ function walkAnimal(i){
   const dpx=(p.x-ox)/100*W, dpy=(p.y-oy)/100*H;
   const dist=Math.hypot(dpx,dpy);
   let dur=dist/ANIMAL_SPEED; dur=Math.max(0.6,Math.min(dur,5));
-  const body=el.querySelector(".abody");
-  if(body&&Math.abs(p.x-ox)>0.3)body.style.transform="scaleX("+(p.x<ox?-1:1)+")";
+  // 移動時不做左右翻轉
   el.style.transition="left "+dur.toFixed(2)+"s linear, top "+dur.toFixed(2)+"s linear";
   s.x=p.x;s.y=p.y;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.zIndex=Math.round(p.y);
   scheduleWalk(i, dur*1000 + 700 + Math.random()*1800); // 抵達後停一下再走
