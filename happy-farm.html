@@ -21,7 +21,7 @@
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{display:none;}
-  #world .field{left:455px;top:665px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
+  #world .field{left:455px;top:665px;transform:translate(-50%,-50%) scaleY(.5) rotate(225deg);}
   #world .fieldshadow{left:455px;top:752px;width:700px;transform:translate(-50%,-50%);}
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -99,7 +99,7 @@
   .fieldshadow{position:absolute;left:28%;top:73%;width:680px;height:120px;transform:translate(-50%,-50%);
     background:radial-gradient(closest-side,#00000030,transparent 72%);border-radius:50%;filter:blur(5px);z-index:1;}
   .field{
-    position:absolute;left:28%;top:56%;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);z-index:2;
+    position:absolute;left:28%;top:56%;transform:translate(-50%,-50%) scaleY(.5) rotate(225deg);z-index:2;
   }
   .grid{
     display:grid;grid-template-columns:repeat(6,97px);grid-auto-rows:97px;gap:3px;
@@ -114,7 +114,7 @@
   }
   /* 等角地磚：用反向變換抵銷 field 的 rotate/scale，讓菱形貼圖正立並無縫拼接 */
   .plot::before{content:"";position:absolute;left:50%;top:50%;width:150px;height:75px;margin-left:-75px;margin-top:-37.5px;
-    transform:rotate(-45deg) scaleY(2);background:center/100% 100% no-repeat;z-index:-1;pointer-events:none;}
+    transform:rotate(-225deg) scaleY(2);background:center/100% 100% no-repeat;z-index:-1;pointer-events:none;}
   .plot.t-grass::before{background-image:url(background/grass.png);}
   .plot.t-dirt::before{background-image:url(background/lend.png);}
   .plot:active{filter:brightness(1.12);}
@@ -122,21 +122,21 @@
   .plot.ripe{z-index:3;}
   .plot.ripe::before{animation:ripeglow 1.6s ease-in-out infinite;}
   @keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
-  .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
+  .crop{font-size:34px;line-height:1;transform:rotate(-225deg) scaleY(2) translateY(-5px);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
   .plot.ripe .crop{animation:cropbounce 1.4s ease-in-out infinite;}
   @keyframes cropsway{0%,100%{rotate:-5deg;}50%{rotate:5deg;}}
   @keyframes cropbounce{0%,100%{scale:1;}50%{scale:1.14;}}
   @media(max-width:560px){.crop{font-size:34px;}}
-  .ov{position:absolute;font-size:16px;pointer-events:none;transform:rotate(-45deg) scaleY(2);}
+  .ov{position:absolute;font-size:16px;pointer-events:none;transform:rotate(-225deg) scaleY(2);}
   .ov.dry{top:1px;left:3px;}
   .ov.weed{bottom:0px;left:2px;}
   .ov.bug{top:0px;right:2px;}
-  .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2);}
+  .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-225deg) scaleY(2);}
   .progress>i{display:block;height:100%;background:linear-gradient(90deg,#ffe082,#ffb300);}
   .signpost{
     position:absolute;left:50%;top:50%;font-size:8.5px;line-height:1.15;font-weight:800;color:#5a3a1a;background:#f3e2b8ee;
     border:2px solid #b88a3e;border-radius:7px;padding:2px 5px;white-space:nowrap;
-    transform-origin:center;transform:translate(-50%,-50%) rotate(-45deg) scaleY(2);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
+    transform-origin:center;transform:translate(-50%,-50%) rotate(-225deg) scaleY(2);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
   }
 
   /* 左上 HUD */
@@ -281,12 +281,23 @@
   .scell{width:58px;height:58px;border:3px solid #d9c9a6;border-radius:12px;background:#fffef6;
     display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:inset 0 2px 5px #0001;transition:.2s;}
   .scell.win{border-color:#ffca28;background:#fff7d6;box-shadow:0 0 12px #ffca28;transform:scale(1.06);}
-  /* 底部按鈕變多：窄畫面可橫向捲動 */
-  @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;}
-    .field,.groundgrid,.fieldshadow{left:50%!important;}
-    .tools{gap:6px;} .tools .tool{width:46px;height:46px;font-size:21px;}
-    .leftbar{gap:6px;} .leftbar .lbtn{width:46px;height:46px;font-size:21px;}
-  }
+  /* 左側功能：桌機常駐展開、隱藏摺疊鈕 */
+  .leftbar .lbtoggle{display:none;}
+  .lbitems{display:flex;flex-direction:column;gap:8px;}
+  /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
+  body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
+  /* 底部選單：改成可左右滑動 */
+  body.narrow .dock{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;scroll-snap-type:x proximity;}
+  body.narrow .dock::-webkit-scrollbar{display:none;}
+  body.narrow .dock .grp{flex-shrink:0;} body.narrow .dbtn{flex-shrink:0;scroll-snap-align:center;}
+  /* 左側功能：摺疊成選單，點「功能」展開 */
+  body.narrow .leftbar .lbtoggle{display:flex;}
+  body.narrow .leftbar .lbtn{width:46px;height:46px;font-size:21px;}
+  body.narrow .leftbar .lbitems{display:none;}
+  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  /* 仍保留媒體查詢做為後備（真手機） */
+  @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
   /* Modal / 通用 */
   .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
@@ -410,11 +421,14 @@
   <!-- 右側工具 -->
   <div class="tools" id="tools"></div>
 
-  <!-- 左側功能（每日 / 拉霸 / 股市） -->
-  <div class="leftbar">
-    <div class="lbtn" onclick="openDaily()">🎁<small>每日</small></div>
-    <div class="lbtn" onclick="openSlot()">🎰<small>拉霸</small></div>
-    <div class="lbtn" onclick="openStocks()">📈<small>股市</small></div>
+  <!-- 左側功能（每日 / 拉霸 / 股市）；手機版摺疊成選單 -->
+  <div class="leftbar" id="leftbar">
+    <div class="lbtn lbtoggle" onclick="toggleLeftbar()">🎯<small>功能</small></div>
+    <div class="lbitems" id="lbItems">
+      <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
+      <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
+      <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
+    </div>
   </div>
 
   <!-- 紀錄按鈕＋面板 -->
@@ -1043,6 +1057,8 @@ function renderGrid(){
   const grid=document.getElementById("grid");grid.innerHTML="";
   G.plots.forEach((p,i)=>{
     const d=document.createElement("div");
+    // 田地已旋轉180°：依格位設定堆疊順序，讓前方(畫面下方)地磚蓋住後方
+    d.style.zIndex = 60 - ((i%6) + Math.floor(i/6));
     if(!p.unlocked){
       d.className="plot locked t-grass";   // 未開墾＝草地貼圖
       const firstLocked=G.plots.findIndex(x=>!x.unlocked);
@@ -1384,6 +1400,8 @@ function showM(h){document.getElementById("modal").innerHTML=h;document.getEleme
 function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
+function toggleLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.toggle("open");}
+function closeLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.remove("open");}
 let logCount=0;
 function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<span class="'+cls+'">'+t+'</span>';else p.innerHTML=t;const l=document.getElementById("logList");l.prepend(p);logCount++;if(logCount>60&&l.lastChild)l.removeChild(l.lastChild);}
 let toastT;
@@ -1436,6 +1454,7 @@ function applyWorld(){ const t="translate("+Math.round(panX)+"px,"+Math.round(pa
 function centerField(){ panX=VW()/2-FX; panY=VH()/2-FY; clampPan(); applyWorld(); }
 function layout(){
   applySimScale();
+  document.body.classList.toggle("narrow", VW()<=760);   // 手機/模擬器：套用窄版選單樣式
   const vw=VW(), vh=VH(), pen=document.getElementById("pen");
   if(pen){ const narrow=vw<760; const availH=Math.max(150,vh-175);
     const pAvailW=vw-(narrow?30:110); const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
@@ -1452,6 +1471,8 @@ window.addEventListener("orientationchange",function(){setTimeout(layout,200);})
 let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
 function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
+  // 觸碰到 UI（底部選單、左右功能列、HUD…）時不啟動拖曳，讓選單可正常滑動/點擊
+  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn'))return;
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
@@ -1487,7 +1508,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok */
+/* build-ok r2 */
 </script>
 </body>
 </html>
