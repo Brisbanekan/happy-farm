@@ -102,7 +102,7 @@
     position:absolute;left:28%;top:56%;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);z-index:2;
   }
   .grid{
-    display:grid;grid-template-columns:repeat(7,97px);grid-auto-rows:97px;gap:3px;
+    display:grid;grid-template-columns:repeat(6,97px);grid-auto-rows:97px;gap:3px;
     background:transparent;padding:0;
     touch-action:none;
   }
@@ -478,11 +478,12 @@ const CROPS = {
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
+/* 6×3 = 18 塊地：前 6 塊免費開通，其餘 12 塊依等級/金幣解鎖 */
 const LANDS = [
   {price:0,lvl:1},{price:0,lvl:1},{price:0,lvl:1},{price:0,lvl:1},{price:0,lvl:1},{price:0,lvl:1},
   {price:10000,lvl:5},{price:20000,lvl:7},{price:30000,lvl:9},{price:50000,lvl:11},{price:80000,lvl:13},{price:120000,lvl:15},
   {price:160000,lvl:17},{price:200000,lvl:19},{price:260000,lvl:21},
-  {price:320000,lvl:23},{price:400000,lvl:25},{price:500000,lvl:27},{price:650000,lvl:29},{price:850000,lvl:31},{price:1100000,lvl:33}
+  {price:320000,lvl:23},{price:400000,lvl:25},{price:500000,lvl:27}
 ];
 const ANIMALS = {
   chick:{name:"小雞", emoji:"🐔", prod:"🥚", cost:200,  time:20, yield:48,  xp:4,  lvl:1},
