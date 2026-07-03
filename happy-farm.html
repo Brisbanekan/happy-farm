@@ -21,11 +21,12 @@
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{display:none;}
-  #world .field{left:500px;top:690px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
-  #world .fieldshadow{left:500px;top:775px;width:560px;transform:translate(-50%,-50%);}
-  /* 建築物（家 / 倉庫）：素材圖，放在田地後方 */
+  #world .field{left:450px;top:790px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
+  #world .fieldshadow{left:450px;top:875px;width:560px;transform:translate(-50%,-50%);}
+  /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
   #world .bld.storage{left:18px;top:330px;width:400px;}
-  #world .bld.house{left:855px;top:355px;width:400px;}
+  #world .bld.bhouse{left:855px;top:355px;width:400px;}
+  .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
     background:
@@ -94,7 +95,7 @@
     transform:translateX(-50%) scaleY(.7);opacity:.8;}
   /* 白色柵欄 */
   .fence{position:absolute;left:0;right:0;height:26px;display:flex;justify-content:space-around;pointer-events:none;}
-  .fence.bottom{bottom:90px;}
+  .fence.bottom{bottom:90px;display:none;}   /* 暫時移除底部白柵欄 */
   .fence span{width:10px;background:#fff;border:1px solid #cbb;border-radius:3px 3px 0 0;position:relative;box-shadow:0 1px 2px #0002;}
   .fence span::after{content:"";position:absolute;left:-6px;right:-6px;top:7px;height:5px;background:#fff;border:1px solid #cbb;border-radius:2px;}
 
@@ -260,6 +261,13 @@
   /* 牧場頂部資訊列（固定，不隨世界平移）＋ 加動物按鈕 */
   .ranchui{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:24;display:none;align-items:center;gap:8px;}
   #scene.s-ranch .ranchui{display:flex;}
+  body.narrow .ranchui{top:12px;}   /* 手機：牧場數量提示移到背景上方 */
+  /* 放大/縮小按鈕 */
+  .zoomctrl{position:absolute;right:10px;bottom:100px;z-index:26;display:flex;flex-direction:column;gap:7px;}
+  .zbtn{width:42px;height:42px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;color:#7a5a10;
+    font-size:22px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;box-shadow:0 3px 0 #e0c389;user-select:none;}
+  .zbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
   .ranchui .rlabel{font-size:13px;font-weight:800;color:#5b3f17;background:#ffffffe0;padding:4px 12px;border-radius:12px;box-shadow:0 2px 5px #0002;white-space:nowrap;}
   .ranchui .radd{width:34px;height:34px;border-radius:50%;background:#fffef6;border:2px solid #f0c544;color:#c9920f;
     font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
@@ -420,7 +428,7 @@
 
   <!-- 建築物（家 / 倉庫） -->
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
-  <div class="bld house"><img src="building/house.png" alt="家"></div>
+  <div class="bld bhouse"><img src="building/house.png" alt="家"></div>
 
   <!-- 田地 -->
   <div class="fieldshadow"></div>
@@ -433,6 +441,12 @@
 
   <!-- 右側工具 -->
   <div class="tools" id="tools"></div>
+
+  <!-- 放大 / 縮小畫面 -->
+  <div class="zoomctrl">
+    <div class="zbtn" onclick="zoomIn()">＋</div>
+    <div class="zbtn" onclick="zoomOut()">－</div>
+  </div>
 
   <!-- 左側功能（每日 / 拉霸 / 股市）；手機版摺疊成選單 -->
   <div class="leftbar" id="leftbar">
@@ -1290,7 +1304,7 @@ function friendTap(idx){
 const DOG_FEED_MS=12*3600*1000; // 餵一次飽 12 小時
 function dogFed(){return !!(G.dog && G.dog.fedUntil && G.dog.fedUntil>Date.now());}
 function dogFedLeftText(){if(!dogFed())return"";const ms=G.dog.fedUntil-Date.now();const hh=Math.floor(ms/3600000);const mm=Math.floor((ms%3600000)/60000);return hh>0?(hh+" 小時 "+mm+" 分"):(mm+" 分");}
-function dogBiteChance(lv){return Math.min(0.9, 0.30+((lv||1)-1)*0.13);} // Lv1=30%…Lv5=82%
+function dogBiteChance(lv){return Math.min(0.55, 0.30+((lv||1)-1)*0.0625);} // Lv1=30%…Lv5=55%（最高5等、最高55%）
 function dogUpCost(lv){return 3000*(lv||1);}
 function openDog(){
   let h='<h2>🐕 養狗 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 <span class=coinico></span> 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
@@ -1451,16 +1465,27 @@ function toggleSim(){
 }
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
-let panX=0, panY=0, worldScale=1;
-const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 桌機預設視角焦點
-const FFX=500, FFY=690;                            // 手機置中焦點（田地中心）
+let panX=0, panY=0, worldScale=1, userZoom=1;
+const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 桌機預設視角焦點（維持原樣）
+const FFX=450, FFY=430;                            // 手機置中焦點（偏上：太陽＋田地都看得到）
 function isNarrow(){ return VW()<=760; }
-// 手機：把整個世界縮放到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
-function computeWorldScale(){
+// 基礎縮放：手機把世界縮到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
+function computeBaseScale(){
   if(!isNarrow()) return 1;
   const s=Math.min(VW()/820, VH()/760);   // 讓田地夠大又看得到周邊
   return Math.max(0.4, Math.min(s, 0.95));
 }
+// 使用者放大/縮小畫面
+function setZoom(mult){
+  const oldS=worldScale||1;
+  const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;   // 視窗中心對應的世界座標
+  userZoom=Math.max(0.6, Math.min(userZoom*mult, 2.2));
+  worldScale=computeBaseScale()*userZoom;
+  panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
+  clampPan(); applyWorld();
+}
+function zoomIn(){ setZoom(1.2); }
+function zoomOut(){ setZoom(1/1.2); }
 function buildWorld(){
   const sc=document.getElementById("scene"); if(!sc||document.getElementById("world"))return;
   const world=document.createElement("div"); world.id="world";
@@ -1480,7 +1505,7 @@ function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY
 function layout(){
   applySimScale();
   document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
-  worldScale=computeWorldScale();
+  worldScale=computeBaseScale()*userZoom;
   clampPan(); applyWorld();
 }
 window.addEventListener("resize",function(){ layout(); if(isNarrow())centerField(); });
@@ -1491,7 +1516,7 @@ let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd
 function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
   // 觸碰到 UI（底部選單、左右功能列、HUD…）時不啟動拖曳，讓選單可正常滑動/點擊
-  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.zoomctrl,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn'))return;
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
