@@ -207,6 +207,15 @@
     background:none;z-index:20;padding:0 10px;   /* 取消綠色底條，只留按鈕 */
   }
   .dock .sp{display:none;}
+  /* ===== 避開手機瀏海 / 圓角安全區（真機用 env()，模擬器左側假瀏海用 body.sim 位移） ===== */
+  .hud{left:calc(10px + env(safe-area-inset-left));}
+  .leftbar{left:calc(8px + env(safe-area-inset-left));}
+  .logbtn{left:calc(10px + env(safe-area-inset-left));}
+  .tools{right:calc(8px + env(safe-area-inset-right));}
+  .sceneswitch{top:calc(8px + env(safe-area-inset-top));}
+  .dock{padding-left:calc(10px + env(safe-area-inset-left));padding-right:calc(10px + env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom);}
+  body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
+  body.sim .dock{padding-left:46px;}
   .dock .grp{display:flex;gap:7px;align-items:center;}
   .dock .sp{width:3px;height:42px;background:#ffffff77;border-radius:3px;margin:0 4px;}
   .dbtn{
@@ -1490,12 +1499,15 @@ function computeBaseScale(){
   const s=Math.min(VW()/820, VH()/760);   // 讓田地夠大又看得到周邊
   return Math.max(0.4, Math.min(s, 0.95));
 }
+// 縮到最小＝背景剛好填滿螢幕（不再露出綠色）
+function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
+function calcWorldScale(){ const s=computeBaseScale()*userZoom; return isNarrow()? Math.max(s, coverScale()) : s; }
 // 使用者放大/縮小畫面
 function setZoom(mult){
   const oldS=worldScale||1;
   const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;   // 視窗中心對應的世界座標
   userZoom=Math.max(0.6, Math.min(userZoom*mult, 2.2));
-  worldScale=computeBaseScale()*userZoom;
+  worldScale=calcWorldScale();
   panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
   clampPan(); applyWorld();
 }
@@ -1520,7 +1532,7 @@ function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY
 function layout(){
   applySimScale();
   document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
-  worldScale=computeBaseScale()*userZoom;
+  worldScale=calcWorldScale();
   clampPan(); applyWorld();
 }
 window.addEventListener("resize",function(){ layout(); if(isNarrow())centerField(); });
@@ -1535,7 +1547,7 @@ function pinchZoom(ratio){
   const oldS=worldScale||1;
   const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;
   userZoom=Math.max(0.6, Math.min(userZoom*ratio, 2.4));
-  worldScale=computeBaseScale()*userZoom;
+  worldScale=calcWorldScale();
   panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
   clampPan(); applyWorld();
 }
