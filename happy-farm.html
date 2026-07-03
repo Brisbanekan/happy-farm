@@ -308,7 +308,11 @@
   /* Modal / 通用 */
   .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
   .mask.on{display:flex;}
-  .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84vh;overflow:auto;border:3px solid #d7ccc8;}
+  .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:auto;border:3px solid #d7ccc8;}
+  /* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
+  body.narrow .modal{max-width:none;}
+  body.narrow .modal h2{font-size:15px;padding:11px 13px;}
+  body.narrow .modal .body{padding:11px 12px;}
   .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;}
   .modal .body{padding:14px 16px;}
   .x{cursor:pointer;font-size:22px;line-height:1;border:none;background:none;color:#8d7b6a;}
@@ -422,10 +426,9 @@
   <div class="fieldshadow"></div>
   <div class="field"><div class="grid" id="grid"></div></div>
 
-  <!-- 牧場頂部資訊列（固定，不隨世界平移） -->
+  <!-- 牧場頂部資訊列（固定，不隨世界平移）；購買動物已移到商店 -->
   <div class="ranchui">
     <div class="rlabel" id="penLabel">🐾 牧場</div>
-    <div class="radd" onclick="openRanch()" title="牧場管理">＋</div>
   </div>
 
   <!-- 右側工具 -->
@@ -463,9 +466,11 @@
       <div class="dbtn" onclick="openHelp()">❓<small>玩法</small></div>
     </div>
   </div>
+
+  <!-- 彈跳視窗（置於 scene 內，手機模擬器才會限制在框內、自適應大小） -->
+  <div class="mask" id="mask"><div class="modal" id="modal"></div></div>
 </div>
 
-<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 
 <!-- 登入畫面（啟用帳號登入時才顯示） -->
@@ -1017,42 +1022,20 @@ function clearPen(){
 }
 function sellRefund(k){return Math.floor(ANIMALS[k].cost*0.5);}
 function animalIcon(k){const img=ANIMAL_IMG[k];return img?'<span class="e"><img src="'+img.b+'" style="height:34px;width:auto;vertical-align:middle"></span>':'<span class="e">'+ANIMALS[k].emoji+'</span>';}
-function openRanch(){
-  const cap=ranchCap();
-  let h='<h2>🐾 牧場 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
-  if(G.ranch.length){
-    h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
-    G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
-      h+='<div class="shopitem">'+animalIcon(s.a)+'<div class="meta"><b>'+a.name+'</b>'+
-        '<div>'+(s.ready?'✅ 可收成 <span class=coinico></span>'+a.yield:'生產中…')+'</div></div>'+
-        '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 <span class=coinico></span>'+sellRefund(s.a)+'</button></div>';
-    });
-    h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
-  }
-  h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">購買動物</div>'+
-    '<p class="hint">動物會在整個牧場裡自由走動並定時生產，產物出現時點一下動物即可收成換 <span class=coinico></span>。售出可回收一半購買金。'+
-    (G.ranch.length>=cap?'<br><span class="locktag">牧場已滿，提升等級可增加容量。</span>':'')+'</p>';
-  Object.entries(ANIMALS).forEach(([k,a])=>{
-    const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
-    h+='<div class="shopitem">'+animalIcon(k)+'<div class="meta"><b>'+a.name+'</b>'+
-      '<div>每 '+a.time+'s 產 '+a.prod+' ＝ <span class=coinico></span>'+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
-      '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'><span class=coinico></span>'+a.cost+'</button></div>';
-  });
-  h+='</div>';showM(h);
-}
+function openRanch(){ openShop('animal'); }   // 牧場管理已整合進商店的「動物」分頁
 function buyAnimal(k){
   const a=ANIMALS[k];const cap=ranchCap();
   if(G.level<a.lvl||G.gold<a.cost||G.ranch.length>=cap)return;
   G.gold-=a.cost;G.ranch.push({a:k,prod:0,ready:false,x:null,y:null});
   log("買了 "+a.emoji+a.name+" 放進牧場 🐾","g");toast("歡迎 "+a.emoji+a.name);
-  renderHUD();renderPen();saveGame();openRanch();
+  renderHUD();renderPen();saveGame();openShop('animal');
 }
 function sellAnimal(i){
   const s=G.ranch[i];if(!s)return;const a=ANIMALS[s.a];const refund=sellRefund(s.a);
   G.ranch.splice(i,1);G.gold+=refund;
   clearPen();renderPen();renderHUD();saveGame();
   log("售出 "+a.emoji+a.name+"，回收 <span class=coinico></span>"+refund,"g");toast("售出 +<span class=coinico></span>"+refund);
-  openRanch();
+  openShop('animal');
 }
 function renderHUD(){
   document.getElementById("goldChip").innerHTML='<span class=coinico></span> '+G.gold;
@@ -1166,7 +1149,30 @@ function openShop(tab){
   let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="body"><div class="tabs">'+
     '<button class="'+(tab==='crop'?'on':'')+'" onclick="openShop(\'crop\')">🌾 農作物</button>'+
     '<button class="'+(tab==='flower'?'on':'')+'" onclick="openShop(\'flower\')">🌸 花卉</button>'+
-    '<button class="'+(tab==='fert'?'on':'')+'" onclick="openShop(\'fert\')">🧴 道具/肥料</button></div>';
+    '<button class="'+(tab==='fert'?'on':'')+'" onclick="openShop(\'fert\')">🧴 道具/肥料</button>'+
+    '<button class="'+(tab==='animal'?'on':'')+'" onclick="openShop(\'animal\')">🐮 動物</button></div>';
+  if(tab==="animal"){
+    const cap=ranchCap();
+    if(G.ranch.length){
+      h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
+      G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
+        h+='<div class="shopitem">'+animalIcon(s.a)+'<div class="meta"><b>'+a.name+'</b>'+
+          '<div>'+(s.ready?'✅ 可收成 '+CO+a.yield:'生產中…')+'</div></div>'+
+          '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 '+CO+sellRefund(s.a)+'</button></div>';
+      });
+      h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
+    }
+    h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">購買動物</div>'+
+      '<p class="hint">買下的動物會在「🐮 牧場」分頁裡自由走動並定時生產，產物出現時點一下動物即可收成換 '+CO+'。售出可回收一半購買金。'+
+      (G.ranch.length>=cap?'<br><span class="locktag">牧場已滿，提升等級可增加容量。</span>':'')+'</p>';
+    Object.entries(ANIMALS).forEach(([k,a])=>{
+      const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
+      h+='<div class="shopitem">'+animalIcon(k)+'<div class="meta"><b>'+a.name+'</b>'+
+        '<div>每 '+a.time+'s 產 '+a.prod+' ＝ '+CO+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
+        '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'>'+CO+a.cost+'</button></div>';
+    });
+    h+='</div>';showM(h);return;
+  }
   if(tab==="fert"){
     Object.entries(FERTS).forEach(([k,f])=>{const cur=f.cur==="blue"?"💎":"<span class=coinico></span>";const can=f.cur==="blue"?G.credit>=f.cost:G.gold>=f.cost;
       h+='<div class="shopitem"><span class="e">'+f.emoji+'</span><div class="meta"><b>'+f.name+'</b><div>'+f.desc+'</div></div><button class="pbtn '+(f.cur==="blue"?"blue":"gold")+'" onclick="buyFert(\''+k+'\')" '+(can?'':'disabled')+'>'+cur+f.cost+'</button></div>';});
@@ -1312,7 +1318,7 @@ function openHelp(){
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
   '<b>偷菜</b>：👑好友 → 進別人農場，✋偷成熟作物（每塊最多 2 次），也可幫忙賺經驗。<br><br>'+
   '<b>養狗</b>：🐕餵一次飽 12 小時，期間會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
-  '<b>🐾 牧場</b>：切到「🐮 牧場」分頁，這是一片和農場一樣大的開放草原，按頂部 ＋ 放入動物（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）。動物會在整片草原自由走動並定時生產，產物出現在頭上時點一下動物即可收成換 <span class=coinico></span>。可拖移瀏覽，容量隨等級提升。<br><br>'+
+  '<b>🐾 牧場</b>：切到「🐮 牧場」分頁看你的動物在草原走動。動物到 🛒 商店 → 🐮 動物 分頁購買（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）；產物出現在動物頭上時點一下即可收成換 <span class=coinico></span>。可拖移瀏覽，容量隨等級提升。<br><br>'+
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
   '<b>💎 鑽石怎麼來</b>：每次升級 +💎1；每天首次登入 +💎2。鑽石可買高級肥料、大蟲殺蟲劑、看門狗。<br><br>'+
   '<b>❤️ 魅力怎麼來</b>：種花收成（康乃馨 +1、鬱金香 +2）、每次升級 +❤️2、每日登入 +❤️3。<br><br>'+
@@ -1445,8 +1451,16 @@ function toggleSim(){
 }
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
-let panX=0, panY=0;
-const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 預設視角焦點（讓左下田地與上方景色都看得到）
+let panX=0, panY=0, worldScale=1;
+const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 桌機預設視角焦點
+const FFX=500, FFY=690;                            // 手機置中焦點（田地中心）
+function isNarrow(){ return VW()<=760; }
+// 手機：把整個世界縮放到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
+function computeWorldScale(){
+  if(!isNarrow()) return 1;
+  const s=Math.min(VW()/820, VH()/760);   // 讓田地夠大又看得到周邊
+  return Math.max(0.4, Math.min(s, 0.95));
+}
 function buildWorld(){
   const sc=document.getElementById("scene"); if(!sc||document.getElementById("world"))return;
   const world=document.createElement("div"); world.id="world";
@@ -1454,28 +1468,23 @@ function buildWorld(){
   sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,.bld,#dog").forEach(function(n){world.appendChild(n);});
 }
 function clampPan(){
-  const vw=VW(), vh=VH();
-  if(WORLD_W<=vw) panX=Math.round((vw-WORLD_W)/2); else panX=Math.max(vw-WORLD_W, Math.min(0, panX));
-  if(WORLD_H<=vh) panY=Math.round((vh-WORLD_H)/2); else panY=Math.max(vh-WORLD_H, Math.min(0, panY));
+  const vw=VW(), vh=VH(), ww=WORLD_W*worldScale, wh=WORLD_H*worldScale;
+  if(ww<=vw) panX=Math.round((vw-ww)/2); else panX=Math.max(vw-ww, Math.min(0, panX));
+  if(wh<=vh) panY=Math.round((vh-wh)/2); else panY=Math.max(vh-wh, Math.min(0, panY));
 }
-function applyWorld(){ const t="translate("+Math.round(panX)+"px,"+Math.round(panY)+"px)";
+function applyWorld(){ const t="translate("+Math.round(panX)+"px,"+Math.round(panY)+"px) scale("+worldScale.toFixed(3)+")";
   const w=document.getElementById("world"); if(w)w.style.transform=t;
   const rb=document.getElementById("ranchBg"); if(rb)rb.style.transform=t; }
-function centerField(){ panX=VW()/2-FX; panY=VH()/2-FY; clampPan(); applyWorld(); }
+function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY;
+  panX=VW()/2 - fx*worldScale; panY=VH()/2 - fy*worldScale; clampPan(); applyWorld(); }
 function layout(){
   applySimScale();
-  document.body.classList.toggle("narrow", VW()<=760);   // 手機/模擬器：套用窄版選單樣式
-  const vw=VW(), vh=VH(), pen=document.getElementById("pen");
-  if(pen){ const narrow=vw<760; const availH=Math.max(150,vh-175);
-    const pAvailW=vw-(narrow?30:110); const pScale=Math.min(1,Math.min(pAvailW/610, availH/340));
-    const pw=Math.max(240,610*pScale);
-    pen.style.left="50%"; pen.style.top= narrow?"48%":"50%";
-    pen.style.width=pw.toFixed(0)+"px"; pen.style.height=(pw*340/610).toFixed(0)+"px";
-  }
+  document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
+  worldScale=computeWorldScale();
   clampPan(); applyWorld();
 }
-window.addEventListener("resize",layout);
-window.addEventListener("orientationchange",function(){setTimeout(layout,200);});
+window.addEventListener("resize",function(){ layout(); if(isNarrow())centerField(); });
+window.addEventListener("orientationchange",function(){setTimeout(function(){layout();centerField();},200);});
 
 /* ====== 拖移瀏覽田地（手指/滑鼠拖曳平移，點擊不受影響） ====== */
 let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
