@@ -270,9 +270,15 @@
   /* 動物：用圖像取代 emoji，在整個牧場世界內走動 */
   #penGround{position:absolute;inset:0;z-index:2;}
   /* 牧場圍籬（400×800），動物都在裡面走動 */
+  /* 用木格柵素材拼成 800×400 圍欄 */
   #ranchBg .ranchpen{position:absolute;left:300px;top:400px;width:800px;height:400px;z-index:1;
-    border:9px solid #9c6a30;border-radius:16px;background:rgba(120,150,70,0.16);
-    box-shadow:inset 0 0 0 4px #caa46a, inset 0 0 40px #00000018, 0 6px 14px #0003;}
+    background:radial-gradient(120% 90% at 50% 60%, rgba(190,215,120,.14), rgba(150,185,90,.05) 70%, transparent);border-radius:10px;}
+  #ranchBg .ranchpen .pf{position:absolute;pointer-events:none;}
+  #ranchBg .ranchpen .pt{left:-24px;right:-24px;top:-40px;height:78px;background:url(building/ffront.png) repeat-x;background-size:auto 100%;opacity:.97;}
+  #ranchBg .ranchpen .pl{top:-40px;bottom:-40px;left:-30px;width:64px;background:url(building/fside.png) repeat-y;background-size:100% auto;}
+  #ranchBg .ranchpen .pr{top:-40px;bottom:-40px;right:-30px;width:64px;background:url(building/fside.png) repeat-y;background-size:100% auto;}
+  #ranchBg .ranchpenfront{position:absolute;left:272px;top:762px;width:856px;height:82px;z-index:3;pointer-events:none;
+    background:url(building/ffront.png) repeat-x;background-size:auto 100%;filter:drop-shadow(0 4px 3px #0003);}
   .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
   .animal img.abody{display:block;height:64px;width:auto;filter:drop-shadow(0 4px 2px #0004);pointer-events:none;}
   .animal .bubble{position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-size:22px;opacity:0;
@@ -395,8 +401,9 @@
     <div class="rtree t3">🌳</div>
     <div class="rtree t4">🌲</div>
     <div class="rpond"></div>
-    <div class="ranchpen"></div>
+    <div class="ranchpen"><div class="pf pt"></div><div class="pf pl"></div><div class="pf pr"></div></div>
     <div id="penGround"></div>
+    <div class="ranchpenfront"></div>
   </div>
   <!-- 地面 -->
   <div class="ground"></div>
