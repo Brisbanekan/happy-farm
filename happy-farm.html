@@ -261,7 +261,7 @@
   /* 動物：用圖像取代 emoji，在整個牧場世界內走動 */
   #penGround{position:absolute;inset:0;z-index:2;}
   /* 牧場圍籬（400×800），動物都在裡面走動 */
-  #ranchBg .ranchpen{position:absolute;left:500px;top:120px;width:400px;height:760px;z-index:1;
+  #ranchBg .ranchpen{position:absolute;left:300px;top:400px;width:800px;height:400px;z-index:1;
     border:9px solid #9c6a30;border-radius:16px;background:rgba(120,150,70,0.16);
     box-shadow:inset 0 0 0 4px #caa46a, inset 0 0 40px #00000018, 0 6px 14px #0003;}
   .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
@@ -987,7 +987,7 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
 let penNodes=[], penTimers=[];
 // 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
-const RANCH_X0=38, RANCH_X1=62, RANCH_Y0=16, RANCH_Y1=84;   // 動物活動範圍＝圍籬(500~900, 120~880)內側
+const RANCH_X0=24, RANCH_X1=76, RANCH_Y0=44, RANCH_Y1=76;   // 動物活動範圍＝圍籬(300~1100, 400~800)內側
 function clampRanch(x,y){return {x:Math.max(RANCH_X0,Math.min(RANCH_X1,x)), y:Math.max(RANCH_Y0,Math.min(RANCH_Y1,y))};}
 function penPos(){return {x:RANCH_X0+Math.random()*(RANCH_X1-RANCH_X0), y:RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0)};}
 // 從目前位置往附近走一小步（仍在草地範圍內）
