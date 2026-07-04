@@ -503,9 +503,8 @@
     </div>
     <div class="sp"></div>
     <div class="grp">
-      <div class="dbtn" onclick="openInv('seeds')">🎒<small>種子</small></div>
       <div class="dbtn" onclick="openShop()">🛒<small>商店</small></div>
-      <div class="dbtn" onclick="openInv('harvest')">🏚️<small>倉庫</small></div>
+      <div class="dbtn" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
       <div class="dbtn" onclick="openCloud()">☁️<small>同步</small></div>
       <div class="dbtn" onclick="openHelp()">❓<small>玩法</small></div>
     </div>
@@ -1129,7 +1128,7 @@ function renderGrid(){
   G.plots.forEach((p,i)=>{
     const d=document.createElement("div");
     // 田地已旋轉180°：依格位設定堆疊順序，讓前方(畫面下方)地磚蓋住後方
-    d.style.zIndex = 1 + (i%3) + Math.floor(i/3) + ((p.unlocked&&(p.ripe||p.dry||p.weed||p.bug))?12:0);   // 前方地磚蓋住後方；有狀態圖示/發光的田拉到最上層，避免被鄰田蓋住
+    d.style.zIndex = 1 + (i%3) + Math.floor(i/3);   // 前方(畫面下方)地磚蓋住後方（狀態泡泡朝上方漂浮，不會被前排蓋住）
     if(!p.unlocked){
       d.className="plot locked t-grass";   // 未開墾＝草地貼圖
       const firstLocked=G.plots.findIndex(x=>!x.unlocked);
@@ -1813,7 +1812,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r7：田地狀態改對話泡泡顯示 */
+/* build-ok r8：取消狀態田 z-index 拉高、種子與倉庫按鈕合併 */
 </script>
 </body>
 </html>
