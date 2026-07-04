@@ -310,8 +310,8 @@
   .googlebtn{display:inline-flex;align-items:center;gap:8px;border:2px solid #cdbb95;background:#fff;border-radius:14px;
     padding:11px 20px;font-size:15px;font-weight:800;color:#3e2723;cursor:pointer;box-shadow:0 3px 0 #d7ccc8;}
   .googlebtn:active{transform:translateY(2px);box-shadow:0 1px 0 #d7ccc8;}
-  /* 左側功能按鈕（每日 / 拉霸 / 股市） */
-  .leftbar{position:absolute;top:50%;left:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:20;}
+  /* 左側功能按鈕（每日 / 拉霸 / 股市 / 紀錄）：移到左下（原紀錄按鈕位置），向上展開 */
+  .leftbar{position:absolute;left:10px;bottom:94px;display:flex;flex-direction:column-reverse;gap:8px;z-index:30;}
   .leftbar .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;
     display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:24px;line-height:1;
     box-shadow:0 4px 0 #e6c486;transition:transform .08s;}
@@ -336,7 +336,7 @@
   body.narrow .leftbar .lbtoggle{display:flex;}
   body.narrow .leftbar .lbtn{width:46px;height:46px;font-size:21px;}
   body.narrow .leftbar .lbitems{display:none;}
-  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:column;gap:6px;}
   /* 仍保留媒體查詢做為後備（真手機） */
   @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
@@ -367,9 +367,8 @@
   .hint{font-size:12px;color:#8d7b6a;margin:4px 2px 10px;line-height:1.5;}
   .bigbtn{border:2px solid #7cb342;background:#aed581;border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14px;font-weight:700;width:100%;}
 
-  /* log */
-  .logbtn{position:absolute;left:10px;bottom:94px;z-index:30;width:54px;height:54px;font-size:24px;border-radius:16px;}
-  .logpanel{position:absolute;left:10px;bottom:156px;width:300px;max-width:62vw;background:#fffdf5f5;border:3px solid #e7c9a8;border-radius:16px;box-shadow:0 6px 18px #0003;z-index:31;display:none;overflow:hidden;}
+  /* log（面板開在功能選單右側，避免蓋住按鈕） */
+  .logpanel{position:absolute;left:72px;bottom:94px;width:300px;max-width:62vw;background:#fffdf5f5;border:3px solid #e7c9a8;border-radius:16px;box-shadow:0 6px 18px #0003;z-index:31;display:none;overflow:hidden;}
   .logpanel.on{display:block;}
   .loghd{display:flex;justify-content:space-between;align-items:center;background:#ffe6c2;padding:6px 12px;font-size:13px;font-weight:800;color:#9a6a2e;}
   .logx{cursor:pointer;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #e7b27a;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;color:#b5763a;}
@@ -461,11 +460,7 @@
   <div class="fieldshadow"></div>
   <div class="field"><div class="grid" id="grid"></div></div>
 
-  <!-- 牧場頂部資訊列（固定，不隨世界平移）；購買動物已移到商店 -->
-  <div class="ranchui">
-    <div class="rlabel" id="penLabel">🐾 牧場</div>
-  </div>
-
+  <!-- 牧場容量資訊已移到商店 → 🐮 動物分頁 -->
   <!-- 右側工具 -->
   <div class="tools" id="tools"></div>
 
@@ -477,11 +472,11 @@
       <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
       <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
       <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
+      <div class="lbtn" onclick="toggleLog();closeLeftbar()">📜<small>紀錄</small></div>
     </div>
   </div>
 
-  <!-- 紀錄按鈕＋面板 -->
-  <div class="dbtn logbtn" onclick="toggleLog()">📜<small>紀錄</small></div>
+  <!-- 紀錄面板（按鈕已整合進左側功能選單） -->
   <div class="logpanel" id="logPanel">
     <div class="loghd">📜 農場紀錄 <span class="logx" onclick="toggleLog()">×</span></div>
     <div class="loglist" id="logList"></div>
@@ -976,12 +971,11 @@ function makeFriendPlot(){
 const TOOLS=[
   {k:"hand",ic:"✋",name:"手（收成/偷）"},
   {k:"plant",ic:"🌱",name:"播種"},
-  {k:"water",ic:"💧",name:"澆水器"},
-  {k:"weed",ic:"🌿",name:"除草劑"},
-  {k:"bug",ic:"🐛",name:"除蟲劑"},
+  {k:"care",ic:"🚿",name:"照顧（澆水/除草/除蟲）"},
   {k:"fert",ic:"💩",name:"肥料（加速）"},
 ];
 function renderTools(){
+  if(G.tool==="water"||G.tool==="weed"||G.tool==="bug")G.tool="care";   // 舊存檔工具轉換
   const box=document.getElementById("tools");box.innerHTML="";
   TOOLS.forEach(t=>{
     const d=document.createElement("div");
@@ -989,9 +983,22 @@ function renderTools(){
     d.innerHTML=t.ic+'<span class="lbl">'+t.name+'</span>';
     d.onclick=()=>{G.tool=t.k;renderTools();
       if(t.k==="plant")openInv("seeds");
+      if(t.k==="care")toast("點需要照顧的田地，自動澆水/除草/除蟲");
       if(t.k==="fert")toast("選肥料後點要加速的作物");};
     box.appendChild(d);
   });
+  // 一鍵收成（動作按鈕，非工具）
+  const ha=document.createElement("div");
+  ha.className="tool";
+  ha.innerHTML='🧺<span class="lbl">一鍵收成全部作物</span>';
+  ha.onclick=harvestAll;
+  box.appendChild(ha);
+}
+function harvestAll(){
+  let n=0;
+  G.plots.forEach((p,i)=>{ if(p.unlocked&&p.state==="planted"&&p.ripe){harvest(i);n++;} });
+  if(n>0){toast("🧺 一鍵收成了 "+n+" 塊田！");render();saveGame();}
+  else toast("目前沒有成熟的作物");
 }
 
 /* ============ 渲染 ============ */
@@ -1014,7 +1021,6 @@ function animalMarkup(a){
 }
 function renderPen(){
   const ground=document.getElementById("penGround");if(!ground)return;
-  const lab=document.getElementById("penLabel");if(lab)lab.textContent="🐾 牧場 "+G.ranch.length+"/"+ranchCap();
   for(let i=0;i<G.ranch.length;i++){
     const s=G.ranch[i];const a=ANIMALS[s.a];a.key=s.a;
     if(!penNodes[i]){
@@ -1125,12 +1131,16 @@ function tapPlot(i){
   if(t==="plant"){
     if(p.state==="planted"){toast("這塊地已經種了作物");return;}
     plantOn(i);   // 空地或剛收成的枯田都能直接播種
-  }else if(t==="water"){ if(p.dry){p.dry=false;gainXp(1);log("澆水 💧 +經驗");}else toast("這塊地不缺水"); }
-  else if(t==="weed"){ if(p.weed){p.weed=false;gainXp(1);log("除草 🌿 +經驗");}else toast("沒有雜草"); }
-  else if(t==="bug"){
-    if(!p.bug){toast("沒有蟲");return;}
-    if(p.bugBig){p.bug--;if(p.bug<=0){p.bug=0;p.bugBig=false;gainXp(2);log("大毛毛蟲被消滅了！🎉","g");}else{gainXp(1);log("大毛毛蟲還要噴 "+p.bug+" 次（可用💎大蟲殺蟲劑一次解決）","r");}}
-    else{p.bug=0;gainXp(1);log("殺蟲 🐜 +經驗");}
+  }else if(t==="care"){   // 照顧：一次處理澆水/除草/除蟲
+    let did=false;
+    if(p.dry){p.dry=false;gainXp(1);log("澆水 💧 +經驗");did=true;}
+    if(p.weed){p.weed=false;gainXp(1);log("除草 🌿 +經驗");did=true;}
+    if(p.bug){
+      if(p.bugBig){p.bug--;if(p.bug<=0){p.bug=0;p.bugBig=false;gainXp(2);log("大毛毛蟲被消滅了！🎉","g");}else{gainXp(1);log("大毛毛蟲還要噴 "+p.bug+" 次（可用💎大蟲殺蟲劑一次解決）","r");}}
+      else{p.bug=0;gainXp(1);log("殺蟲 🐜 +經驗");}
+      did=true;
+    }
+    if(!did)toast("這塊地不需要照顧");
   }else if(t==="hand"){
     if(p.state==="planted"&&p.ripe)harvest(i);
     else if(p.state==="planted")toast("還沒成熟");
@@ -1196,6 +1206,9 @@ function openShop(tab){
     '<button class="'+(tab==='animal'?'on':'')+'" onclick="openShop(\'animal\')">🐮 動物</button></div>';
   if(tab==="animal"){
     const cap=ranchCap();
+    const capLeft=Math.max(0,cap-G.ranch.length);
+    h+='<div style="font-size:13px;font-weight:800;background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:6px 10px;margin:0 0 10px">'+
+      '🐾 牧場容量 '+G.ranch.length+'/'+cap+'｜目前最多還可購買 <span style="color:#c9920f;font-size:15px">'+capLeft+'</span> 隻動物</div>';
     if(G.ranch.length){
       h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
       G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
@@ -1357,7 +1370,7 @@ function openHelp(){
   showM('<h2>❓ 玩法說明 <button class="x" onclick="closeM()">×</button></h2><div class="body" style="font-size:14px;line-height:1.7">'+
   '<b>基本循環</b><br>🌱 播種（空地直接點即可，免翻土） → 💧 照顧 → 等成熟 → ✋ 收成 → 🏚️ 倉庫賣錢 → ⭐ 升級 → 🛒 買高級種子 / 🪧 Buy Land 買新農地。收成後土地會空出來，可以馬上再種。<br><br>'+
   '<b>作物三階段</b>：種子🌰（前 45%）→ 幼苗🌱（45～100%）→ 成熟結果（顯示作物本體，發光代表可收成）。<br><br>'+
-  '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。<br><br>'+
+  '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。選右側 🚿 照顧工具點田地，會自動一次澆水／除草／除蟲。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。成熟作物可用右側 🧺 一鍵收成全部收下。<br><br>'+
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
   '<b>偷菜</b>：👑好友 → 進別人農場，✋偷成熟作物（每塊最多 2 次），也可幫忙賺經驗。<br><br>'+
   '<b>養狗</b>：🐕餵一次飽 12 小時，期間會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
@@ -1506,7 +1519,7 @@ function computeBaseScale(){
 }
 // 縮到最小＝背景剛好填滿螢幕（不再露出綠色）
 function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
-function calcWorldScale(){ const s=computeBaseScale()*userZoom; return isNarrow()? Math.max(s, coverScale()) : s; }
+function calcWorldScale(){ const s=computeBaseScale()*userZoom; return Math.max(s, coverScale()); }
 // 使用者放大/縮小畫面
 function setZoom(mult){
   const oldS=worldScale||1;
@@ -1605,7 +1618,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r2 */
+/* build-ok r3：商店顯示牧場容量、桌機 cover 縮放、紀錄併入功能選單、照顧合併＋一鍵收成 */
 </script>
 </body>
 </html>
