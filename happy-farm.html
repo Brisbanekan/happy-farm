@@ -123,8 +123,9 @@
   /* 等角地磚：用反向變換抵銷 field 的 rotate/scale，讓菱形貼圖正立並無縫拼接 */
   .plot::before{content:"";position:absolute;left:50%;top:50%;width:150px;height:75px;margin-left:-75px;margin-top:-37.5px;
     transform:rotate(-45deg) scaleY(2);background:center/100% 100% no-repeat;z-index:-1;pointer-events:none;}
-  .plot.t-grass::before{background-image:url(background/grass.png);}
-  .plot.t-dirt::before{background-image:url(background/lend.png);}
+  /* 兩張地磚圖比例不同（grass 340×186 / lend 340×196），各自校正縮放與位移，讓菱形頂面完全對齊 */
+  .plot.t-grass::before{background-image:url(background/grass.png);background-size:150px 78.4px;background-position:0 -2.1px;}
+  .plot.t-dirt::before{background-image:url(background/lend.png);background-size:150px 82.6px;background-position:0 0;}
   .plot:active{filter:brightness(1.12);}
   .plot.dry{filter:brightness(1.22) saturate(.62) sepia(.18);}
   .plot.ripe{z-index:3;}
@@ -538,10 +539,20 @@ const CROPS = {
   corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:45,  sell:92,  grow:56, xp:15},
   eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:70,  sell:150, grow:70, xp:20},
   strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:110, sell:240, grow:86, xp:28},
+  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:140, sell:310, grow:96, xp:34},
   pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:180, sell:420, grow:108,xp:42},
+  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:230, sell:550, grow:120,xp:50},
   grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:300, sell:720, grow:132,xp:60},
+  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:420, sell:1050,grow:150,xp:78},
+  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:600, sell:1600,grow:170,xp:100},
+  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:850, sell:2400,grow:190,xp:128},
+  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:1200,sell:3600,grow:215,xp:165},
   carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:40,  sell:70,  grow:52, xp:14, charm:1},
   tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:90,  sell:170, grow:74, xp:24, charm:2},
+  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:160, sell:300, grow:92, xp:32, charm:3},
+  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:280, sell:540, grow:115,xp:48, charm:4},
+  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:450, sell:900, grow:140,xp:70, charm:6},
+  lotus:    {name:"蓮花",   emoji:"🪷", grown:"🪷", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:170,xp:100,charm:8},
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
@@ -1106,7 +1117,7 @@ function renderGrid(){
   G.plots.forEach((p,i)=>{
     const d=document.createElement("div");
     // 田地已旋轉180°：依格位設定堆疊順序，讓前方(畫面下方)地磚蓋住後方
-    d.style.zIndex = 1 + (i%3) + Math.floor(i/3);   // 前方(畫面下方)地磚蓋住後方
+    d.style.zIndex = 1 + (i%3) + Math.floor(i/3) + ((p.unlocked&&(p.ripe||p.dry||p.weed||p.bug))?12:0);   // 前方地磚蓋住後方；有狀態圖示/發光的田拉到最上層，避免被鄰田蓋住
     if(!p.unlocked){
       d.className="plot locked t-grass";   // 未開墾＝草地貼圖
       const firstLocked=G.plots.findIndex(x=>!x.unlocked);
@@ -1310,21 +1321,38 @@ let curFriend=null;
 let palCache={}, curPal=null, palTool="hand";
 function friendReady(){return !!(fbDB&&fbUser);}
 function myName(){ return ((fbUser&&fbUser.displayName)||"神秘農友").slice(0,12); }
-// 登入後建立/更新公開名片 profiles/{uid}，並產生唯一好友代碼 codes/{code} → uid
+// 由 uid 產生固定的 6 碼好友代碼（同帳號在任何裝置都是同一組）
+function codeFromUid(uid,salt){
+  let n=2166136261>>>0; const s=uid+"#"+(salt||0);
+  for(let i=0;i<s.length;i++){ n^=s.charCodeAt(i); n=Math.imul(n,16777619)>>>0; }
+  const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let c="";
+  for(let i=0;i<6;i++){ c+=a[n%a.length]; n=Math.imul((n>>>5)^0x9e3779b9,2654435761)>>>0; }
+  return c;
+}
+// 登入後建立/更新公開名片 profiles/{uid}，並登記好友代碼 codes/{code} → uid
 function ensureProfile(){
   if(!friendReady())return;
   const fin=function(){
-    fbDB.ref("profiles/"+fbUser.uid).update({name:myName(),level:G.level||1,code:G.myCode,ts:Date.now()}).catch(function(){});
+    fbDB.ref("profiles/"+fbUser.uid).update({name:myName(),level:G.level||1,code:G.myCode,ts:Date.now()})
+      .catch(function(e){log("⚠️ 建立好友名片失敗："+(e&&e.message||e),"r");});
   };
   if(G.myCode){fin();return;}
-  const tryCode=function(){
-    const code=genCode();
-    fbDB.ref("codes/"+code).transaction(function(cur){ return cur===null?fbUser.uid:undefined; },function(err,committed){
-      if(committed){ G.myCode=code; saveGame(); fin(); log("👑 你的好友代碼："+code+"（開 👑好友 面板可查看、給朋友加你）","b"); }
-      else if(!err) tryCode();   // 代碼撞號就重抽
+  const claim=function(salt){
+    if(salt>6){log("⚠️ 好友代碼產生失敗，請稍後重開 👑好友 面板再試","r");return;}
+    const code=codeFromUid(fbUser.uid,salt);
+    fbDB.ref("codes/"+code).once("value").then(function(snap){
+      const cur=snap.val();
+      if(cur&&cur!==fbUser.uid){claim(salt+1);return;}   // 撞號（機率極低）就換下一組
+      return fbDB.ref("codes/"+code).set(fbUser.uid).then(function(){
+        G.myCode=code; saveGame(); fin();
+        log("👑 你的好友代碼："+code,"b");
+        if(document.getElementById("palCode"))openFriends();   // 好友面板開著就即時刷新
+      });
+    }).catch(function(e){
+      log("⚠️ 好友代碼建立失敗："+(e&&e.message||e)+"。請確認 Firebase 資料庫規則允許 codes / profiles 路徑讀寫。","r");
     });
   };
-  tryCode();
+  claim(0);
 }
 function addPalByCode(){
   const inp=document.getElementById("palCode");
@@ -1350,6 +1378,7 @@ function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.p
 function openFriends(){
   let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
   if(friendReady()){
+    if(!G.myCode)ensureProfile();   // 代碼還沒產生（或之前失敗）就再試一次
     h+='<div style="background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px;font-weight:800">我的好友代碼：<span style="font-size:17px;color:#c9920f;letter-spacing:2px">'+(G.myCode||"產生中…")+'</span><div style="font-weight:400;font-size:12px;color:#8d7b6a">把代碼給朋友，他輸入後就能加你好友、來你的農場。</div></div>'+
       '<div style="display:flex;gap:6px;margin-bottom:12px"><input id="palCode" maxlength="6" placeholder="輸入好友代碼" style="flex:1;min-width:0;border:2px solid #e6dcc8;border-radius:10px;padding:8px 10px;font-size:14px;text-transform:uppercase"><button class="pbtn gold" onclick="addPalByCode()">➕ 加好友</button></div>';
     const uids=Object.keys(G.pals||{});
@@ -1538,12 +1567,8 @@ function openHelp(){
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
   '<b>💎 鑽石怎麼來</b>：每次升級 +💎1；每天首次登入 +💎2。鑽石可買高級肥料、大蟲殺蟲劑、看門狗。<br><br>'+
   '<b>❤️ 魅力怎麼來</b>：種花收成（康乃馨 +1、鬱金香 +2）、每次升級 +❤️2、每日登入 +❤️3。<br><br>'+
-  '<b>💾 進度與存檔</b>：遊戲會自動存在這台瀏覽器（localStorage）。注意：若你<b>清除瀏覽器快取／網站資料</b>，存檔會一起被刪除。想永久保留或換裝置，請用下方「匯出存檔」存成檔案，需要時再「匯入存檔」還原。<br>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px">'+
-  '<button class="pbtn blue" onclick="exportSave()">⬇️ 匯出存檔</button>'+
-  '<label class="pbtn gold" style="cursor:pointer;display:inline-block">⬆️ 匯入存檔<input type="file" accept="application/json,.json" style="display:none" onchange="importSave(this)"></label>'+
-  '<button class="pbtn" style="background:#ffd9d9;border-color:#e98a8a" onclick="resetGame()">🔄 重新開始</button>'+
-  '</div></div>');
+  '<b>💾 進度與存檔</b>：進度會自動儲存，登入 Google 帳號後同步到雲端，換裝置登入同一帳號即可接續。'+
+  '</div>');
 }
 
 /* ============ 雲端同步面板 ============ */
@@ -1778,7 +1803,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r5：移除來訪通知、修好友面板開不起來(雲端null田地)、拜訪田地顯示優化 */
+/* build-ok r6：地磚對齊校正、狀態田置頂、移除匯出入/重開按鈕、好友代碼改固定制、新增作物與花卉 */
 </script>
 </body>
 </html>
