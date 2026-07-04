@@ -603,7 +603,7 @@ let G = {
   gold:200, credit:5, level:1, xp:0, charm:0,
   tool:"hand",
   seeds:{radish:3}, harvest:{}, plots:[], dog:null,
-  ferts:{f1:0,f2:0,bigspray:0}, friends:[],
+  ferts:{f1:0,f2:0,bigspray:0}, friends:[], pals:{}, myCode:"",
 };
 const XP_NEED = lv => 50 + (lv-1)*70;
 function newPlot(unlocked){return {unlocked:unlocked,state:"empty",crop:null,grow:0,stolen:0,
@@ -673,6 +673,7 @@ function loadUserCloud(uid){
     }
     cloudReady=true;
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
+    ensureProfile(); initVisitInbox();
   }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); cloudReady=true; render(); });
 }
 function saveUserCloud(){
@@ -708,7 +709,7 @@ function freshGame(){
   G.streak=0;G.totalDays=0;G.lastClaim="";G.lastMarketDate="";
   G.stocks={};STOCKS.forEach(s=>G.stocks[s.t]={price:s.base,prev:s.base,shares:0,cost:0});
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
-  G.ranch=[];
+  G.ranch=[];G.pals={};G.myCode="";
   G.friends=FRIEND_NAMES.map(f=>({name:f[0],av:f[1],plots:Array.from({length:6},()=>makeFriendPlot())}));
 }
 function normalizeState(){
@@ -721,6 +722,8 @@ function normalizeState(){
   if(!G.seeds)G.seeds={};
   if(!G.harvest)G.harvest={};
   if(!Array.isArray(G.ranch))G.ranch=[];
+  if(!G.pals||typeof G.pals!=="object"||Array.isArray(G.pals))G.pals={};
+  if(typeof G.myCode!=="string")G.myCode="";
   G.ranch=G.ranch.filter(s=>s&&ANIMALS[s.a]); // 過濾舊版空欄位/無效動物
   if(G.scene!=="ranch")G.scene="farm";
   if(typeof G.streak!=="number")G.streak=0;
@@ -1299,14 +1302,186 @@ function useFert(i,k){if((G.ferts[k]||0)<=0)return;const p=G.plots[i];if(p.state
 
 /* ============ 好友 / 偷菜 ============ */
 let curFriend=null;
+
+/* ====== 真實好友（串接 Firebase users 資料庫） ====== */
+let palCache={}, curPal=null, palTool="hand", visitInboxOn=false;
+function friendReady(){return !!(fbDB&&fbUser);}
+function myName(){ return ((fbUser&&fbUser.displayName)||"神秘農友").slice(0,12); }
+// 登入後建立/更新公開名片 profiles/{uid}，並產生唯一好友代碼 codes/{code} → uid
+function ensureProfile(){
+  if(!friendReady())return;
+  const fin=function(){
+    fbDB.ref("profiles/"+fbUser.uid).update({name:myName(),level:G.level||1,code:G.myCode,ts:Date.now()}).catch(function(){});
+  };
+  if(G.myCode){fin();return;}
+  const tryCode=function(){
+    const code=genCode();
+    fbDB.ref("codes/"+code).transaction(function(cur){ return cur===null?fbUser.uid:undefined; },function(err,committed){
+      if(committed){ G.myCode=code; saveGame(); fin(); log("👑 你的好友代碼："+code+"（開 👑好友 面板可查看、給朋友加你）","b"); }
+      else if(!err) tryCode();   // 代碼撞號就重抽
+    });
+  };
+  tryCode();
+}
+// 訪客訊息信箱：好友偷菜/幫忙時推播到 visits/{uid}，這裡即時顯示到紀錄並同步田地
+function initVisitInbox(){
+  if(!friendReady()||visitInboxOn)return; visitInboxOn=true;
+  fbDB.ref("visits/"+fbUser.uid).on("child_added",function(snap){
+    const v=snap.val(); snap.ref.remove();
+    if(v&&v.m)log(v.m, v.k||"b");
+    if(v&&v.sync)refreshMineFromCloud();   // 好友動過我的田/金幣 → 對齊雲端
+  });
+}
+// 只合併「會被好友動到」的欄位，避免覆蓋自己正在玩的進度
+function refreshMineFromCloud(){
+  if(!friendReady())return;
+  fbDB.ref("users/"+fbUser.uid).once("value").then(function(snap){
+    const d=snap.val(); if(!d||!Array.isArray(d.plots))return;
+    d.plots.forEach(function(cp,i){ const p=G.plots[i]; if(!p||!cp)return;
+      if(p.state==="planted"&&cp.state==="planted"&&p.crop===cp.crop){
+        p.stolen=Math.max(p.stolen||0,cp.stolen||0);
+        if(cp.dry===false)p.dry=false;
+        if(cp.weed===false)p.weed=false;
+        if(!cp.bug){p.bug=0;p.bugBig=false;}
+      }});
+    if(typeof d.gold==="number"&&d.gold>G.gold)G.gold=d.gold;   // 看門狗咬到的掉落補償
+    render();
+  }).catch(function(){});
+}
+function pushVisit(uid,msg,k,sync){ if(!friendReady())return;
+  fbDB.ref("visits/"+uid).push({m:msg,k:k||"b",sync:!!sync,ts:Date.now()}).catch(function(){}); }
+function addPalByCode(){
+  const inp=document.getElementById("palCode");
+  const code=(inp&&inp.value||"").trim().toUpperCase();
+  if(!code){toast("請輸入好友代碼");return;}
+  if(!friendReady()){toast("請先登入帳號");return;}
+  if(code===G.myCode){toast("這是你自己的代碼 😅");return;}
+  fbDB.ref("codes/"+code).once("value").then(function(snap){
+    const uid=snap.val();
+    if(!uid){alert("找不到這組代碼的玩家，請確認代碼正確（對方需要先登入過遊戲）。");return;}
+    if(G.pals[uid]){toast("已經是好友了");openFriends();return;}
+    return fbDB.ref("profiles/"+uid).once("value").then(function(ps){
+      const pf=ps.val()||{};
+      G.pals[uid]={name:pf.name||"農友",lv:pf.level||1};
+      saveGame();
+      pushVisit(uid,"👑 "+myName()+" 把你加為好友了！他的代碼是 "+(G.myCode||"？")+"，把他加回來吧～","b");
+      toast("已加入好友 "+G.pals[uid].name);
+      openFriends();
+    });
+  }).catch(function(e){alert("查詢失敗："+(e&&e.message||e));});
+}
+function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.pals[uid]; saveGame(); openFriends(); }
+
 function openFriends(){
-  let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">去好友農場可幫忙澆水/除草/殺蟲（賺經驗），也能偷成熟作物。常去幫忙，朋友也會來幫你！</p>';
+  let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
+  if(friendReady()){
+    h+='<div style="background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px;font-weight:800">我的好友代碼：<span style="font-size:17px;color:#c9920f;letter-spacing:2px">'+(G.myCode||"產生中…")+'</span><div style="font-weight:400;font-size:12px;color:#8d7b6a">把代碼給朋友，他輸入後就能加你好友、來你的農場。</div></div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:12px"><input id="palCode" maxlength="6" placeholder="輸入好友代碼" style="flex:1;min-width:0;border:2px solid #e6dcc8;border-radius:10px;padding:8px 10px;font-size:14px;text-transform:uppercase"><button class="pbtn gold" onclick="addPalByCode()">➕ 加好友</button></div>';
+    const uids=Object.keys(G.pals||{});
+    h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">🌍 真實好友（'+uids.length+'）</div>';
+    if(!uids.length)h+='<p class="hint">還沒有真實好友。跟朋友交換代碼互加，就能去對方農場偷菜、幫忙照顧！</p>';
+    uids.forEach(function(uid){const f=G.pals[uid];
+      h+='<div class="friend"><span class="av">🧑‍🌾</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+(f.lv||"?")+'</div></div>'+
+        '<button class="pbtn blue" onclick="visitPal(\''+uid+'\')">前往農場</button>'+
+        '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="removePal(\''+uid+'\')">移除</button></div>';
+    });
+    h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
+  }else{
+    h+='<p class="hint">尚未登入帳號。登入後可用好友代碼加真實好友，互相拜訪、偷菜、幫忙照顧。以下為電腦好友（練習用）。</p>';
+  }
+  h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">🤖 電腦好友（練習）</div>';
   G.friends.forEach((f,i)=>{const ripe=f.plots.filter(p=>p.ripe&&p.stolen<2).length;h+='<div class="friend"><span class="av">'+f.av+'</span><div class="meta"><b>'+f.name+'</b><div>成熟可偷：'+ripe+' 塊</div></div><button class="pbtn blue" onclick="visitFriend('+i+')">前往農場</button></div>';});
   h+='</div>';showM(h);
 }
+
+/* ====== 拜訪真實好友農場（讀取對方 users/{uid} 的實際田地） ====== */
+function visitPal(uid){
+  if(!friendReady())return;
+  toast("前往好友農場…");
+  fbDB.ref("users/"+uid).once("value").then(function(snap){
+    const d=snap.val();
+    if(!d||!Array.isArray(d.plots)){alert("讀不到好友的農場資料（對方可能還沒上線存檔過）。");return;}
+    curPal=uid; palCache[uid]=d;
+    renderPalFarm();
+  }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
+}
+function renderPalFarm(){
+  const d=palCache[curPal]; if(!d)return;
+  const f=G.pals[curPal]||{name:"農友"};
+  const dogOn=!!(d.dog&&d.dog.fedUntil&&d.dog.fedUntil>Date.now());
+  let h='<h2>🧑‍🌾 '+f.name+' 的農場（Lv.'+(d.level||1)+'）<button class="x" onclick="closeM()">×</button></h2><div class="body">'+
+    '<p class="hint">✋ 偷菜（每塊最多被偷 2 次'+(dogOn?'，⚠️ 他有餵飽的看門狗🐕':'')+'）｜🚿 照顧（幫忙澆水/除草/殺蟲賺經驗）。</p>';
+  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:linear-gradient(#9ccff0,#bfe3f7);border:3px solid #79b8da;border-radius:12px;padding:10px;">';
+  d.plots.forEach(function(p,idx){
+    if(!p||!p.unlocked)return;
+    let inner="",bg="background:repeating-linear-gradient(95deg,#6b4a2f 0 7px,#5d3f28 7px 14px);";
+    if(p.state!=="planted"||!p.crop)bg="background:linear-gradient(#7fb84e,#74ad45);";
+    else if(p.ripe)inner='<span style="font-size:30px">'+(CROPS[p.crop]?CROPS[p.crop].grown:"🌾")+'</span>';
+    else inner='<span style="font-size:24px">🌱</span>';
+    const glow=(p.state==="planted"&&p.ripe&&(p.stolen||0)<2)?"box-shadow:0 0 0 3px #ffd54f,0 0 12px #ffca28;":"";
+    h+='<div onclick="palTap('+idx+')" style="position:relative;aspect-ratio:1/1;border-radius:10px;border:2px solid #4a3019;cursor:pointer;display:flex;align-items:center;justify-content:center;'+bg+glow+'">'+inner+
+      (p.dry?'<span style="position:absolute;top:1px;left:3px">💧</span>':'')+
+      (p.weed?'<span style="position:absolute;bottom:0;left:2px">🌿</span>':'')+
+      (p.bug?'<span style="position:absolute;top:0;right:2px">'+(p.bugBig?"🐛":"🐜")+'</span>':'')+'</div>';
+  });
+  h+='</div>';
+  h+='<div class="tabs" style="margin-top:10px;justify-content:center">'+
+    '<button class="'+(palTool==='hand'?'on':'')+'" onclick="setPalTool(\'hand\')">✋ 偷菜</button>'+
+    '<button class="'+(palTool==='care'?'on':'')+'" onclick="setPalTool(\'care\')">🚿 照顧</button></div>'+
+    '<button class="bigbtn" style="background:#e7f3ff;border-color:#7bb8ee;margin-top:6px" onclick="openFriends()">← 返回好友名單</button></div>';
+  showM(h);
+}
+function setPalTool(t){palTool=t;renderPalFarm();}
+function palTap(idx){
+  const d=palCache[curPal]; if(!d)return;
+  const p=d.plots[idx]; if(!p)return;
+  const f=G.pals[curPal]||{name:"農友"};
+  const plotRef=fbDB.ref("users/"+curPal+"/plots/"+idx);
+  if(p.state!=="planted"||!p.crop){toast("空地");return;}
+  if(palTool==="care"){
+    let n=0; const up={};
+    if(p.dry){p.dry=false;up.dry=false;n++;}
+    if(p.weed){p.weed=false;up.weed=false;n++;}
+    if(p.bug){p.bug=0;p.bugBig=false;up.bug=0;up.bugBig=false;n++;}
+    if(!n){toast("這塊地不需要照顧");return;}
+    plotRef.update(up).then(function(){
+      gainXp(n);saveGame();
+      log("幫 "+f.name+" 照顧田地 🤝 +"+n+" 經驗","g");toast("幫忙照顧 +"+n+" 經驗");
+      pushVisit(curPal,"🤝 "+myName()+" 來幫你照顧田地了（澆水/除草/殺蟲 ×"+n+"）！","g",true);
+      renderPalFarm();
+    }).catch(function(e){alert("寫入失敗："+(e&&e.message||e));});
+  }else{   // ✋ 偷菜
+    if(!p.ripe){toast("還沒成熟，不能偷");return;}
+    if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
+    // 對方的看門狗（用他存檔裡的真實狗）
+    if(d.dog&&d.dog.fedUntil&&d.dog.fedUntil>Date.now()&&Math.random()<dogBiteChance(d.dog.level||1)){
+      const fine=Math.round((15+Math.random()*30)*(1+((d.dog.level||1)-1)*0.6));
+      G.gold=Math.max(0,G.gold-fine);renderHUD();saveGame();
+      fbDB.ref("users/"+curPal+"/gold").transaction(function(g){return (g||0)+fine;});
+      log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");
+      pushVisit(curPal,"🐕 你的看門狗咬住了來偷菜的 "+myName()+"，撿到他掉的 "+CO+fine+"！","g",true);
+      return;
+    }
+    plotRef.child("stolen").transaction(function(cur){
+      cur=cur||0; return cur>=2?undefined:cur+1;
+    },function(err,committed,snap){
+      if(err){alert("偷菜失敗："+(err.message||err));return;}
+      if(!committed){toast("這塊已被偷光了");p.stolen=2;renderPalFarm();return;}
+      p.stolen=snap.val();
+      const q=1+Math.floor(Math.random()*2);
+      const c=CROPS[p.crop]||{name:"作物",emoji:"🌾"};
+      G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);saveGame();
+      log("偷到 "+f.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);
+      pushVisit(curPal,"😱 "+myName()+" 偷走了你的 "+c.emoji+c.name+" ×"+q+"！","r",true);
+      renderPalFarm();
+    });
+  }
+}
+
+/* ====== 電腦好友（練習用） ====== */
 function visitFriend(i){
   curFriend=i;const f=G.friends[i];
-  let h='<h2>'+f.av+' '+f.name+' 的農場 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">✋偷菜 ｜ 💧澆水 ｜ 🌿除草 ｜ 🐛殺蟲（幫忙都加經驗）。每塊成熟地最多被偷 2 次。</p>';
+  let h='<h2>'+f.av+' '+f.name+' 的農場 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">✋ 偷菜（每塊最多被偷 2 次）｜🚿 照顧（幫忙澆水/除草/殺蟲，都加經驗）。</p>';
   h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:linear-gradient(#9ccff0,#bfe3f7);border:3px solid #79b8da;border-radius:12px;padding:10px;">';
   f.plots.forEach((p,idx)=>{
     let inner="",bg="background:repeating-linear-gradient(95deg,#6b4a2f 0 7px,#5d3f28 7px 14px);";
@@ -1321,24 +1496,27 @@ function visitFriend(i){
   });
   h+='</div>';
   h+='<div class="tabs" style="margin-top:10px;justify-content:center">'+
-    '<button class="'+(G.tool==='hand'?'on':'')+'" onclick="setFTool(\'hand\')">✋ 偷菜</button>'+
-    '<button class="'+(G.tool==='water'?'on':'')+'" onclick="setFTool(\'water\')">💧 澆水</button>'+
-    '<button class="'+(G.tool==='weed'?'on':'')+'" onclick="setFTool(\'weed\')">🌿 除草</button>'+
-    '<button class="'+(G.tool==='bug'?'on':'')+'" onclick="setFTool(\'bug\')">🐛 殺蟲</button></div>'+
+    '<button class="'+(palTool==='hand'?'on':'')+'" onclick="setFTool(\'hand\')">✋ 偷菜</button>'+
+    '<button class="'+(palTool==='care'?'on':'')+'" onclick="setFTool(\'care\')">🚿 照顧</button></div>'+
     '<button class="bigbtn" style="background:#e7f3ff;border-color:#7bb8ee;margin-top:6px" onclick="openFriends()">← 返回好友名單</button></div>';
   showM(h);
 }
-function setFTool(t){G.tool=t;visitFriend(curFriend);}
+function setFTool(t){palTool=t;visitFriend(curFriend);}
 function friendTap(idx){
   const f=G.friends[curFriend];const p=f.plots[idx];if(!p.crop){toast("空地");return;}
-  if(G.tool==="hand"){
+  if(palTool==="hand"){
     if(!p.ripe){toast("還沒成熟，不能偷");return;}
     if(p.stolen>=2){toast("這塊已被偷光了");return;}
     if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 <span class=coinico></span>"+fine,"r");toast("被狗咬！掉錢 😱");}
     else{const q=1+Math.floor(Math.random()*3);p.stolen++;const c=CROPS[p.crop];G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);log("偷到 "+f.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);}
-  }else if(G.tool==="water"){if(p.dry){p.dry=false;gainXp(1);toast("幫忙澆水 +經驗");}else toast("不缺水");}
-  else if(G.tool==="weed"){if(p.weed){p.weed=false;gainXp(1);toast("幫忙除草 +經驗");}else toast("沒雜草");}
-  else if(G.tool==="bug"){if(p.bug){p.bug=0;gainXp(1);toast("幫忙殺蟲 +經驗");}else toast("沒有蟲");}
+  }else{   // 🚿 照顧：一次處理
+    let n=0;
+    if(p.dry){p.dry=false;n++;}
+    if(p.weed){p.weed=false;n++;}
+    if(p.bug){p.bug=0;n++;}
+    if(n){gainXp(n);toast("幫忙照顧 +"+n+" 經驗");}
+    else toast("這塊地不需要照顧");
+  }
   renderHUD();visitFriend(curFriend);
 }
 
@@ -1372,7 +1550,7 @@ function openHelp(){
   '<b>作物三階段</b>：種子🌰（前 45%）→ 幼苗🌱（45～100%）→ 成熟結果（顯示作物本體，發光代表可收成）。<br><br>'+
   '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。選右側 🚿 照顧工具點田地，會自動一次澆水／除草／除蟲。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。成熟作物可用右側 🧺 一鍵收成全部收下。<br><br>'+
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
-  '<b>偷菜</b>：👑好友 → 進別人農場，✋偷成熟作物（每塊最多 2 次），也可幫忙賺經驗。<br><br>'+
+  '<b>👑 好友</b>：登入帳號後會有一組 6 碼好友代碼，和朋友交換代碼互加好友，就能前往對方的<b>真實農場</b>：✋偷成熟作物（每塊最多被偷 2 次，小心對方的看門狗）、🚿幫忙澆水/除草/殺蟲賺經驗。對方會在紀錄裡收到你來過的訊息。沒登入也可以跟🤖電腦好友練習。<br><br>'+
   '<b>養狗</b>：🐕餵一次飽 12 小時，期間會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
   '<b>🐾 牧場</b>：切到「🐮 牧場」分頁看你的動物在草原走動。動物到 🛒 商店 → 🐮 動物 分頁購買（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）；產物出現在動物頭上時點一下即可收成換 <span class=coinico></span>。可拖移瀏覽，容量隨等級提升。<br><br>'+
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
@@ -1618,7 +1796,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r3：商店顯示牧場容量、桌機 cover 縮放、紀錄併入功能選單、照顧合併＋一鍵收成 */
+/* build-ok r4：真實好友系統（好友代碼/拜訪/偷菜/幫忙照顧/來訪通知） */
 </script>
 </body>
 </html>
