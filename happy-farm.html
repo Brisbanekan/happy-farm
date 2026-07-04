@@ -127,7 +127,7 @@
   .plot.t-grass::before{background-image:url(background/grass.png);background-size:150px 78.4px;background-position:0 -2.1px;}
   .plot.t-dirt::before{background-image:url(background/lend.png);background-size:150px 82.6px;background-position:0 0;}
   .plot:active{filter:brightness(1.12);}
-  .plot.dry{filter:brightness(1.22) saturate(.62) sepia(.18);}
+  .plot.dry::before{filter:brightness(1.22) saturate(.62) sepia(.18);}   /* 乾旱只影響地磚，不影響作物與泡泡 */
   .plot.ripe{z-index:3;}
   .plot.ripe::before{animation:ripeglow 1.6s ease-in-out infinite;}
   @keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
@@ -140,6 +140,18 @@
   .ov.dry{top:1px;left:3px;}
   .ov.weed{bottom:0px;left:2px;}
   .ov.bug{top:0px;right:2px;}
+  /* 田地狀態對話泡泡（💧🌿🐜 漂浮在田地上方） */
+  .statbub{position:absolute;left:50%;top:50%;z-index:6;pointer-events:none;
+    transform:translate(-50%,-50%) rotate(-45deg) scaleY(2) translateY(-25px);}
+  .statbub .bin{display:inline-flex;gap:3px;align-items:center;background:#fffef8f5;border:2px solid #e0c389;
+    border-radius:11px;padding:2px 7px;font-size:13px;line-height:1.2;box-shadow:0 2px 5px #0003;
+    position:relative;white-space:nowrap;animation:bubbob 1.6s ease-in-out infinite;}
+  .statbub .bin::before{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:#e0c389;border-bottom:none;}
+  .statbub .bin::after{content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:#fffef8f5;border-bottom:none;}
+  .statbub small{font-size:9px;font-weight:800;color:#a23b3b;}
+  @keyframes bubbob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
   .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2);}
   .progress>i{display:block;height:100%;background:linear-gradient(90deg,#ffe082,#ffb300);}
   .signpost{
@@ -1132,10 +1144,8 @@ function renderGrid(){
     }
     if(p.dry)cls+=" dry";
     d.className=cls;
-    d.innerHTML=inner
-      +(p.dry?'<span class="ov dry">💧</span>':'')
-      +(p.weed?'<span class="ov weed">🌿</span>':'')
-      +(p.bug?'<span class="ov bug">'+(p.bugBig?'🐛<small style="font-size:9px">x'+p.bug+'</small>':'🐜')+'</span>':'');
+    const st=(p.dry?'💧':'')+(p.weed?'🌿':'')+(p.bug?(p.bugBig?('🐛<small>×'+p.bug+'</small>'):'🐜'):'');
+    d.innerHTML=inner+(st?'<div class="statbub"><span class="bin">'+st+'</span></div>':'');
     d.onclick=()=>tapPlot(i);
     grid.appendChild(d);
   });
@@ -1803,7 +1813,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r6：地磚對齊校正、狀態田置頂、移除匯出入/重開按鈕、好友代碼改固定制、新增作物與花卉 */
+/* build-ok r7：田地狀態改對話泡泡顯示 */
 </script>
 </body>
 </html>
