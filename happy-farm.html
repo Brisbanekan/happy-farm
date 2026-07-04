@@ -272,6 +272,14 @@
   .sceneswitch button.on{background:#aed581;color:#33691e;box-shadow:0 1px 3px #0002;}
   #scene.s-farm .pen{display:none;}
   #scene.s-ranch #world,#scene.s-ranch .tools{display:none;}
+  /* 拜訪好友農場（同一個遊戲場景）：頂部顯示好友名稱＋離開按鈕，隱藏場景切換 */
+  .visitbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:26;display:none;align-items:center;gap:10px;
+    background:#fffef6ea;border:2px solid #d9c9a6;border-radius:24px;padding:5px 8px 5px 16px;box-shadow:0 3px 8px #0003;
+    font-size:14px;font-weight:800;color:#5b3f17;white-space:nowrap;}
+  #scene.visiting .visitbar{display:flex;}
+  #scene.visiting .sceneswitch{display:none;}
+  .visitbar button{border:2px solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:16px;padding:4px 14px;font-weight:800;cursor:pointer;font-size:13px;}
+  .visitbar button:active{transform:translateY(1px);}
 
   /* ===== 牧場場景：與農場同尺寸(1400×1000)，背景改用素材圖 ===== */
   #ranchBg{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;display:none;overflow:hidden;
@@ -464,6 +472,9 @@
     <button id="tabFarm" class="on" onclick="setScene('farm')">🌾 農場</button>
     <button id="tabRanch" onclick="setScene('ranch')">🐮 牧場</button>
   </div>
+
+  <!-- 拜訪好友農場的頂部列 -->
+  <div class="visitbar"><span id="visitName"></span><button onclick="leaveVisit()">🏡 離開</button></div>
 
   <!-- 建築物（家 / 倉庫） -->
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
@@ -1004,8 +1015,9 @@ const TOOLS=[
 ];
 function renderTools(){
   if(G.tool==="water"||G.tool==="weed"||G.tool==="bug")G.tool="care";   // 舊存檔工具轉換
+  if(VISIT.on&&G.tool!=="hand"&&G.tool!=="care")G.tool="hand";          // 拜訪中只能用手/照顧
   const box=document.getElementById("tools");box.innerHTML="";
-  TOOLS.forEach(t=>{
+  (VISIT.on?TOOLS.filter(t=>t.k==="hand"||t.k==="care"):TOOLS).forEach(t=>{
     const d=document.createElement("div");
     d.className="tool"+(G.tool===t.k?" sel":"");
     d.innerHTML=t.ic+'<span class="lbl">'+t.name+'</span>';
@@ -1015,6 +1027,7 @@ function renderTools(){
       if(t.k==="fert")toast("選肥料後點要加速的作物");};
     box.appendChild(d);
   });
+  if(VISIT.on)return;   // 拜訪中不顯示一鍵收成
   // 一鍵收成（動作按鈕，非工具）
   const ha=document.createElement("div");
   ha.className="tool";
@@ -1125,15 +1138,19 @@ function renderHUD(){
 }
 function renderGrid(){
   const grid=document.getElementById("grid");grid.innerHTML="";
-  G.plots.forEach((p,i)=>{
+  const plots=VISIT.on?VISIT.plots:G.plots;
+  plots.forEach((p,i)=>{
     const d=document.createElement("div");
     // 田地已旋轉180°：依格位設定堆疊順序，讓前方(畫面下方)地磚蓋住後方
     d.style.zIndex = 1 + (i%3) + Math.floor(i/3);   // 前方(畫面下方)地磚蓋住後方（狀態泡泡朝上方漂浮，不會被前排蓋住）
     if(!p.unlocked){
       d.className="plot locked t-grass";   // 未開墾＝草地貼圖
-      const firstLocked=G.plots.findIndex(x=>!x.unlocked);
-      if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</div>';}
-      d.onclick=()=>buyLand(i);grid.appendChild(d);return;
+      if(!VISIT.on){   // 拜訪好友時不顯示購地告示、也不能幫別人買地
+        const firstLocked=G.plots.findIndex(x=>!x.unlocked);
+        if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</div>';}
+        d.onclick=()=>buyLand(i);
+      }
+      grid.appendChild(d);return;
     }
     let cls="plot t-dirt";let inner="";   // 可種植的田＝褐色土地貼圖
     if(p.state==="planted"){
@@ -1143,7 +1160,8 @@ function renderGrid(){
     }
     if(p.dry)cls+=" dry";
     d.className=cls;
-    const st=(p.dry?'💧':'')+(p.weed?'🌿':'')+(p.bug?(p.bugBig?('🐛<small>×'+p.bug+'</small>'):'🐜'):'');
+    let st=(p.dry?'💧':'')+(p.weed?'🌿':'')+(p.bug?(p.bugBig?('🐛<small>×'+p.bug+'</small>'):'🐜'):'');
+    if(VISIT.on&&p.ripe){const left=Math.max(0,2-(p.stolen||0));st+=(left>0?'✋<small>×'+left+'</small>':'🚫');}   // 拜訪時顯示剩餘可偷次數
     d.innerHTML=inner+(st?'<div class="statbub"><span class="bin">'+st+'</span></div>':'');
     d.onclick=()=>tapPlot(i);
     grid.appendChild(d);
@@ -1153,6 +1171,7 @@ function renderGrid(){
 /* ============ 點田地 ============ */
 function tapPlot(i){
   if(Date.now()-lastPanEnd<250)return;   // 剛拖移過就不算點擊
+  if(VISIT.on){visitTap(i);return;}      // 拜訪好友中 → 偷菜/照顧
   const p=G.plots[i];const t=G.tool;
   if(t==="plant"){
     if(p.state==="planted"){toast("這塊地已經種了作物");return;}
@@ -1324,10 +1343,7 @@ function openFertPick(i){
 function useFert(i,k){if((G.ferts[k]||0)<=0)return;const p=G.plots[i];if(p.state!=="planted"||p.ripe){closeM();return;}G.ferts[k]--;p.grow+=FERTS[k].cut;const total=CROPS[p.crop].grow;if(p.grow>=total){p.grow=total;p.ripe=true;log("施肥後作物立刻成熟！可馬上收成防被偷 😆","g");}else log("施肥加速 "+FERTS[k].cut+"s");closeM();render();}
 
 /* ============ 好友 / 偷菜 ============ */
-let curFriend=null;
-
 /* ====== 真實好友（串接 Firebase users 資料庫） ====== */
-let palCache={}, curPal=null, palTool="hand";
 function friendReady(){return !!(fbDB&&fbUser);}
 function myName(){ return ((fbUser&&fbUser.displayName)||"神秘農友").slice(0,12); }
 // 由 uid 產生固定的 6 碼好友代碼（同帳號在任何裝置都是同一組）
@@ -1395,7 +1411,7 @@ function openFriends(){
     if(!uids.length)h+='<p class="hint">還沒有真實好友。跟朋友交換代碼互加，就能去對方農場偷菜、幫忙照顧！</p>';
     uids.forEach(function(uid){const f=G.pals[uid];
       h+='<div class="friend"><span class="av">🧑‍🌾</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+(f.lv||"?")+'</div></div>'+
-        '<button class="pbtn blue" onclick="visitPal(\''+uid+'\')">前往農場</button>'+
+        '<button class="pbtn blue" onclick="enterVisitPal(\''+uid+'\')">前往農場</button>'+
         '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="removePal(\''+uid+'\')">移除</button></div>';
     });
     h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
@@ -1403,75 +1419,80 @@ function openFriends(){
     h+='<p class="hint">尚未登入帳號。登入後可用好友代碼加真實好友，互相拜訪、偷菜、幫忙照顧。以下為電腦好友（練習用）。</p>';
   }
   h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">🤖 電腦好友（練習）</div>';
-  G.friends.forEach((f,i)=>{const ripe=(f.plots||[]).filter(p=>p&&p.ripe&&(p.stolen||0)<2).length;h+='<div class="friend"><span class="av">'+f.av+'</span><div class="meta"><b>'+f.name+'</b><div>成熟可偷：'+ripe+' 塊</div></div><button class="pbtn blue" onclick="visitFriend('+i+')">前往農場</button></div>';});
+  const NPC_LV=[3,5,8,12];
+  G.friends.forEach((f,i)=>{const ripe=(f.plots||[]).filter(p=>p&&p.ripe&&(p.stolen||0)<2).length;h+='<div class="friend"><span class="av">'+f.av+'</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+NPC_LV[i%NPC_LV.length]+'｜成熟可偷：'+ripe+' 塊</div></div><button class="pbtn blue" onclick="enterVisitNpc('+i+')">前往農場</button></div>';});
   h+='</div>';showM(h);
 }
 
-/* ====== 好友田地格子（狀態徽章＋成長進度＋可偷次數） ====== */
-function pbadge(bgc,ic){return '<span style="padding:1px 3px;border-radius:6px;font-size:11px;line-height:1;box-shadow:0 1px 2px #0004;background:'+bgc+'">'+ic+'</span>';}
-function palPlotCell(p,idx,fn){
-  if(!p)p={crop:null};
-  const planted=!!p.crop&&(p.state?p.state==="planted":true);
-  let bg,main="",foot="",dim="";
-  if(!planted){
-    bg="background:linear-gradient(#8bc45e,#79b34c);";
-    foot='<span style="font-size:10px;color:#ffffffcc;font-weight:700">空地</span>';
-  }else{
-    const c=CROPS[p.crop]||{grown:"🌾",name:"作物",grow:0};
-    bg="background:repeating-linear-gradient(95deg,#6b4a2f 0 7px,#5d3f28 7px 14px);";
-    if(p.ripe){
-      const left=Math.max(0,2-(p.stolen||0));
-      main='<span style="font-size:29px;line-height:1;filter:drop-shadow(0 0 6px #ffd54f)">'+c.grown+'</span>';
-      if(left>0)foot='<span style="font-size:10px;background:#ffd54f;color:#6b4a00;font-weight:800;padding:1px 6px;border-radius:8px">可偷 '+left+' 次</span>';
-      else{foot='<span style="font-size:10px;background:#00000066;color:#fff;font-weight:700;padding:1px 6px;border-radius:8px">被偷光了</span>';dim="opacity:.6;";}
-    }else{
-      const total=c.grow||0;
-      const pct=(typeof p.grow==="number"&&total)?Math.min(99,Math.round(p.grow/total*100)):null;
-      main='<span style="font-size:22px;line-height:1">'+((pct!==null&&pct<45)?"🌰":"🌱")+'</span>';
-      if(pct!==null)foot='<div style="width:78%;height:6px;background:#0006;border-radius:3px;overflow:hidden"><i style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#aed581,#7cb342)"></i></div><span style="font-size:9px;color:#fff;font-weight:700;text-shadow:0 1px 2px #000">'+c.name+' '+pct+'%</span>';
-      else foot='<span style="font-size:10px;color:#ffffffdd;font-weight:700">'+c.name+' 成長中…</span>';
-    }
+/* ====== 拜訪好友農場（直接進入遊戲場景；真實好友與電腦好友共用） ====== */
+let VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null};
+function visitPlotsFromNpc(f){
+  const arr=[];
+  for(let i=0;i<LANDS.length;i++){
+    const np=(f.plots||[])[i];
+    if(np&&typeof np==="object")arr.push({unlocked:true,state:np.crop?"planted":"empty",crop:np.crop||null,
+      ripe:!!np.ripe,stolen:np.stolen||0,dry:!!np.dry,weed:!!np.weed,bug:np.bug||0,bugBig:!!np.bugBig,
+      grow:(np.crop&&!np.ripe&&CROPS[np.crop])?Math.round(CROPS[np.crop].grow*0.6):0,_npc:np});
+    else arr.push({unlocked:false,state:"empty",crop:null});
   }
-  const badges=(p.dry?pbadge("#4fa3e3","💧"):"")+(p.weed?pbadge("#6fae4e","🌿"):"")+(p.bug?pbadge("#c96a3b",p.bugBig?"🐛":"🐜"):"");
-  const glow=(planted&&p.ripe&&(p.stolen||0)<2)?"box-shadow:0 0 0 3px #ffd54f,0 0 12px #ffca28;":"";
-  return '<div onclick="'+fn+'('+idx+')" style="position:relative;aspect-ratio:1/1;border-radius:10px;border:2px solid #4a3019;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;overflow:hidden;'+bg+glow+dim+'">'+main+foot+
-    (badges?'<div style="position:absolute;top:2px;left:2px;display:flex;gap:2px">'+badges+'</div>':'')+'</div>';
+  return arr;
 }
-
-/* ====== 拜訪真實好友農場（讀取對方 users/{uid} 的實際田地） ====== */
-function visitPal(uid){
+function enterVisitNpc(i){
+  const f=G.friends[i]; if(!f)return;
+  VISIT={on:true,uid:null,npc:i,plots:visitPlotsFromNpc(f),name:f.av+" "+f.name,dog:null};
+  startVisit();
+}
+function enterVisitPal(uid){
   if(!friendReady())return;
   toast("前往好友農場…");
   fbDB.ref("users/"+uid).once("value").then(function(snap){
     const d=snap.val();
     if(!d||!Array.isArray(d.plots)){alert("讀不到好友的農場資料（對方可能還沒上線存檔過）。");return;}
-    curPal=uid; palCache[uid]=d;
-    renderPalFarm();
+    const f=G.pals[uid]||{name:"農友"};
+    VISIT={on:true,uid:uid,npc:-1,name:"🧑‍🌾 "+f.name+"（Lv."+(d.level||1)+"）",dog:d.dog||null,
+      plots:d.plots.map(function(p){return (p&&typeof p==="object")?p:{unlocked:false,state:"empty",crop:null};})};
+    startVisit();
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
 }
-function renderPalFarm(){
-  const d=palCache[curPal]; if(!d)return;
-  const f=G.pals[curPal]||{name:"農友"};
-  const dogOn=!!(d.dog&&d.dog.fedUntil&&d.dog.fedUntil>Date.now());
-  let h='<h2>🧑‍🌾 '+f.name+' 的農場（Lv.'+(d.level||1)+'）<button class="x" onclick="closeM()">×</button></h2><div class="body">'+
-    '<p class="hint">✋ 偷菜（每塊最多被偷 2 次'+(dogOn?'，⚠️ 他有餵飽的看門狗🐕':'')+'）｜🚿 照顧（幫忙澆水/除草/殺蟲賺經驗）。</p>';
-  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:linear-gradient(#9ccff0,#bfe3f7);border:3px solid #79b8da;border-radius:12px;padding:10px;">';
-  d.plots.forEach(function(p,idx){ if(!p||!p.unlocked)return; h+=palPlotCell(p,idx,"palTap"); });
-  h+='</div>';
-  h+='<div class="tabs" style="margin-top:10px;justify-content:center">'+
-    '<button class="'+(palTool==='hand'?'on':'')+'" onclick="setPalTool(\'hand\')">✋ 偷菜</button>'+
-    '<button class="'+(palTool==='care'?'on':'')+'" onclick="setPalTool(\'care\')">🚿 照顧</button></div>'+
-    '<button class="bigbtn" style="background:#e7f3ff;border-color:#7bb8ee;margin-top:6px" onclick="openFriends()">← 返回好友名單</button></div>';
-  showM(h);
+function startVisit(){
+  closeM(); setScene("farm");
+  const sc=document.getElementById("scene"); if(sc)sc.classList.add("visiting");
+  const vn=document.getElementById("visitName"); if(vn)vn.textContent=VISIT.name+" 的農場";
+  if(G.tool!=="hand"&&G.tool!=="care")G.tool="hand";
+  render(); centerField();
+  toast("✋ 偷成熟作物｜🚿 幫忙照顧"+((VISIT.dog&&VISIT.dog.fedUntil&&VISIT.dog.fedUntil>Date.now())?"（⚠️ 小心他的看門狗）":""));
 }
-function setPalTool(t){palTool=t;renderPalFarm();}
-function palTap(idx){
-  const d=palCache[curPal]; if(!d)return;
-  const p=d.plots[idx]; if(!p)return;
-  const f=G.pals[curPal]||{name:"農友"};
-  const plotRef=fbDB.ref("users/"+curPal+"/plots/"+idx);
-  if(p.state!=="planted"||!p.crop){toast("空地");return;}
-  if(palTool==="care"){
+function leaveVisit(){
+  VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null};
+  const sc=document.getElementById("scene"); if(sc)sc.classList.remove("visiting");
+  render(); centerField(); toast("回到自己的農場 🏡");
+}
+
+/* ====== 拜訪中點田地：✋偷菜 / 🚿照顧 ====== */
+function visitTap(i){
+  const p=VISIT.plots[i]; if(!p||!p.unlocked)return;
+  const care=(G.tool==="care");
+  if(!p.crop||(p.state&&p.state!=="planted")){toast("空地");return;}
+  if(VISIT.npc>=0){   // 電腦好友：本機模擬
+    const np=p._npc||{};
+    if(care){
+      let n=0;
+      if(p.dry){p.dry=false;np.dry=false;n++;}
+      if(p.weed){p.weed=false;np.weed=false;n++;}
+      if(p.bug){p.bug=0;p.bugBig=false;np.bug=0;n++;}
+      if(n){gainXp(n);toast("幫忙照顧 +"+n+" 經驗");}else toast("這塊地不需要照顧");
+    }else{
+      if(!p.ripe){toast("還沒成熟，不能偷");return;}
+      if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
+      if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+VISIT.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");}
+      else{const q=1+Math.floor(Math.random()*3);p.stolen++;np.stolen=(np.stolen||0)+1;const c=CROPS[p.crop];G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);log("偷到 "+VISIT.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);}
+    }
+    renderHUD();renderGrid();saveGame();
+    return;
+  }
+  // 真實好友：直接寫回對方資料庫
+  const plotRef=fbDB.ref("users/"+VISIT.uid+"/plots/"+i);
+  if(care){
     let n=0; const up={};
     if(p.dry){p.dry=false;up.dry=false;n++;}
     if(p.weed){p.weed=false;up.weed=false;n++;}
@@ -1479,66 +1500,36 @@ function palTap(idx){
     if(!n){toast("這塊地不需要照顧");return;}
     plotRef.update(up).then(function(){
       gainXp(n);saveGame();
-      log("幫 "+f.name+" 照顧田地 🤝 +"+n+" 經驗","g");toast("幫忙照顧 +"+n+" 經驗");
-      renderPalFarm();
+      log("幫 "+VISIT.name+" 照顧田地 🤝 +"+n+" 經驗","g");toast("幫忙照顧 +"+n+" 經驗");
+      renderGrid();
     }).catch(function(e){alert("寫入失敗："+(e&&e.message||e));});
-  }else{   // ✋ 偷菜
+  }else{
     if(!p.ripe){toast("還沒成熟，不能偷");return;}
     if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
-    // 對方的看門狗（用他存檔裡的真實狗）
-    if(d.dog&&d.dog.fedUntil&&d.dog.fedUntil>Date.now()&&Math.random()<dogBiteChance(d.dog.level||1)){
-      const fine=Math.round((15+Math.random()*30)*(1+((d.dog.level||1)-1)*0.6));
+    const dog=VISIT.dog;   // 對方存檔裡的真實看門狗
+    if(dog&&dog.fedUntil&&dog.fedUntil>Date.now()&&Math.random()<dogBiteChance(dog.level||1)){
+      const fine=Math.round((15+Math.random()*30)*(1+((dog.level||1)-1)*0.6));
       G.gold=Math.max(0,G.gold-fine);renderHUD();saveGame();
-      fbDB.ref("users/"+curPal+"/gold").transaction(function(g){return (g||0)+fine;});
-      log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");
+      fbDB.ref("users/"+VISIT.uid+"/gold").transaction(function(g){return (g||0)+fine;});
+      log("你在 "+VISIT.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");
       return;
     }
     plotRef.child("stolen").transaction(function(cur){
       cur=cur||0; return cur>=2?undefined:cur+1;
     },function(err,committed,snap){
       if(err){alert("偷菜失敗："+(err.message||err));return;}
-      if(!committed){toast("這塊已被偷光了");p.stolen=2;renderPalFarm();return;}
+      if(!committed){toast("這塊已被偷光了");p.stolen=2;renderGrid();return;}
       p.stolen=snap.val();
       const q=1+Math.floor(Math.random()*2);
       const c=CROPS[p.crop]||{name:"作物",emoji:"🌾"};
       G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);saveGame();
-      log("偷到 "+f.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);
-      renderPalFarm();
+      log("偷到 "+VISIT.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);
+      renderGrid();
     });
   }
 }
 
-/* ====== 電腦好友（練習用） ====== */
-function visitFriend(i){
-  curFriend=i;const f=G.friends[i];
-  let h='<h2>'+f.av+' '+f.name+' 的農場 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">✋ 偷菜（每塊最多被偷 2 次）｜🚿 照顧（幫忙澆水/除草/殺蟲，都加經驗）。</p>';
-  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:linear-gradient(#9ccff0,#bfe3f7);border:3px solid #79b8da;border-radius:12px;padding:10px;">';
-  f.plots.forEach((p,idx)=>{ h+=palPlotCell(p,idx,"friendTap"); });
-  h+='</div>';
-  h+='<div class="tabs" style="margin-top:10px;justify-content:center">'+
-    '<button class="'+(palTool==='hand'?'on':'')+'" onclick="setFTool(\'hand\')">✋ 偷菜</button>'+
-    '<button class="'+(palTool==='care'?'on':'')+'" onclick="setFTool(\'care\')">🚿 照顧</button></div>'+
-    '<button class="bigbtn" style="background:#e7f3ff;border-color:#7bb8ee;margin-top:6px" onclick="openFriends()">← 返回好友名單</button></div>';
-  showM(h);
-}
-function setFTool(t){palTool=t;visitFriend(curFriend);}
-function friendTap(idx){
-  const f=G.friends[curFriend];const p=f.plots[idx];if(!p||!p.crop){toast("空地");return;}
-  if(palTool==="hand"){
-    if(!p.ripe){toast("還沒成熟，不能偷");return;}
-    if(p.stolen>=2){toast("這塊已被偷光了");return;}
-    if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+f.name+" 家偷菜被狗咬了！🐕 掉了 <span class=coinico></span>"+fine,"r");toast("被狗咬！掉錢 😱");}
-    else{const q=1+Math.floor(Math.random()*3);p.stolen++;const c=CROPS[p.crop];G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);log("偷到 "+f.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);}
-  }else{   // 🚿 照顧：一次處理
-    let n=0;
-    if(p.dry){p.dry=false;n++;}
-    if(p.weed){p.weed=false;n++;}
-    if(p.bug){p.bug=0;n++;}
-    if(n){gainXp(n);toast("幫忙照顧 +"+n+" 經驗");}
-    else toast("這塊地不需要照顧");
-  }
-  renderHUD();visitFriend(curFriend);
-}
+/* 電腦好友與真實好友都改用場景拜訪（enterVisitNpc / enterVisitPal） */
 
 /* ============ 養狗 ============ */
 const DOG_FEED_MS=12*3600*1000; // 餵一次飽 12 小時
@@ -1812,7 +1803,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r8：取消狀態田 z-index 拉高、種子與倉庫按鈕合併 */
+/* build-ok r9：拜訪好友改為進入遊戲場景（真實好友與電腦好友共用） */
 </script>
 </body>
 </html>
