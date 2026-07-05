@@ -280,6 +280,59 @@
   #scene.visiting .sceneswitch{display:none;}
   .visitbar button{border:2px solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:16px;padding:4px 14px;font-weight:800;cursor:pointer;font-size:13px;}
   .visitbar button:active{transform:translateY(1px);}
+  /* ===== 股市交易場景（幣安風格深色 UI） ===== */
+  #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
+  #scene.s-stock #stockScene{display:flex;}
+  #scene.s-stock .hud,#scene.s-stock .tools,#scene.s-stock .leftbar,#scene.s-stock .dock,#scene.s-stock .sceneswitch,#scene.s-stock .zoomctrl,#scene.s-stock .visitbar,#scene.s-stock .logpanel{display:none!important;}
+  .stkTop{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#161a1e;border-bottom:1px solid #2b3139;position:relative;flex-wrap:wrap;}
+  .stkBack{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+  .stkStar{cursor:pointer;font-size:18px;filter:grayscale(1);opacity:.55;}
+  .stkStar.on{filter:none;opacity:1;}
+  .stkSym{cursor:pointer;font-size:17px;font-weight:800;display:flex;align-items:center;gap:6px;user-select:none;}
+  .stkSym span{font-size:11px;color:#848e9c;font-weight:400;}
+  .stkPrice{font-size:22px;font-weight:800;}
+  .stkPrice.up{color:#0ecb81;} .stkPrice.dn{color:#f6465d;}
+  .stkStat{font-size:11px;color:#848e9c;display:flex;flex-direction:column;line-height:1.4;}
+  .stkStat b{font-size:13px;color:#eaecef;}
+  .stkDrop{position:absolute;left:70px;top:100%;width:300px;max-height:330px;overflow:auto;background:#1e2329;border:1px solid #2b3139;
+    border-radius:8px;box-shadow:0 8px 24px #000a;z-index:5;display:none;}
+  .stkDrop.on{display:block;}
+  .stkDrop .row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;}
+  .stkDrop .row:hover{background:#2b3139;}
+  .stkDrop .row b{flex:1;} .stkDrop .row .tk{color:#848e9c;font-size:11px;}
+  .stkMain{flex:1;display:flex;min-height:0;}
+  #tvFrame{flex:1;border:0;min-width:0;background:#131722;}
+  .stkOrder{width:252px;flex-shrink:0;background:#161a1e;border-left:1px solid #2b3139;padding:12px;display:flex;flex-direction:column;gap:9px;overflow:auto;}
+  .stkOrder .otabs{display:flex;gap:6px;}
+  .stkOrder .otabs button{flex:1;border:none;background:#2b3139;color:#848e9c;border-radius:6px;padding:6px 0;font-weight:800;font-size:13px;cursor:pointer;}
+  .stkOrder .otabs button.on{background:#474d57;color:#f0b90b;}
+  .stkOrder label{font-size:11px;color:#848e9c;}
+  .stkOrder .inrow{display:flex;align-items:center;background:#2b3139;border-radius:8px;padding:6px 10px;gap:6px;}
+  .stkOrder input{flex:1;min-width:0;border:none;background:none;color:#eaecef;font-size:14px;font-weight:700;outline:none;text-align:right;}
+  .stkOrder input:disabled{color:#5a6570;}
+  .stkOrder .inrow span{font-size:11px;color:#848e9c;flex-shrink:0;}
+  .stkOrder .inrow button{border:none;background:#474d57;color:#eaecef;font-size:10px;border-radius:5px;padding:2px 7px;cursor:pointer;flex-shrink:0;}
+  .stkOrder .pct{display:flex;gap:5px;}
+  .stkOrder .pct button{flex:1;border:none;background:#2b3139;color:#848e9c;border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;}
+  .stkOrder .pct button:hover{color:#eaecef;background:#474d57;}
+  .stkBuy{border:none;border-radius:8px;padding:11px 0;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:#0ecb81;}
+  .stkSell{border:none;border-radius:8px;padding:11px 0;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:#f6465d;}
+  .stkBuy:active,.stkSell:active{opacity:.82;}
+  .stkOrder .info{font-size:11px;color:#848e9c;line-height:1.7;}
+  .stkBottom{height:158px;flex-shrink:0;background:#161a1e;border-top:1px solid #2b3139;display:flex;flex-direction:column;}
+  .stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px;border-bottom:1px solid #2b3139;}
+  .stkBottom .btabs button{border:none;background:none;color:#848e9c;font-size:13px;font-weight:800;cursor:pointer;padding:2px 0;}
+  .stkBottom .btabs button.on{color:#f0b90b;border-bottom:2px solid #f0b90b;}
+  .stkBottom .bbody{flex:1;overflow:auto;padding:4px 14px;}
+  .stkBottom table{width:100%;border-collapse:collapse;font-size:12px;}
+  .stkBottom th{color:#848e9c;font-weight:400;text-align:left;padding:4px 6px;font-size:11px;}
+  .stkBottom td{padding:5px 6px;border-top:1px solid #23282e;}
+  .stkBottom .up{color:#0ecb81;} .stkBottom .dn{color:#f6465d;}
+  .stkBottom .cbtn{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;}
+  body.narrow .stkOrder{width:196px;padding:8px;gap:6px;}
+  body.narrow .stkBottom{height:112px;}
+  body.narrow .stkTop{gap:8px;padding:6px 10px;}
+  body.narrow .stkPrice{font-size:17px;}
 
   /* ===== 牧場場景：與農場同尺寸(1400×1000)，背景改用素材圖 ===== */
   #ranchBg{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;display:none;overflow:hidden;
@@ -521,6 +574,39 @@
     </div>
   </div>
 
+  <!-- 股市交易場景 -->
+  <div id="stockScene">
+    <div class="stkTop">
+      <button class="stkBack" onclick="exitStock()">← 農場</button>
+      <span class="stkStar" id="stkStar" onclick="toggleFav()">⭐</span>
+      <div class="stkSym" onclick="toggleStockDrop()"><b id="stkName">--</b><span id="stkTick"></span> ▾</div>
+      <div class="stkPrice" id="stkPrice">--</div>
+      <div class="stkStat">今日漲跌<b id="stkChg">--</b></div>
+      <div class="stkStat">交易時段<b id="stkSess">--</b></div>
+      <div class="stkStat">持倉<b id="stkPos">--</b></div>
+      <div class="stkStat">可用金幣<b id="stkCash">--</b></div>
+      <div class="stkDrop" id="stkDrop"></div>
+    </div>
+    <div class="stkMain">
+      <iframe id="tvFrame" title="chart"></iframe>
+      <div class="stkOrder">
+        <div class="otabs"><button id="otLimit" class="on" onclick="setOrderType('limit')">限價</button><button id="otMarket" onclick="setOrderType('market')">市價</button></div>
+        <label>委託價格</label>
+        <div class="inrow"><input id="odPrice" type="number" step="0.01" oninput="updOdCost()"><span>金幣</span><button onclick="odUseCur()">現價</button></div>
+        <label>數量</label>
+        <div class="inrow"><input id="odQty" type="number" step="1" min="0" oninput="updOdCost()"><span>股</span></div>
+        <div class="pct"><button onclick="odQtyPct(.25)">25%</button><button onclick="odQtyPct(.5)">50%</button><button onclick="odQtyPct(.75)">75%</button><button onclick="odQtyPct(1)">全部</button></div>
+        <button class="stkBuy" onclick="placeOrder(1)">買入 / 做多</button>
+        <button class="stkSell" onclick="placeOrder(-1)">賣出 / 做空</button>
+        <div class="info" id="odCost"></div>
+      </div>
+    </div>
+    <div class="stkBottom">
+      <div class="btabs"><button id="btPos" class="on" onclick="setStkTab('pos')">倉位(<span id="posN">0</span>)</button><button id="btOrd" onclick="setStkTab('ord')">當前委託(<span id="ordN">0</span>)</button></div>
+      <div class="bbody" id="stkBody"></div>
+    </div>
+  </div>
+
   <!-- 彈跳視窗（置於 scene 內，手機模擬器才會限制在框內、自適應大小） -->
   <div class="mask" id="mask"><div class="modal" id="modal"></div></div>
 </div>
@@ -544,6 +630,7 @@
       <span style="font-size:18px">🔵</span> 使用 Google 登入
     </button>
     <div id="loginMsg" style="font-size:12px;color:#c62828;margin-top:10px;min-height:16px"></div>
+    <div style="margin-top:6px"><a href="#" onclick="hideLogin();return false" style="font-size:12px;color:#8d7b6a">先本機試玩，之後再登入 →</a></div>
   </div>
 </div>
 
@@ -615,12 +702,21 @@ const SLOT_SYM=[
 // 3×3 格子索引：0 1 2 / 3 4 5 / 6 7 8；5 條線（3 橫＋2 斜）
 const SLOT_LINES=[[0,1,2],[3,4,5],[6,7,8],[0,4,8],[6,4,2]];
 const SLOT_COST=50;
-// 股市：公司清單
+// 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
 const STOCKS=[
-  {t:"NTSMC",n:"農積電",base:600},{t:"NFAK",n:"農發科",base:150},{t:"NHAI",n:"農海",base:78},
-  {t:"TNPC",n:"台農電",base:96},{t:"NVDA",n:"農VDA",base:480},{t:"NAPL",n:"農PPLE",base:210},
-  {t:"NOOG",n:"農OOG",base:165},{t:"NSFT",n:"農SFT",base:320},{t:"NSLA",n:"農SLA",base:250},{t:"NMZN",n:"農MZN",base:185}
+  {t:"TSM",  n:"台積電ADR", base:200, y:"TSM",  tv:"NYSE:TSM"},
+  {t:"UMC",  n:"聯電ADR",   base:7,   y:"UMC",  tv:"NYSE:UMC"},
+  {t:"ASX",  n:"日月光ADR", base:10,  y:"ASX",  tv:"NYSE:ASX"},
+  {t:"CHT",  n:"中華電ADR", base:40,  y:"CHT",  tv:"NYSE:CHT"},
+  {t:"NVDA", n:"輝達",   base:180, y:"NVDA", tv:"NASDAQ:NVDA"},
+  {t:"AAPL", n:"蘋果",   base:235, y:"AAPL", tv:"NASDAQ:AAPL"},
+  {t:"GOOGL",n:"谷歌",   base:200, y:"GOOGL",tv:"NASDAQ:GOOGL"},
+  {t:"MSFT", n:"微軟",   base:460, y:"MSFT", tv:"NASDAQ:MSFT"},
+  {t:"TSLA", n:"特斯拉", base:330, y:"TSLA", tv:"NASDAQ:TSLA"},
+  {t:"AMZN", n:"亞馬遜", base:230, y:"AMZN", tv:"NASDAQ:AMZN"}
 ];
+// 舊代號存檔搬移
+const STOCK_MIG={NTSMC:"TSM",NFAK:"UMC",NHAI:"ASX",TNPC:"CHT",NAPL:"AAPL",NOOG:"GOOGL",NSFT:"MSFT",NSLA:"TSLA",NMZN:"AMZN","2330":"TSM","2454":"UMC","2317":"ASX","2308":"CHT"};
 function stockName(t){const s=STOCKS.find(x=>x.t===t);return s?s.n:t;}
 const FERTS = {
   f1:{name:"普通肥料",emoji:"💩",cost:120,cut:8,cur:"gold",desc:"加速成長 8 秒"},
@@ -740,7 +836,8 @@ function freshGame(){
   G.gold=200;G.credit=5;G.level=1;G.xp=0;G.charm=0;G.tool="hand";
   G.seeds={radish:3};G.harvest={};G.dog=null;G.ferts={f1:0,f2:0,bigspray:0};G.lastDaily="";G.ts=0;G.scene="farm";
   G.streak=0;G.totalDays=0;G.lastClaim="";G.lastMarketDate="";
-  G.stocks={};STOCKS.forEach(s=>G.stocks[s.t]={price:s.base,prev:s.base,shares:0,cost:0});
+  G.stocks={};STOCKS.forEach(s=>G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0});
+  G.stockOrders=[];G.stockFav={};
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
   G.ranch=[];G.pals={};G.myCode="";
   G.friends=FRIEND_NAMES.map(f=>({name:f[0],av:f[1],plots:Array.from({length:6},()=>makeFriendPlot())}));
@@ -767,7 +864,12 @@ function normalizeState(){
   if(typeof G.lastClaim!=="string")G.lastClaim="";
   if(typeof G.lastMarketDate!=="string")G.lastMarketDate="";
   if(!G.stocks||typeof G.stocks!=="object")G.stocks={};
-  STOCKS.forEach(s=>{const st=G.stocks[s.t]; if(!st||typeof st.price!=="number")G.stocks[s.t]={price:s.base,prev:s.base,shares:0,cost:0};});
+  Object.keys(STOCK_MIG).forEach(o=>{const n=STOCK_MIG[o];   // 舊代號 → 真實標的
+    if(G.stocks[o]){ if((G.stocks[o].shares||0)!==0&&!(G.stocks[n]&&G.stocks[n].shares))G.stocks[n]=G.stocks[o]; delete G.stocks[o]; }});
+  STOCKS.forEach(s=>{let st=G.stocks[s.t]; if(!st||typeof st.price!=="number")st=G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0};
+    if(typeof st.avg!=="number")st.avg=(st.shares&&st.cost)?st.cost/st.shares:0;});
+  if(!Array.isArray(G.stockOrders))G.stockOrders=[];
+  if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
 }
 function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
@@ -940,37 +1042,184 @@ function settleSlot(grid,cells){
   renderHUD();saveGame();
 }
 
-/* ============ 股市 ============ */
-function updateMarket(){
-  STOCKS.forEach(s=>{const st=G.stocks[s.t];if(!st)return;st.prev=st.price;
-    const chg=-0.10+Math.random()*0.20; // 每日 -10%~+10%
-    st.price=Math.max(5,Math.round(st.price*(1+chg)));
-  });
-}
+/* ============ 股市（幣安風格交易場景） ============ */
+function updateMarket(){ pollAllQuotes(); }   // 改用真實市場報價（Yahoo Finance）
+let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos";
+function stockOf(t){return STOCKS.find(x=>x.t===t)||STOCKS[0];}
+function fmtP(v){return (Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});}
 function openStocks(){
-  let h='<h2>📈 農場股市 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
-    '<p class="hint">買進股票，每天隨機變動（-10%～+10%），低買高賣賺價差。股價每天更新一次（紅漲綠跌）。</p>';
-  let totVal=0,totCost=0;
-  STOCKS.forEach(s=>{const st=G.stocks[s.t];const chg=st.prev?((st.price-st.prev)/st.prev*100):0;
-    const val=st.shares*st.price; const pl=val-st.cost; totVal+=val; totCost+=st.cost;
-    const col=chg>0?"#c62828":(chg<0?"#2e7d32":"#888");
-    h+='<div class="shopitem"><div style="flex:1;min-width:0"><b>'+s.n+'</b> <span style="font-size:10px;color:#aaa">'+s.t+'</span>'+
-      '<div style="font-size:12px"><span class=coinico></span>'+st.price+' <span style="color:'+col+';font-weight:700">'+(chg>=0?"▲":"▼")+Math.abs(chg).toFixed(1)+'%</span>'+
-      (st.shares?'<br>持有 '+st.shares+' 股｜市值 <span class=coinico></span>'+val+'｜損益 <span style="color:'+(pl>=0?"#c62828":"#2e7d32")+'">'+(pl>=0?"+":"")+Math.round(pl)+'</span>':'')+'</div></div>'+
-      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'+
-        '<div style="display:flex;gap:4px"><button class="pbtn gold" onclick="buyStock(\''+s.t+'\',1)">買1</button><button class="pbtn gold" onclick="buyStock(\''+s.t+'\',10)">買10</button></div>'+
-        '<div style="display:flex;gap:4px"><button class="pbtn" onclick="sellStock(\''+s.t+'\',1)">賣1</button><button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a" onclick="sellStock(\''+s.t+'\',999999)">全賣</button></div>'+
-      '</div></div>';
-  });
-  h+='<div style="text-align:center;font-weight:800;margin-top:8px">總市值 <span class=coinico></span>'+Math.round(totVal)+'（總損益 '+(totVal-totCost>=0?"+":"")+Math.round(totVal-totCost)+'）</div>';
-  h+='</div>';showM(h);
+  stockOpen=true;
+  document.getElementById("scene").classList.add("s-stock");
+  loadTv(); setOrderType(orderType); odUseCur(); renderStockUI();
 }
-function buyStock(t,qty){const st=G.stocks[t];if(!st)return;const cost=st.price*qty;if(G.gold<cost){toast("金幣不足");return;}
-  G.gold-=cost;st.shares+=qty;st.cost+=cost;log("買進 "+stockName(t)+" ×"+qty+"，共 <span class=coinico></span>"+cost);renderHUD();saveGame();openStocks();}
-function sellStock(t,qty){const st=G.stocks[t];if(!st)return;qty=Math.min(qty,st.shares);if(qty<=0){toast("沒有持股");return;}
-  const gain=st.price*qty; const avg=st.shares?st.cost/st.shares:0; st.cost-=avg*qty; st.shares-=qty;
-  if(st.shares<=0){st.shares=0;st.cost=0;} G.gold+=gain;
-  log("賣出 "+stockName(t)+" ×"+qty+"，得 <span class=coinico></span>"+gain,"g");renderHUD();saveGame();openStocks();}
+function exitStock(){ stockOpen=false; stockDropOpen=false;
+  document.getElementById("scene").classList.remove("s-stock"); render(); }
+function loadTv(){
+  const s=stockOf(curStock); const f=document.getElementById("tvFrame"); if(!f)return;
+  if(f.getAttribute("data-sym")===s.tv)return;
+  f.setAttribute("data-sym",s.tv);
+  f.src="https://s.tradingview.com/widgetembed/?symbol="+encodeURIComponent(s.tv)+
+    "&interval=15&theme=dark&style=1&locale=zh_TW&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&withdateranges=1";
+}
+function pickStock(t){curStock=t;stockDropOpen=false;loadTv();odUseCur();renderStockUI();}
+function toggleStockDrop(){stockDropOpen=!stockDropOpen;renderStockUI();}
+function toggleFav(){G.stockFav[curStock]=!G.stockFav[curStock];saveGame();renderStockUI();}
+function setStkTab(t){stkTab=t;renderStockUI();}
+function setOrderType(t){orderType=t;
+  const l=document.getElementById("otLimit"),m=document.getElementById("otMarket"),p=document.getElementById("odPrice");
+  if(l)l.classList.toggle("on",t==="limit"); if(m)m.classList.toggle("on",t==="market");
+  if(p)p.disabled=(t==="market");
+  updOdCost();
+}
+function odUseCur(){const p=document.getElementById("odPrice");if(p)p.value=G.stocks[curStock].price;updOdCost();}
+function odPriceNow(){ const st=G.stocks[curStock];
+  if(orderType==="market")return st.price;
+  return parseFloat((document.getElementById("odPrice")||{}).value)||st.price; }
+function odQtyPct(r){ const q=Math.floor(G.gold*r/odPriceNow());
+  const el=document.getElementById("odQty"); if(el)el.value=q>0?q:0; updOdCost(); }
+function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
+  const qty=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
+  el.innerHTML="預估成本 "+CO+" "+Math.round(odPriceNow()*qty).toLocaleString()+"　｜　可用 "+CO+" "+G.gold.toLocaleString(); }
+function placeOrder(side){
+  const st=G.stocks[curStock];
+  const qty=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
+  if(qty<=0){toast("請輸入數量");return;}
+  if(orderType==="market"){execTrade(curStock,side,qty,st.price);return;}
+  const price=Math.round((parseFloat((document.getElementById("odPrice")||{}).value)||0)*100)/100;
+  if(price<=0){toast("請輸入委託價格");return;}
+  if((side>0&&st.price<=price)||(side<0&&st.price>=price)){execTrade(curStock,side,qty,st.price);return;}   // 立即可成交
+  G.stockOrders.push({id:Math.round(Date.now()+Math.random()*1e4),t:curStock,side:side,price:price,qty:qty});
+  log("📋 掛單："+(side>0?"買入":"賣出")+" "+stockName(curStock)+" ×"+qty+" @ "+fmtP(price),"b");
+  toast("已掛單，到價自動成交");saveGame();renderStockUI();
+}
+function execTrade(t,side,qty,price){
+  const st=G.stocks[t]; const pos=st.shares||0;
+  let closeQ=0, openQ=qty;
+  if(pos!==0&&(pos>0)!==(side>0)){closeQ=Math.min(qty,Math.abs(pos));openQ=qty-closeQ;}   // 先平反向倉
+  if(closeQ>0){
+    const dir=pos>0?1:-1;
+    const pnl=Math.round((price-st.avg)*dir*closeQ);
+    G.gold=Math.max(0,Math.round(G.gold+st.avg*closeQ)+pnl);
+    st.shares=pos-dir*closeQ; if(st.shares===0)st.avg=0;
+    log((dir>0?"平多 ":"平空 ")+stockName(t)+" ×"+closeQ+" @ "+fmtP(price)+"，損益 "+(pnl>=0?"+":"")+pnl+" "+CO,(pnl>=0?"g":"r"));
+    toast(pnl>=0?("💰 獲利 +"+pnl):("虧損 "+pnl));
+  }
+  if(openQ>0){
+    const cost=Math.round(price*openQ);
+    if(G.gold<cost){ toast(closeQ?"金幣不足，僅完成平倉":"金幣不足"); }
+    else{
+      G.gold-=cost;
+      const cur=Math.abs(st.shares);
+      st.avg=cur?((st.avg*cur+price*openQ)/(cur+openQ)):price;
+      st.shares+=side*openQ;
+      log((side>0?"開多 ":"開空 ")+stockName(t)+" ×"+openQ+" @ "+fmtP(price),"b");
+    }
+  }
+  renderHUD();saveGame();renderStockUI();
+}
+function closePosition(t){const st=G.stocks[t];if(!st||!st.shares)return;execTrade(t,st.shares>0?-1:1,Math.abs(st.shares),st.price);}
+function cancelOrder(id){G.stockOrders=(G.stockOrders||[]).filter(o=>o.id!==id);saveGame();renderStockUI();toast("已取消掛單");}
+function stockTick(){   // 每個遊戲心跳：以最新真實報價撮合限價單
+  (G.stockOrders||[]).slice().forEach(o=>{const st=G.stocks[o.t];if(!st)return;
+    if((o.side>0&&st.price<=o.price)||(o.side<0&&st.price>=o.price)){
+      G.stockOrders=G.stockOrders.filter(x=>x.id!==o.id);
+      toast("✅ 限價單成交："+stockName(o.t));
+      execTrade(o.t,o.side,o.qty,o.price);
+    }});
+  if(stockOpen)renderStockUI();
+}
+/* ---- 真實市場報價（Yahoo Finance，含盤前/盤中/盤後）；CORS 代理多重容錯 ---- */
+const YPROXIES=["https://api.allorigins.win/raw?url=","https://corsproxy.io/?url="];
+let yProxyIdx=0;
+function yFetch(u,ok,tryIdx){
+  tryIdx=tryIdx||0;
+  if(tryIdx>=YPROXIES.length)return;
+  const idx=(yProxyIdx+tryIdx)%YPROXIES.length;
+  const ctrl=("AbortController" in window)?new AbortController():null;
+  const timer=ctrl?setTimeout(function(){ctrl.abort();},8000):null;
+  fetch(YPROXIES[idx]+encodeURIComponent(u),ctrl?{signal:ctrl.signal}:{})
+    .then(function(r){if(timer)clearTimeout(timer);if(!r.ok)throw 0;return r.json();})
+    .then(function(d){yProxyIdx=idx;ok(d);})
+    .catch(function(){if(timer)clearTimeout(timer);yFetch(u,ok,tryIdx+1);});
+}
+function fetchQuote(t,cb){
+  const s=stockOf(t);
+  // _ts 快取破壞參數：避免 CORS 代理回舊快取造成報價與圖表不一致
+  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+"?interval=1m&range=1d&includePrePost=true&_ts="+Date.now();
+  yFetch(u,function(d){
+    const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
+    const meta=res.meta||{}; const st=G.stocks[t]; if(!st)return;
+    if(meta.regularMarketTime&&(Date.now()/1000-meta.regularMarketTime)>6*86400)return;   // 過期資料不採用
+    let px=meta.regularMarketPrice;
+    const q=res.indicators&&res.indicators.quote&&res.indicators.quote[0];
+    if(q&&q.close){for(let i=q.close.length-1;i>=0;i--){if(q.close[i]!=null){px=q.close[i];break;}}}   // 含盤前/盤後最新成交
+    if(!px)return;
+    st.price=Math.round(px*100)/100;
+    if(meta.chartPreviousClose)st.prev=meta.chartPreviousClose;
+    let sess="盤中";
+    const ts=res.timestamp&&res.timestamp[res.timestamp.length-1];
+    const tp=meta.currentTradingPeriod;
+    if(ts&&tp&&tp.regular){ if(ts<tp.regular.start)sess="盤前"; else if(ts>=tp.regular.end)sess="盤後"; }
+    st.sess=sess; st.qts=Date.now();
+    if(cb)cb();
+    if(stockOpen&&t===curStock)renderStockUI();
+  });
+}
+function pollAllQuotes(){ STOCKS.forEach(function(s,i){ setTimeout(function(){fetchQuote(s.t);},i*1200); }); }
+setTimeout(pollAllQuotes,2500);                                          // 開場先抓一輪真實報價
+setInterval(pollAllQuotes,90000);                                        // 全標的每 90 秒更新（背景撮合掛單也吃得到）
+setInterval(function(){ if(stockOpen)fetchQuote(curStock); },15000);     // 股市開啟中，當前標的每 15 秒更新
+
+function renderStockUI(){
+  if(!stockOpen)return;
+  const s=stockOf(curStock), st=G.stocks[curStock];
+  const chg=st.prev?((st.price-st.prev)/st.prev*100):0;
+  document.getElementById("stkName").textContent=s.n;
+  document.getElementById("stkTick").textContent=s.t;
+  const pe=document.getElementById("stkPrice"); pe.textContent=fmtP(st.price); pe.className="stkPrice "+(chg>=0?"up":"dn");
+  const ce=document.getElementById("stkChg"); ce.textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%"; ce.style.color=chg>=0?"#0ecb81":"#f6465d";
+  const se=document.getElementById("stkSess"); if(se){se.textContent=st.sess||"--";se.style.color=st.sess==="盤中"?"#0ecb81":(st.sess?"#f0b90b":"#848e9c");}
+  const posEl=document.getElementById("stkPos");
+  posEl.textContent=st.shares?((st.shares>0?"+":"")+st.shares+" 股"):"--";
+  posEl.style.color=st.shares>0?"#0ecb81":(st.shares<0?"#f6465d":"#eaecef");
+  document.getElementById("stkCash").textContent=G.gold.toLocaleString();
+  document.getElementById("stkStar").classList.toggle("on",!!G.stockFav[curStock]);
+  // 標的摺疊選單（自選置頂）
+  const dd=document.getElementById("stkDrop"); dd.classList.toggle("on",stockDropOpen);
+  if(stockDropOpen){
+    const list=STOCKS.slice().sort((a,b)=>(G.stockFav[b.t]?1:0)-(G.stockFav[a.t]?1:0));
+    dd.innerHTML=list.map(x=>{const xs=G.stocks[x.t];const c=xs.prev?((xs.price-xs.prev)/xs.prev*100):0;
+      return '<div class="row" onclick="pickStock(\''+x.t+'\')">'+(G.stockFav[x.t]?'⭐':'<span style="opacity:.25">⭐</span>')+'<b>'+x.n+'</b><span class="tk">'+x.t+'</span>'+
+        '<span>'+fmtP(xs.price)+'</span><span style="width:62px;text-align:right;color:'+(c>=0?'#0ecb81':'#f6465d')+'">'+(c>=0?'+':'')+c.toFixed(2)+'%</span></div>';}).join("");
+  }
+  // 底部：倉位 / 當前委託
+  const posRows=STOCKS.filter(x=>(G.stocks[x.t].shares||0)!==0);
+  document.getElementById("posN").textContent=posRows.length;
+  document.getElementById("ordN").textContent=(G.stockOrders||[]).length;
+  document.getElementById("btPos").classList.toggle("on",stkTab==="pos");
+  document.getElementById("btOrd").classList.toggle("on",stkTab==="ord");
+  const body=document.getElementById("stkBody");
+  if(stkTab==="pos"){
+    if(!posRows.length){body.innerHTML='<div style="color:#848e9c;font-size:12px;padding:18px;text-align:center">目前沒有持倉，用右側面板下單開始交易。</div>';return;}
+    let h='<table><tr><th>標的</th><th>數量</th><th>開倉均價</th><th>標記價格</th><th>盈虧(ROI%)</th><th></th></tr>';
+    posRows.forEach(x=>{const xs=G.stocks[x.t];const lg=xs.shares>0;
+      const pnl=(xs.price-xs.avg)*xs.shares;
+      const roi=xs.avg?(pnl/(xs.avg*Math.abs(xs.shares))*100):0;
+      h+='<tr><td><b>'+x.n+'</b> <span class="'+(lg?'up':'dn')+'">'+(lg?'多':'空')+'</span></td>'+
+        '<td>'+xs.shares+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td>'+
+        '<td class="'+(pnl>=0?'up':'dn')+'">'+(pnl>=0?'+':'')+Math.round(pnl)+'（'+(roi>=0?'+':'')+roi.toFixed(2)+'%）</td>'+
+        '<td><button class="cbtn" onclick="closePosition(\''+x.t+'\')">市價平倉</button></td></tr>';
+    });
+    body.innerHTML=h+'</table>';
+  }else{
+    const os=G.stockOrders||[];
+    if(!os.length){body.innerHTML='<div style="color:#848e9c;font-size:12px;padding:18px;text-align:center">沒有掛單中的委託。</div>';return;}
+    let h='<table><tr><th>標的</th><th>方向</th><th>委託價</th><th>數量</th><th></th></tr>';
+    os.forEach(o=>{h+='<tr><td><b>'+stockName(o.t)+'</b></td><td class="'+(o.side>0?'up':'dn')+'">'+(o.side>0?'買入/做多':'賣出/做空')+'</td><td>'+fmtP(o.price)+'</td><td>'+o.qty+'</td>'+
+      '<td><button class="cbtn" onclick="cancelOrder('+o.id+')">取消</button></td></tr>';});
+    body.innerHTML=h+'</table>';
+  }
+}
 function init(){
   const loaded=loadGame();
   if(!loaded)freshGame();
@@ -1648,6 +1897,7 @@ function tick(){
   if(Array.isArray(G.ranch))G.ranch.forEach(s=>{
     if(s&&!s.ready){s.prod+=1;if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}}
   });
+  stockTick();   // 股價波動＋限價單撮合
   render();
   saveGame();
 }
@@ -1758,7 +2008,7 @@ function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
-  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,.visitbar'))return;
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
@@ -1791,7 +2041,7 @@ function initPan(){
   sc.addEventListener("mousedown",panDown);
   window.addEventListener("mousemove",panMove);
   window.addEventListener("mouseup",panUp);
-  sc.addEventListener("wheel",function(e){ const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return; e.preventDefault(); pinchZoom(e.deltaY<0?1.12:1/1.12); },{passive:false});
+  sc.addEventListener("wheel",function(e){ const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return; if(stockOpen)return; e.preventDefault(); pinchZoom(e.deltaY<0?1.12:1/1.12); },{passive:false});
 }
 
 /* ============ start ============ */
@@ -1803,7 +2053,7 @@ initPan();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
-/* build-ok r9：拜訪好友改為進入遊戲場景（真實好友與電腦好友共用） */
+/* build-ok r12：移除K線切換鈕回歸預設、報價加快取破壞與過期防護修正與圖表不一致 */
 </script>
 </body>
 </html>
