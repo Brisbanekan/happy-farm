@@ -224,7 +224,7 @@
   .hud{left:calc(10px + env(safe-area-inset-left));}
   .leftbar{left:calc(8px + env(safe-area-inset-left));}
   .logbtn{left:calc(10px + env(safe-area-inset-left));}
-  .tools{right:calc(8px + env(safe-area-inset-right));}
+  .tools{right:calc(3px + env(safe-area-inset-right));}
   .sceneswitch{top:calc(8px + env(safe-area-inset-top));}
   .dock{padding-left:calc(10px + env(safe-area-inset-left));padding-right:calc(10px + env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom);}
   body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
@@ -385,7 +385,7 @@
     padding:11px 20px;font-size:15px;font-weight:800;color:#3e2723;cursor:pointer;box-shadow:0 3px 0 #d7ccc8;}
   .googlebtn:active{transform:translateY(2px);box-shadow:0 1px 0 #d7ccc8;}
   /* 左側功能按鈕（每日 / 拉霸 / 股市 / 紀錄）：移到左下（原紀錄按鈕位置），向上展開 */
-  .leftbar{position:absolute;left:10px;bottom:94px;display:flex;flex-direction:column-reverse;gap:8px;z-index:30;}
+  .leftbar{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:94px;display:flex;flex-direction:column-reverse;gap:8px;z-index:30;}
   .leftbar .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;
     display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:24px;line-height:1;
     box-shadow:0 4px 0 #e6c486;transition:transform .08s;}
@@ -888,7 +888,30 @@ function applyOfflineGrowth(){
       if(p.grow>=CROPS[p.crop].grow){p.grow=CROPS[p.crop].grow;p.ripe=true;ripened++;}
     }
   });
+  // 牧場動物離線產出：每 tick +1，達到 time 就完成
+  let prodDone=0;
+  if(Array.isArray(G.ranch))G.ranch.forEach(function(s){
+    if(s&&!s.ready&&ANIMALS[s.a]){
+      s.prod=(s.prod||0)+ticks;
+      if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;prodDone++;}
+    }
+  });
   if(ripened>0)log("🌱 離線期間有 "+ripened+" 塊作物長成熟了！","g");
+  if(prodDone>0)log("🐾 離線期間有 "+prodDone+" 隻動物完成產出！","g");
+}
+// 拜訪好友時，把對方存檔（凍結在他上次存檔的 ts）的作物補算到「現在」的生長階段，讓拜訪看到即時狀況
+function advancePlotsOffline(plots, ts){
+  if(!Array.isArray(plots)||!ts)return plots;
+  const ticks=(Date.now()-ts)/1500;
+  if(!(ticks>0))return plots;
+  plots.forEach(function(p){
+    if(p&&p.unlocked&&p.state==="planted"&&!p.ripe&&p.crop&&CROPS[p.crop]){
+      let s=1;if(p.dry)s*=.4;if(p.weed)s*=.6;if(p.bug)s*=.6;
+      p.grow=(p.grow||0)+ticks*s;
+      if(p.grow>=CROPS[p.crop].grow){p.grow=CROPS[p.crop].grow;p.ripe=true;}
+    }
+  });
+  return plots;
 }
 function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
 function loadGame(){
@@ -1736,6 +1759,7 @@ function enterVisitPal(uid){
     const f=G.pals[uid]||{name:"農友"};
     VISIT={on:true,uid:uid,npc:-1,name:"🧑‍🌾 "+f.name+"（Lv."+(d.level||1)+"）",dog:d.dog||null,
       plots:d.plots.map(function(p){return (p&&typeof p==="object")?p:{unlocked:false,state:"empty",crop:null};})};
+    advancePlotsOffline(VISIT.plots, d.ts);   // 補算到現在，顯示好友作物的即時生長階段
     startVisit();
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
 }
