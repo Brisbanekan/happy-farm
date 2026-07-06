@@ -69,7 +69,7 @@
     transform:translate(-50%,-50%);filter:drop-shadow(0 4px 2px #00000022);}
   #dog::after{content:"";position:absolute;left:50%;bottom:-3px;width:58%;height:9px;transform:translateX(-50%);
     background:radial-gradient(closest-side,#00000033,transparent);border-radius:50%;z-index:-1;}
-  #dog .dogbody{display:inline-block;animation:hop .7s ease-in-out infinite;transition:transform .2s;}
+  #dog .dogbody{display:inline-block;height:58px;width:auto;animation:hop .7s ease-in-out infinite;transition:transform .2s;filter:drop-shadow(0 3px 2px #0004);}
   .barn{top:27%;left:6%;font-size:62px;}
   .tfar1{top:25.5%;left:24%;font-size:34px;animation:sway 5s ease-in-out infinite;}
   .tfar2{top:25.5%;left:33%;font-size:30px;animation:sway 6s ease-in-out infinite;}
@@ -486,7 +486,7 @@
   <!-- 場景物件（站在地面上） -->
   <div class="deco barn">🛖</div>
   <div class="deco house">🏡</div>
-  <div id="dog"><span class="dogbody">🐕</span></div>
+  <div id="dog"><img class="dogbody" src="animal/dog.png" alt="dog"></div>
   <div class="deco tfar1">🌲</div>
   <div class="deco tfar2">🌳</div>
   <div class="deco tfar3">🌲</div>
@@ -871,6 +871,24 @@ function normalizeState(){
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
+  applyOfflineGrowth();
+}
+// 離線生長：載入存檔後，用「現在時間 − 上次存檔時間(ts)」把作物補算成長（每 1.5 秒＝1 tick）
+let _lastGrownTs=0;
+function applyOfflineGrowth(){
+  if(!G.ts||G.ts===_lastGrownTs)return;              // 無時間戳、或此存檔已補算過就略過
+  const ticks=(Date.now()-G.ts)/1500;                // 換算成成長 tick 數
+  _lastGrownTs=G.ts;                                 // 記住已處理（不改 G.ts，維持雲端同步的時間比較）
+  if(!(ticks>0)||!Array.isArray(G.plots))return;
+  let ripened=0;
+  G.plots.forEach(function(p){
+    if(p&&p.unlocked&&p.state==="planted"&&!p.ripe&&p.crop&&CROPS[p.crop]){
+      let s=1;if(p.dry)s*=.4;if(p.weed)s*=.6;if(p.bug)s*=.6;
+      p.grow=(p.grow||0)+ticks*s;
+      if(p.grow>=CROPS[p.crop].grow){p.grow=CROPS[p.crop].grow;p.ripe=true;ripened++;}
+    }
+  });
+  if(ripened>0)log("🌱 離線期間有 "+ripened+" 塊作物長成熟了！","g");
 }
 function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
 function loadGame(){
