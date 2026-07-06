@@ -280,7 +280,7 @@
   #scene.visiting .sceneswitch{display:none;}
   .visitbar button{border:2px solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:16px;padding:4px 14px;font-weight:800;cursor:pointer;font-size:13px;}
   .visitbar button:active{transform:translateY(1px);}
-  /* ===== 股市交易場景（幣安風格深色 UI） ===== */
+  /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
   #scene.s-stock .hud,#scene.s-stock .tools,#scene.s-stock .leftbar,#scene.s-stock .dock,#scene.s-stock .sceneswitch,#scene.s-stock .zoomctrl,#scene.s-stock .visitbar,#scene.s-stock .logpanel{display:none!important;}
@@ -1042,7 +1042,7 @@ function settleSlot(grid,cells){
   renderHUD();saveGame();
 }
 
-/* ============ 股市（幣安風格交易場景） ============ */
+/* ============ 股市 ============ */
 function updateMarket(){ pollAllQuotes(); }   // 改用真實市場報價（Yahoo Finance）
 let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos";
 function stockOf(t){return STOCKS.find(x=>x.t===t)||STOCKS[0];}
