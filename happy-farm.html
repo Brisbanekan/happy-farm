@@ -802,7 +802,7 @@ function loadUserCloud(uid){
     }
     cloudReady=true;
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
-    ensureProfile();
+    ensureProfile(); loadFriends();
   }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); cloudReady=true; render(); });
 }
 function saveUserCloud(){
@@ -1646,6 +1646,19 @@ function ensureProfile(){
   };
   claim(0);
 }
+// 載入時把「別人加我」和「我加別人」的共用好友清單合併進 G.pals，達成雙向好友
+function loadFriends(){
+  if(!friendReady())return;
+  fbDB.ref("friends/"+fbUser.uid).once("value").then(function(snap){
+    const d=snap.val()||{}; let added=0;
+    Object.keys(d).forEach(function(uid){
+      if(uid&&uid!==fbUser.uid&&!(G.pals&&G.pals[uid])){
+        const r=d[uid]||{}; if(!G.pals)G.pals={}; G.pals[uid]={name:r.name||"農友",lv:r.lv||1}; added++;
+      }
+    });
+    if(added>0){saveGame(); if(document.getElementById("palCode"))openFriends();}
+  }).catch(function(){});
+}
 function addPalByCode(){
   const inp=document.getElementById("palCode");
   const code=(inp&&inp.value||"").trim().toUpperCase();
@@ -1660,6 +1673,11 @@ function addPalByCode(){
       const pf=ps.val()||{};
       G.pals[uid]={name:pf.name||"農友",lv:pf.level||1};
       saveGame();
+      // 雙向好友：寫進共用 friends 節點，對方載入時就會把你也加進好友清單
+      try{
+        fbDB.ref("friends/"+fbUser.uid+"/"+uid).set({name:G.pals[uid].name,lv:G.pals[uid].lv,ts:Date.now()});
+        fbDB.ref("friends/"+uid+"/"+fbUser.uid).set({name:myName(),lv:G.level||1,ts:Date.now()});
+      }catch(e){}
       toast("已加入好友 "+G.pals[uid].name);
       openFriends();
     });
