@@ -336,9 +336,9 @@
   body.narrow .stkPrice{font-size:17px;}
 
   /* ===== 牧場場景：與農場同尺寸(1400×1000)，背景改用素材圖 ===== */
-  #ranchBg{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;display:none;overflow:hidden;
+  #ranchBg{position:absolute;left:0;top:0;width:2200px;height:1000px;z-index:0;display:none;overflow:hidden;
     transform-origin:0 0;will-change:transform;
-    background:#8bca54 url(background/background2.png) center/100% 100% no-repeat;}
+    background:#8bca54 url(background/background4.png) center/cover no-repeat;}
   #scene.s-ranch #ranchBg{display:block;}
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本 CSS 場景裝飾避免重複 */
   #ranchBg .rsun,#ranchBg .rcloud,#ranchBg .rhill,#ranchBg .rbarn,#ranchBg .rtree,#ranchBg .rpond{display:none;}
@@ -1341,7 +1341,7 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
 let penNodes=[], penTimers=[];
 // 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
-const RANCH_X0=20, RANCH_X1=80, RANCH_Y0=64, RANCH_Y1=79;   // 動物活動範圍＝background2 圍籬內側 (影像 x208~1021 / y526~709)
+const RANCH_X0=24, RANCH_X1=76, RANCH_Y0=55, RANCH_Y1=87;   // 動物活動範圍＝background4 圍籬內側
 function clampRanch(x,y){return {x:Math.max(RANCH_X0,Math.min(RANCH_X1,x)), y:Math.max(RANCH_Y0,Math.min(RANCH_Y1,y))};}
 function penPos(){return {x:RANCH_X0+Math.random()*(RANCH_X1-RANCH_X0), y:RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0)};}
 // 從目前位置往附近走一小步（仍在草地範圍內）
