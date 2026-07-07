@@ -1341,9 +1341,15 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
 let penNodes=[], penTimers=[];
 // 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
-const RANCH_X0=28, RANCH_X1=72, RANCH_Y0=55, RANCH_Y1=80;   // 動物活動範圍＝background4 圍籬內側
-function clampRanch(x,y){return {x:Math.max(RANCH_X0,Math.min(RANCH_X1,x)), y:Math.max(RANCH_Y0,Math.min(RANCH_Y1,y))};}
-function penPos(){return {x:RANCH_X0+Math.random()*(RANCH_X1-RANCH_X0), y:RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0)};}
+// 動物活動範圍＝background4 圍籬內側（梯形：後方窄、前方寬）
+const RANCH_Y0=55, RANCH_Y1=80;      // 上(後)、下(前)
+const RANCH_XT0=33, RANCH_XT1=67;    // 上底(後方) 左、右
+const RANCH_XB0=24, RANCH_XB1=76;    // 下底(前方) 左、右
+// 依 y 高度內插出該列的左右界線（梯形）
+function ranchXB(y){const t=Math.max(0,Math.min(1,(y-RANCH_Y0)/(RANCH_Y1-RANCH_Y0)));return {a:RANCH_XT0+t*(RANCH_XB0-RANCH_XT0), b:RANCH_XT1+t*(RANCH_XB1-RANCH_XT1)};}
+function clampRanch(x,y){const cy=Math.max(RANCH_Y0,Math.min(RANCH_Y1,y));const g=ranchXB(cy);return {x:Math.max(g.a,Math.min(g.b,x)), y:cy};}
+function penPos(){const y=RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0);const g=ranchXB(y);return {x:g.a+Math.random()*(g.b-g.a), y:y};}
+function inRanch(x,y){if(y<RANCH_Y0||y>RANCH_Y1)return false;const g=ranchXB(y);return x>=g.a&&x<=g.b;}
 // 從目前位置往附近走一小步（仍在草地範圍內）
 function nextTarget(ox,oy){const ang=Math.random()*Math.PI*2, step=3+Math.random()*11; return clampRanch(ox+step*Math.cos(ang), oy+step*Math.sin(ang)*0.6);}
 function animalMarkup(a){
@@ -1359,7 +1365,7 @@ function renderPen(){
     if(!penNodes[i]){
       const el=document.createElement("div");el.className="animal";
       el.innerHTML=animalMarkup(a);
-      if(s.x==null||s.y==null||s.x<RANCH_X0||s.x>RANCH_X1||s.y<RANCH_Y0||s.y>RANCH_Y1){const p=penPos();s.x=p.x;s.y=p.y;}  // 圍籬外的動物重置到籬內
+      if(s.x==null||s.y==null||!inRanch(s.x,s.y)){const p=penPos();s.x=p.x;s.y=p.y;}  // 圍籬外的動物重置到籬內
       el.style.transition="none";
       el.style.left=s.x+"%";el.style.top=s.y+"%";el.style.zIndex=Math.round(s.y);
       el.addEventListener("click",(function(idx){return function(){tapAnimal(idx);};})(i));
