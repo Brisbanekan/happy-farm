@@ -13,11 +13,12 @@
   }
   #scene{
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
-    background:#8bca54 url(background/background.jpg) center/cover no-repeat;   /* 全景時外圍以同張背景填滿，避免綠底 */
+    background:#8bca54 url(background/background_wide.jpg) center/cover no-repeat;   /* 全景外圍以同張寬背景填滿，無縫 */
   }
   /* 可平移的「世界」：背景改用素材圖；田地與動物疊在上面 */
-  #world{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;transform-origin:0 0;will-change:transform;
-    background:#8bca54 url(background/background.jpg) center/cover no-repeat;}
+  #world{position:absolute;left:0;top:0;width:2200px;height:1000px;z-index:0;transform-origin:0 0;will-change:transform;
+    background:#8bca54 url(background/background_wide.jpg) center/cover no-repeat;}
+  #world .wcontent{position:absolute;left:314px;top:0;width:1400px;height:1000px;}   /* 內容置中於寬背景的原始場景區 */
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{display:none;}
@@ -2003,8 +2004,8 @@ function toggleSim(){
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
 let panX=0, panY=0, worldScale=1, userZoom=1;
-const WORLD_W=1400, WORLD_H=1000, FX=620, FY=520;  // 桌機預設視角焦點（維持原樣）
-const FFX=450, FFY=430;                            // 手機置中焦點（偏上：太陽＋田地都看得到）
+const WORLD_W=2200, WORLD_H=1000, FX=934, FY=520;  // 寬世界(2200)；焦點含內容偏移 +314
+const FFX=764, FFY=430;                            // 手機置中焦點（含 +314 偏移）
 function isNarrow(){ return Math.min(VW(),VH())<=560; }  // 手機（含橫屏）：較短邊很小就算窄版
 // 基礎縮放：手機把世界縮到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
 function computeBaseScale(){
@@ -2034,8 +2035,10 @@ function zoomOut(){ setZoom(1/1.2); }
 function buildWorld(){
   const sc=document.getElementById("scene"); if(!sc||document.getElementById("world"))return;
   const world=document.createElement("div"); world.id="world";
+  const wc=document.createElement("div"); wc.className="wcontent";
+  world.appendChild(wc);
   sc.insertBefore(world, sc.firstChild);
-  sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,.bld,#dog").forEach(function(n){world.appendChild(n);});
+  sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,.bld,#dog").forEach(function(n){wc.appendChild(n);});
 }
 function clampPan(){
   const vw=VW(), vh=VH(), ww=WORLD_W*worldScale, wh=WORLD_H*worldScale;
