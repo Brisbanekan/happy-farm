@@ -13,7 +13,7 @@
   }
   #scene{
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
-    background:#8bca54;
+    background:#8bca54 url(background/background.jpg) center/cover no-repeat;   /* 全景時外圍以同張背景填滿，避免綠底 */
   }
   /* 可平移的「世界」：背景改用素材圖；田地與動物疊在上面 */
   #world{position:absolute;left:0;top:0;width:1400px;height:1000px;z-index:0;transform-origin:0 0;will-change:transform;
@@ -2009,17 +2009,22 @@ function isNarrow(){ return Math.min(VW(),VH())<=560; }  // 手機（含橫屏�
 // 基礎縮放：手機把世界縮到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
 function computeBaseScale(){
   if(!isNarrow()) return 1;
-  const s=Math.min(VW()/820, VH()/760);   // 讓田地夠大又看得到周邊
-  return Math.max(0.4, Math.min(s, 0.95));
+  return Math.min(VW()/WORLD_W, VH()/WORLD_H);   // 手機：預設完整顯示整座農場（全景），再靠手勢放大看局部
 }
 // 縮到最小＝背景剛好填滿螢幕（不再露出綠色）
 function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
-function calcWorldScale(){ const s=computeBaseScale()*userZoom; return Math.max(s, coverScale()); }
+function calcWorldScale(){
+  const s=computeBaseScale()*userZoom;
+  if(!isNarrow()) return Math.max(s, coverScale());                                   // 桌機維持填滿
+  const sc=document.getElementById("scene");
+  if(sc&&sc.classList.contains("s-ranch")) return Math.max(s, coverScale());          // 牧場維持填滿
+  return s;                                                                            // 農場（手機）：全景，可縮到看見整座農場
+}
 // 使用者放大/縮小畫面
 function setZoom(mult){
   const oldS=worldScale||1;
   const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;   // 視窗中心對應的世界座標
-  userZoom=Math.max(0.6, Math.min(userZoom*mult, 2.2));
+  userZoom=Math.max(1, Math.min(userZoom*mult, 5));
   worldScale=calcWorldScale();
   panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
   clampPan(); applyWorld();
@@ -2059,7 +2064,7 @@ function tDist(e){const a=e.touches[0],b=e.touches[1];return Math.hypot(a.client
 function pinchZoom(ratio){
   const oldS=worldScale||1;
   const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;
-  userZoom=Math.max(0.6, Math.min(userZoom*ratio, 2.4));
+  userZoom=Math.max(1, Math.min(userZoom*ratio, 5));
   worldScale=calcWorldScale();
   panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
   clampPan(); applyWorld();
