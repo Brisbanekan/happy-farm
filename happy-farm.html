@@ -2057,7 +2057,9 @@ function buildWorld(){
 function clampPan(){
   const vw=VW(), vh=VH(), ww=WORLD_W*worldScale, wh=WORLD_H*worldScale;
   const sc=document.getElementById("scene");
-  if(sc&&sc.classList.contains("s-ranch")){   // 牧場：完全鎖定置中，不可左右/上下拖動
+  const ranch=sc&&sc.classList.contains("s-ranch");
+  // 牧場永遠鎖定置中；農場在手機「初始全景(未放大)」也鎖定，放大後(userZoom>1)才能拖動
+  if(ranch || (isNarrow()&&userZoom<=1)){
     panX=Math.round((vw-ww)/2); panY=Math.round((vh-wh)/2); return;
   }
   if(ww<=vw) panX=Math.round((vw-ww)/2); else panX=Math.max(vw-ww, Math.min(0, panX));
