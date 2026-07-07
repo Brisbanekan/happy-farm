@@ -1341,7 +1341,7 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
 let penNodes=[], penTimers=[];
 // 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
-const RANCH_X0=24, RANCH_X1=76, RANCH_Y0=55, RANCH_Y1=87;   // 動物活動範圍＝background4 圍籬內側
+const RANCH_X0=28, RANCH_X1=72, RANCH_Y0=55, RANCH_Y1=80;   // 動物活動範圍＝background4 圍籬內側
 function clampRanch(x,y){return {x:Math.max(RANCH_X0,Math.min(RANCH_X1,x)), y:Math.max(RANCH_Y0,Math.min(RANCH_Y1,y))};}
 function penPos(){return {x:RANCH_X0+Math.random()*(RANCH_X1-RANCH_X0), y:RANCH_Y0+Math.random()*(RANCH_Y1-RANCH_Y0)};}
 // 從目前位置往附近走一小步（仍在草地範圍內）
