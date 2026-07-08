@@ -1200,9 +1200,11 @@ function openStocks(){
   stockOpen=true; stockView="home";
   document.getElementById("scene").classList.add("s-stock");
   document.getElementById("stockScene").classList.add("home");
+  const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";   // 手機預覽鈕會蓋住倉位表，股市中隱藏
   pollAllQuotes(true); renderStockHome(); loadFinNews();
 }
 function exitStock(){ stockOpen=false; stockDropOpen=false;
+  const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
   document.getElementById("scene").classList.remove("s-stock"); render(); }
 function backStockHome(){ stockView="home"; stockDropOpen=false;
   document.getElementById("stockScene").classList.add("home"); renderStockHome(); }
