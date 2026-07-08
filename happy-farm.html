@@ -907,7 +907,7 @@ function resumeHere(){
     const d=snap.val();
     if(d&&Array.isArray(d.plots)){Object.assign(G,d);normalizeState();}
     cloudPaused=false; devSeenMine=false; if(m)m.style.display="none";
-    setScene(G.scene||"farm"); render();
+    setScene(G.scene||"farm"); render(); loadFriends();
     saveGame();                                        // 以本裝置身分寫回 → 其他裝置換成暫停
     toast("已載入最新進度，這台裝置繼續 ☁️");
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
@@ -1927,17 +1927,23 @@ function addPalByCode(){
       saveGame();
       // 雙向好友：寫進共用 friends 節點，對方載入時就會把你也加進好友清單
       try{
-        fbDB.ref("friends/"+fbUser.uid+"/"+uid).set({name:G.pals[uid].name,lv:G.pals[uid].lv,ts:Date.now()});
-        fbDB.ref("friends/"+uid+"/"+fbUser.uid).set({name:myName(),lv:G.level||1,ts:Date.now()});
+        fbDB.ref("friends/"+fbUser.uid+"/"+uid).set({name:G.pals[uid].name,lv:G.pals[uid].lv,ts:Date.now()})
+          .catch(function(e){log("⚠️ 好友節點寫入失敗（可能是資料庫規則未含 friends）："+(e&&e.message||e),"r");});
+        fbDB.ref("friends/"+uid+"/"+fbUser.uid).set({name:myName(),lv:G.level||1,ts:Date.now()})
+          .catch(function(e){log("⚠️ 對方好友節點寫入失敗："+(e&&e.message||e),"r");});
       }catch(e){}
       toast("已加入好友 "+G.pals[uid].name);
       openFriends();
     });
   }).catch(function(e){alert("查詢失敗："+(e&&e.message||e));});
 }
-function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.pals[uid]; saveGame(); openFriends(); }
+function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.pals[uid];
+  if(friendReady()){try{fbDB.ref("friends/"+fbUser.uid+"/"+uid).remove();}catch(e){}}   // 同步刪雲端，否則下次載入又跑回來
+  saveGame(); openFriends(); }
 
+let palSyncTs=0;
 function openFriends(){
+  if(friendReady()&&Date.now()-palSyncTs>15000){palSyncTs=Date.now();loadFriends();}   // 開好友面板時重新同步雲端好友清單
   let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
   if(friendReady()){
     if(!G.myCode)ensureProfile();   // 代碼還沒產生（或之前失敗）就再試一次
