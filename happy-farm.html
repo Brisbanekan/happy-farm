@@ -367,7 +367,7 @@
   .stkBuy:active,.stkSell:active{opacity:.82;}
   .stkOrder .info{font-size:11px;color:#848e9c;line-height:1.7;}
   .stkBottom{height:200px;flex-shrink:0;background:#161a1e;border-top:1px solid #2b3139;display:flex;flex-direction:column;}
-  .stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px;border-bottom:1px solid #2b3139;}
+  .stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px calc(14px + env(safe-area-inset-left,0px));border-bottom:1px solid #2b3139;}
   .stkBottom .btabs button{border:none;background:none;color:#848e9c;font-size:13px;font-weight:800;cursor:pointer;padding:2px 0;}
   .stkBottom .btabs button.on{color:#f0b90b;border-bottom:2px solid #f0b90b;}
   .stkBottom .bbody{flex:1;overflow:auto;padding:4px 14px 4px calc(14px + env(safe-area-inset-left,0px));}   /* 起始欄位與「← 返回」按鈕 X 軸對齊 */
