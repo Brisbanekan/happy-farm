@@ -308,8 +308,39 @@
   .stkDrop .row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;}
   .stkDrop .row:hover{background:#2b3139;}
   .stkDrop .row b{flex:1;} .stkDrop .row .tk{color:#848e9c;font-size:11px;}
+  /* --- 股市首頁（清單） --- */
+  #stockHome{display:none;flex-direction:column;flex:1;min-height:0;background:#eef0f5;color:#16181d;}
+  #stockScene.home #stockHome{display:flex;}
+  #stockScene.home .stkTop,#stockScene.home .stkMain,#stockScene.home .stkBottom{display:none;}
+  .shTop{display:flex;align-items:center;gap:12px;padding:10px 14px;}
+  .shTop .ttl{font-size:17px;font-weight:800;}
+  .shTop .shCashBox{margin-left:auto;font-size:12px;color:#5b6472;}
+  .shTop .shCashBox b{color:#16181d;}
+  .shList{flex:1;overflow:auto;margin:0 12px 12px;background:#fff;border-radius:16px;box-shadow:0 2px 10px #0000000d;}
+  .shRow{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-top:1px solid #f0f1f5;}
+  .shRow:first-child{border-top:none;}
+  .shRow:hover{background:#f7f8fb;}
+  .shIcon{width:42px;height:42px;border-radius:11px;color:#fff;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .shName{display:flex;flex-direction:column;min-width:0;width:104px;flex-shrink:0;}
+  .shName b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .shName span{font-size:11px;color:#8a93a3;}
+  .shSpark{flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden;}
+  .shPx{display:flex;flex-direction:column;align-items:flex-end;width:96px;flex-shrink:0;}
+  .shPx b{font-size:15px;}
+  .shPx .up{color:#16a34a;font-weight:700;font-size:12px;}
+  .shPx .dn{color:#dc2626;font-weight:700;font-size:12px;}
+  body.narrow .shName{width:84px;} body.narrow .shPx{width:82px;}
   .stkMain{flex:1;display:flex;min-height:0;}
-  #tvFrame{flex:1;border:0;min-width:0;background:#131722;}
+  /* --- Lightweight Charts 圖表區 --- */
+  .stkChart{flex:1;min-width:0;position:relative;background:#0b0e11;display:flex;flex-direction:column;}
+  #stkRanges{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid #1c2126;flex-shrink:0;}
+  #stkRanges button{border:none;background:none;color:#848e9c;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;}
+  #stkRanges button.on{background:#2b3139;color:#f0b90b;}
+  #lwChart{flex:1;position:relative;min-height:0;}
+  #lwLegend{position:absolute;left:12px;top:40px;z-index:3;pointer-events:none;line-height:1.35;}
+  #lwLegend .l1{font-size:14px;font-weight:800;color:#eaecef;} #lwLegend .l1 span{color:#848e9c;font-weight:400;font-size:11px;}
+  #lwLegend .l2{font-size:20px;font-weight:800;color:#eaecef;}
+  #lwLegend .l3{font-size:11px;color:#848e9c;}
   .stkOrder{width:252px;flex-shrink:0;background:#161a1e;border-left:1px solid #2b3139;padding:12px;display:flex;flex-direction:column;gap:9px;overflow:auto;}
   .stkOrder .otabs{display:flex;gap:6px;}
   .stkOrder .otabs button{flex:1;border:none;background:#2b3139;color:#848e9c;border-radius:6px;padding:6px 0;font-weight:800;font-size:13px;cursor:pointer;}
@@ -327,7 +358,7 @@
   .stkSell{border:none;border-radius:8px;padding:11px 0;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:#f6465d;}
   .stkBuy:active,.stkSell:active{opacity:.82;}
   .stkOrder .info{font-size:11px;color:#848e9c;line-height:1.7;}
-  .stkBottom{height:158px;flex-shrink:0;background:#161a1e;border-top:1px solid #2b3139;display:flex;flex-direction:column;}
+  .stkBottom{height:118px;flex-shrink:0;background:#161a1e;border-top:1px solid #2b3139;display:flex;flex-direction:column;}
   .stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px;border-bottom:1px solid #2b3139;}
   .stkBottom .btabs button{border:none;background:none;color:#848e9c;font-size:13px;font-weight:800;cursor:pointer;padding:2px 0;}
   .stkBottom .btabs button.on{color:#f0b90b;border-bottom:2px solid #f0b90b;}
@@ -338,7 +369,7 @@
   .stkBottom .up{color:#0ecb81;} .stkBottom .dn{color:#f6465d;}
   .stkBottom .cbtn{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;}
   body.narrow .stkOrder{width:196px;padding:8px;gap:6px;}
-  body.narrow .stkBottom{height:112px;}
+  body.narrow .stkBottom{height:84px;}
   body.narrow .stkTop{gap:8px;padding:6px 10px;}
   body.narrow .stkPrice{font-size:17px;}
 
@@ -585,8 +616,16 @@
 
   <!-- 股市交易場景 -->
   <div id="stockScene">
+    <div id="stockHome">
+      <div class="shTop">
+        <button class="stkBack" onclick="exitStock()">← 農場</button>
+        <span class="ttl">📈 股市</span>
+        <span class="shCashBox">可用金幣 <b id="shCash">--</b></span>
+      </div>
+      <div class="shList" id="shList"></div>
+    </div>
     <div class="stkTop">
-      <button class="stkBack" onclick="exitStock()">← 農場</button>
+      <button class="stkBack" onclick="backStockHome()">← 返回</button>
       <span class="stkStar" id="stkStar" onclick="toggleFav()">⭐</span>
       <div class="stkSym" onclick="toggleStockDrop()"><b id="stkName">--</b><span id="stkTick"></span> ▾</div>
       <div class="stkPrice" id="stkPrice">--</div>
@@ -597,7 +636,16 @@
       <div class="stkDrop" id="stkDrop"></div>
     </div>
     <div class="stkMain">
-      <iframe id="tvFrame" title="chart"></iframe>
+      <div class="stkChart">
+        <div id="stkRanges">
+          <button data-r="24H" class="on" onclick="setChartRange('24H')">24小時</button>
+          <button data-r="2D" onclick="setChartRange('2D')">2日</button>
+          <button data-r="3D" onclick="setChartRange('3D')">3日</button>
+          <button data-r="5D" onclick="setChartRange('5D')">5日</button>
+        </div>
+        <div id="lwChart"></div>
+        <div id="lwLegend"></div>
+      </div>
       <div class="stkOrder">
         <div class="otabs"><button id="otLimit" class="on" onclick="setOrderType('limit')">限價</button><button id="otMarket" onclick="setOrderType('market')">市價</button></div>
         <label>委託價格</label>
@@ -647,6 +695,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
+<!-- TradingView Lightweight Charts（股市圖表） -->
+<script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
 
 <script>
 /* ============ 資料設定 ============ */
@@ -1094,24 +1145,101 @@ function settleSlot(grid,cells){
 
 /* ============ 股市 ============ */
 function updateMarket(){ pollAllQuotes(); }   // 改用真實市場報價（Yahoo Finance）
-let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos";
+let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos", stockView="home";
 function stockOf(t){return STOCKS.find(x=>x.t===t)||STOCKS[0];}
 function fmtP(v){return (Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});}
 function openStocks(){
-  stockOpen=true;
+  stockOpen=true; stockView="home";
   document.getElementById("scene").classList.add("s-stock");
-  loadTv(); setOrderType(orderType); odUseCur(); renderStockUI();
+  document.getElementById("stockScene").classList.add("home");
+  pollAllQuotes(); renderStockHome();
 }
 function exitStock(){ stockOpen=false; stockDropOpen=false;
   document.getElementById("scene").classList.remove("s-stock"); render(); }
-function loadTv(){
-  const s=stockOf(curStock); const f=document.getElementById("tvFrame"); if(!f)return;
-  if(f.getAttribute("data-sym")===s.tv)return;
-  f.setAttribute("data-sym",s.tv);
-  f.src="https://s.tradingview.com/widgetembed/?symbol="+encodeURIComponent(s.tv)+
-    "&interval=15&theme=dark&style=1&locale=zh_TW&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&withdateranges=1";
+function backStockHome(){ stockView="home"; stockDropOpen=false;
+  document.getElementById("stockScene").classList.add("home"); renderStockHome(); }
+function openStockTrade(t){
+  curStock=t; stockView="trade";
+  document.getElementById("stockScene").classList.remove("home");
+  loadChart(); setOrderType(orderType); odUseCur(); renderStockUI();
 }
-function pickStock(t){curStock=t;stockDropOpen=false;loadTv();odUseCur();renderStockUI();}
+/* ---- 股市首頁清單 ---- */
+const SICON={TSM:"#c62828",UMC:"#1565c0",ASX:"#6a1b9a",CHT:"#00897b",NVDA:"#76b900",AAPL:"#1c1c1e",GOOGL:"#4285f4",MSFT:"#0078d4",TSLA:"#cc0000",AMZN:"#ff9900"};
+const SPARKS={};   // 走勢小圖資料（不存檔）
+function sparkSvg(arr,color){
+  if(!arr||arr.length<2)return '<svg width="110" height="34"></svg>';
+  const mn=Math.min.apply(null,arr),mx=Math.max.apply(null,arr),rg=(mx-mn)||1;
+  const pts=arr.map((v,i)=>((i/(arr.length-1)*106+2).toFixed(1)+','+(32-(v-mn)/rg*26-2).toFixed(1))).join(' ');
+  return '<svg width="110" height="34" viewBox="0 0 110 34"><polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
+}
+function renderStockHome(){
+  if(!stockOpen||stockView!=="home")return;
+  const el=document.getElementById("shList"); if(!el)return;
+  document.getElementById("shCash").textContent=G.gold.toLocaleString();
+  el.innerHTML=STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
+    return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
+      '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+s.n.charAt(0)+'</div>'+
+      '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
+      '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626')+'</div>'+
+      '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
+  }).join("");
+}
+/* ---- Lightweight Charts 圖表（24小時～5個交易日） ---- */
+let lwChart=null,lwSeries=null,lwData=[],chartRange="24H",chartReq=0,lwTries=0;
+const CHART_TZOFF=-new Date().getTimezoneOffset()*60;
+function ensureChart(){
+  if(lwChart)return true;
+  if(!window.LightweightCharts)return false;
+  const el=document.getElementById("lwChart"); if(!el)return false;
+  lwChart=LightweightCharts.createChart(el,{autoSize:true,
+    layout:{textColor:'#848e9c',background:{type:'solid',color:'#0b0e11'},attributionLogo:false},
+    rightPriceScale:{scaleMargins:{top:0.32,bottom:0.12},borderColor:'#2b3139'},
+    timeScale:{timeVisible:true,secondsVisible:false,borderColor:'#2b3139'},
+    crosshair:{horzLine:{visible:false,labelVisible:false}},
+    grid:{vertLines:{visible:false},horzLines:{color:'#1c2126'}}});
+  lwSeries=lwChart.addSeries(LightweightCharts.AreaSeries,{lineWidth:2,crosshairMarkerVisible:false});
+  lwChart.subscribeCrosshairMove(updateLwLegend);
+  return true;
+}
+function updateLwLegend(param){
+  const lg=document.getElementById("lwLegend"); if(!lg||!lwSeries)return;
+  let bar=null;
+  if(param&&param.time&&param.point&&param.point.x>=0&&param.point.y>=0)bar=param.seriesData.get(lwSeries);
+  if(!bar)bar=lwData[lwData.length-1];
+  if(!bar){lg.innerHTML="";return;}
+  const s=stockOf(curStock);
+  const dt=new Date((bar.time-CHART_TZOFF)*1000);
+  lg.innerHTML='<div class="l1">'+s.n+' <span>'+s.t+'</span></div>'+
+    '<div class="l2">'+fmtP(bar.value)+'</div>'+
+    '<div class="l3">'+dt.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+'</div>';
+}
+function setChartRange(r){chartRange=r;
+  document.querySelectorAll('#stkRanges button').forEach(b=>b.classList.toggle('on',b.getAttribute('data-r')===r));
+  loadChart();
+}
+function loadChart(){
+  if(!ensureChart()){ if(lwTries++<20)setTimeout(loadChart,600); return; }   // CDN 尚未載入時重試
+  const s=stockOf(curStock); const rq=++chartReq;
+  const day=chartRange==="24H";
+  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+
+    "?interval="+(day?"5m":"15m")+"&range="+(day?"1d":"5d")+"&includePrePost="+day+"&_ts="+Date.now();
+  yFetch(u,function(d){
+    if(rq!==chartReq)return;
+    const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
+    const ts=res.timestamp||[], q=(res.indicators&&res.indicators.quote&&res.indicators.quote[0])||{}, cl=q.close||[];
+    let pts=[];
+    for(let i=0;i<ts.length;i++){ if(cl[i]!=null)pts.push({time:ts[i]+CHART_TZOFF,value:Math.round(cl[i]*100)/100}); }
+    const nd=chartRange==="2D"?2:chartRange==="3D"?3:0;   // 2日/3日：從5日資料取最後N個交易日
+    if(nd){ const keys=[]; pts.forEach(p=>{const k=Math.floor(p.time/86400);if(keys.indexOf(k)<0)keys.push(k);});
+      const keep=keys.slice(-nd); pts=pts.filter(p=>keep.indexOf(Math.floor(p.time/86400))>=0); }
+    if(!pts.length)return;
+    const up=pts[pts.length-1].value>=pts[0].value;
+    lwSeries.applyOptions(up?{lineColor:'#0ecb81',topColor:'rgba(14,203,129,.30)',bottomColor:'rgba(14,203,129,.03)'}
+                            :{lineColor:'#f6465d',topColor:'rgba(246,70,93,.30)',bottomColor:'rgba(246,70,93,.03)'});
+    lwData=pts; lwSeries.setData(pts); lwChart.timeScale().fitContent(); updateLwLegend();
+  });
+}
+function pickStock(t){curStock=t;stockDropOpen=false;loadChart();odUseCur();renderStockUI();}
 function toggleStockDrop(){stockDropOpen=!stockDropOpen;renderStockUI();}
 function toggleFav(){G.stockFav[curStock]=!G.stockFav[curStock];saveGame();renderStockUI();}
 function setStkTab(t){stkTab=t;renderStockUI();}
@@ -1203,6 +1331,9 @@ function fetchQuote(t,cb){
     let px=meta.regularMarketPrice;
     const q=res.indicators&&res.indicators.quote&&res.indicators.quote[0];
     if(q&&q.close){for(let i=q.close.length-1;i>=0;i--){if(q.close[i]!=null){px=q.close[i];break;}}}   // 含盤前/盤後最新成交
+    if(q&&q.close){ const cs=q.close.filter(v=>v!=null);   // 首頁走勢小圖（降採樣約40點）
+      if(cs.length>2){ const step=Math.max(1,Math.floor(cs.length/40));
+        SPARKS[t]=cs.filter((_,i)=>i%step===0); if(SPARKS[t][SPARKS[t].length-1]!==cs[cs.length-1])SPARKS[t].push(cs[cs.length-1]); } }
     if(!px)return;
     st.price=Math.round(px*100)/100;
     if(meta.chartPreviousClose)st.prev=meta.chartPreviousClose;
@@ -1212,7 +1343,8 @@ function fetchQuote(t,cb){
     if(ts&&tp&&tp.regular){ if(ts<tp.regular.start)sess="盤前"; else if(ts>=tp.regular.end)sess="盤後"; }
     st.sess=sess; st.qts=Date.now();
     if(cb)cb();
-    if(stockOpen&&t===curStock)renderStockUI();
+    if(stockOpen&&stockView==="home")renderStockHome();
+    else if(stockOpen&&t===curStock)renderStockUI();
   });
 }
 function pollAllQuotes(){ STOCKS.forEach(function(s,i){ setTimeout(function(){fetchQuote(s.t);},i*1200); }); }
@@ -1222,6 +1354,7 @@ setInterval(function(){ if(stockOpen)fetchQuote(curStock); },15000);     // 股�
 
 function renderStockUI(){
   if(!stockOpen)return;
+  if(stockView==="home"){renderStockHome();return;}
   const s=stockOf(curStock), st=G.stocks[curStock];
   const chg=st.prev?((st.price-st.prev)/st.prev*100):0;
   document.getElementById("stkName").textContent=s.n;
