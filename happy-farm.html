@@ -370,10 +370,10 @@
   .stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px;border-bottom:1px solid #2b3139;}
   .stkBottom .btabs button{border:none;background:none;color:#848e9c;font-size:13px;font-weight:800;cursor:pointer;padding:2px 0;}
   .stkBottom .btabs button.on{color:#f0b90b;border-bottom:2px solid #f0b90b;}
-  .stkBottom .bbody{flex:1;overflow:auto;padding:4px 14px;}
-  .stkBottom table{width:100%;border-collapse:collapse;font-size:12px;}
-  .stkBottom th{color:#848e9c;font-weight:400;text-align:left;padding:4px 6px;font-size:11px;}
-  .stkBottom td{padding:5px 6px;border-top:1px solid #23282e;}
+  .stkBottom .bbody{flex:1;overflow:auto;padding:4px 14px 4px 34px;}   /* 表格整體右移 */
+  .stkBottom table{width:auto;border-collapse:collapse;font-size:12px;}   /* 欄位緊排，不再撐滿整寬 */
+  .stkBottom th{color:#848e9c;font-weight:400;text-align:left;padding:4px 28px 4px 0;font-size:11px;}
+  .stkBottom td{padding:5px 28px 5px 0;border-top:1px solid #23282e;}
   .stkBottom .up{color:#0ecb81;} .stkBottom .dn{color:#f6465d;}
   .stkBottom .cbtn{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;}
   body.narrow .stkOrder{width:196px;padding:8px;gap:6px;}
