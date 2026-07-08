@@ -345,7 +345,7 @@
   #stkRanges button{border:none;background:none;color:#848e9c;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;}
   #stkRanges button.on{background:#2b3139;color:#f0b90b;}
   #lwChart{flex:1;position:relative;min-height:0;}
-  #lwLegend{position:absolute;left:12px;top:40px;z-index:3;pointer-events:none;line-height:1.35;}
+  #lwLegend{position:absolute;left:calc(14px + env(safe-area-inset-left,0px));top:40px;z-index:3;pointer-events:none;line-height:1.35;}
   #lwLegend .l1{font-size:14px;font-weight:800;color:#eaecef;} #lwLegend .l1 span{color:#848e9c;font-weight:400;font-size:11px;}
   #lwLegend .l2{font-size:20px;font-weight:800;color:#eaecef;}
   #lwLegend .l3{font-size:11px;color:#848e9c;}
