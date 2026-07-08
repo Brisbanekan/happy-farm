@@ -91,7 +91,7 @@
   .flowerbush{bottom:23%;left:4%;font-size:34px;}
   .flowerbush2{bottom:22%;right:6%;font-size:34px;}
   .scarecrow{bottom:25%;right:20%;font-size:40px;}
-  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  @keyframes bob{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,-4px);}}   /* 保留泡泡水平置中，避免動畫時右移半寬 */
   @keyframes sway{0%,100%{transform:rotate(-3deg);}50%{transform:rotate(3deg);}}
   /* 池塘 */
   .pond{position:absolute;left:5%;bottom:26%;width:120px;height:54px;z-index:2;
@@ -265,7 +265,7 @@
     transition:opacity .25s;pointer-events:none;}
   .animal.ready .bubble{opacity:1;animation:bob 1.1s ease-in-out infinite;}
   .animal.ready .body{filter:drop-shadow(0 0 7px #ffd54f) drop-shadow(0 3px 1px #0004);}
-  @keyframes hop{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  @keyframes hop{0%,100%{transform:translateY(0) scaleX(var(--fx,1));}50%{transform:translateY(-4px) scaleX(var(--fx,1));}}   /* 帶入翻面方向，跳動不再蓋掉 scaleX */
   @media(max-width:980px){.pen{width:470px;height:262px;left:60%;}.animal{font-size:26px;}}
   /* 手機：隱藏多餘裝飾、避免擁擠（田與牧場改由 layout() 上下排列） */
   @media(max-width:900px){
@@ -468,7 +468,7 @@
   .mask.on{display:flex;}
   .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:auto;border:3px solid #d7ccc8;}
   /* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
-  body.narrow .modal{max-width:none;}
+  body.narrow .modal{max-width:480px;max-height:92%;}   /* 手機橫屏：限寬置中，不再滿版 */
   body.narrow .modal h2{font-size:15px;padding:11px 13px;}
   body.narrow .modal .body{padding:11px 12px;}
   .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;}
@@ -2171,7 +2171,7 @@ function walkDog(){
   const dist=Math.hypot((nx-ox)/100*vw,(ny-oy)/100*vh);
   let dur=dist/46; dur=Math.max(0.8,Math.min(dur,6)); // 定速散步
   const body=d.querySelector(".dogbody");
-  if(body&&Math.abs(nx-ox)>0.3)body.style.transform="scaleX("+(nx<ox?1:-1)+")"; // 朝行進方向
+  if(body&&Math.abs(nx-ox)>0.3)body.style.setProperty("--fx",(nx<ox?1:-1)); // 朝行進方向（經 CSS 變數進 hop 動畫，不與跳動衝突）
   d.style.transition="left "+dur.toFixed(2)+"s linear, top "+dur.toFixed(2)+"s linear";
   d.style.left=nx+"%";d.style.top=ny+"%";d.dataset.x=nx;d.dataset.y=ny;
   clearTimeout(dogTimer);dogTimer=setTimeout(walkDog, dur*1000 + 500 + Math.random()*1800);
