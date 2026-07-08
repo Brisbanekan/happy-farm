@@ -340,7 +340,7 @@
   body.narrow .shName{width:84px;} body.narrow .shPx{width:82px;}
   .stkMain{flex:1;display:flex;min-height:0;}
   /* --- Lightweight Charts 圖表區 --- */
-  .stkChart{flex:1;min-width:0;position:relative;background:#0b0e11;display:flex;flex-direction:column;}
+  .stkChart{flex:1;min-width:0;position:relative;background:#0b0e11;display:flex;flex-direction:column;padding-left:env(safe-area-inset-left,0px);}   /* 圖表區避開瀏海安全區 */
   #stkRanges{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid #1c2126;flex-shrink:0;}
   #stkRanges button{border:none;background:none;color:#848e9c;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;}
   #stkRanges button.on{background:#2b3139;color:#f0b90b;}
