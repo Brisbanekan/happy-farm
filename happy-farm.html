@@ -29,7 +29,7 @@
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{display:none;}
-  #world .field{left:370px;top:680px;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);}
+  #world .field{left:370px;top:680px;transform:translate(-50%,-50%) rotate(10deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(10deg)＝整塊田順時針轉10度（不影響等角貼圖） */
   #world .fieldshadow{left:370px;top:765px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
   #world .bld.storage{left:18px;top:251px;width:350px;}
@@ -139,18 +139,18 @@
   .plot.ripe{z-index:3;}
   .plot.ripe::before{animation:ripeglow 1.6s ease-in-out infinite;}
   @keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
-  .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
+  .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px) rotate(-10deg);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
   .plot.ripe .crop{animation:cropbounce 1.4s ease-in-out infinite;}
   @keyframes cropsway{0%,100%{rotate:-5deg;}50%{rotate:5deg;}}
   @keyframes cropbounce{0%,100%{scale:1;}50%{scale:1.14;}}
   @media(max-width:560px){.crop{font-size:34px;}}
-  .ov{position:absolute;font-size:16px;pointer-events:none;transform:rotate(-45deg) scaleY(2);}
+  .ov{position:absolute;font-size:16px;pointer-events:none;transform:rotate(-45deg) scaleY(2) rotate(-10deg);}
   .ov.dry{top:1px;left:3px;}
   .ov.weed{bottom:0px;left:2px;}
   .ov.bug{top:0px;right:2px;}
   /* 田地狀態對話泡泡（💧🌿🐜 漂浮在田地上方） */
   .statbub{position:absolute;left:50%;top:50%;z-index:6;pointer-events:none;
-    transform:translate(-50%,-50%) rotate(-45deg) scaleY(2) translateY(-25px);}
+    transform:translate(-50%,-50%) rotate(-45deg) scaleY(2) translateY(-25px) rotate(-10deg);}
   .statbub .bin{display:inline-flex;gap:3px;align-items:center;background:#fffef8f5;border:2px solid #e0c389;
     border-radius:11px;padding:2px 7px;font-size:13px;line-height:1.2;box-shadow:0 2px 5px #0003;
     position:relative;white-space:nowrap;animation:bubbob 1.6s ease-in-out infinite;}
@@ -160,12 +160,12 @@
     border:5px solid transparent;border-top-color:#fffef8f5;border-bottom:none;}
   .statbub small{font-size:9px;font-weight:800;color:#a23b3b;}
   @keyframes bubbob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
-  .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2);}
+  .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2) rotate(-10deg);}
   .progress>i{display:block;height:100%;background:linear-gradient(90deg,#ffe082,#ffb300);}
   .signpost{
     position:absolute;left:50%;top:50%;font-size:8.5px;line-height:1.15;font-weight:800;color:#5a3a1a;background:#f3e2b8ee;
     border:2px solid #b88a3e;border-radius:7px;padding:2px 5px;white-space:nowrap;
-    transform-origin:center;transform:translate(-50%,-50%) rotate(-45deg) scaleY(2);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
+    transform-origin:center;transform:translate(-50%,-50%) rotate(-45deg) scaleY(2) rotate(-10deg);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
   }
 
   /* 左上 HUD */
