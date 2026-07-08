@@ -688,6 +688,16 @@
   <span>開心農場以橫屏遊玩體驗最佳</span>
 </div>
 
+<!-- 多裝置接手提示：另一台裝置寫入雲端時，這台暫停並顯示 -->
+<div id="devMask" style="position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:#000000cc;color:#fff;text-align:center">
+  <div style="background:#1e2329;border-radius:18px;padding:24px 28px;max-width:340px;width:86%">
+    <div style="font-size:38px">📱↔️💻</div>
+    <b style="font-size:16px;display:block;margin:10px 0 6px">另一台裝置已接手</b>
+    <p style="font-size:13px;color:#aab4c0;line-height:1.7;margin:0 0 16px">偵測到你的帳號正在其他裝置遊玩。<br>此視窗已暫停存檔，避免進度互相覆蓋。</p>
+    <button onclick="resumeHere()" style="border:none;background:#f0b90b;color:#222;font-weight:800;border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer">載入最新進度，在這裡繼續</button>
+  </div>
+</div>
+
 <!-- 登入畫面（啟用帳號登入時才顯示） -->
 <div class="loginmask" id="loginMask">
   <div class="loginbox">
@@ -873,18 +883,44 @@ function loadUserCloud(uid){
     }
     cloudReady=true;
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
-    ensureProfile(); loadFriends();
+    ensureProfile(); loadFriends(); attachDevWatch(uid);
   }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); cloudReady=true; render(); });
 }
+/* ---- 多裝置防互蓋：最後寫入者＝作用中裝置，其他裝置暫停雲端存檔並提示接手 ---- */
+const DEV_ID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+let cloudPaused=false, devWatchOn=false, devSeenMine=false;
+function attachDevWatch(uid){
+  if(devWatchOn||!fbDB)return; devWatchOn=true;
+  fbDB.ref("users/"+uid+"/dev").on("value",function(snap){
+    const v=snap.val();
+    if(v===DEV_ID){devSeenMine=true;return;}          // 自己的寫入
+    if(!v||!devSeenMine||cloudPaused)return;           // 首次載入時的舊值不算接手
+    cloudPaused=true;                                  // 別台裝置寫入 → 這台暫停
+    const m=document.getElementById("devMask"); if(m)m.style.display="flex";
+    log("⏸️ 偵測到另一台裝置接手，此裝置已暫停雲端存檔。","b");
+  });
+}
+function resumeHere(){
+  const m=document.getElementById("devMask");
+  if(!fbDB||!fbUser){if(m)m.style.display="none";cloudPaused=false;return;}
+  fbDB.ref("users/"+fbUser.uid).once("value").then(function(snap){
+    const d=snap.val();
+    if(d&&Array.isArray(d.plots)){Object.assign(G,d);normalizeState();}
+    cloudPaused=false; devSeenMine=false; if(m)m.style.display="none";
+    setScene(G.scene||"farm"); render();
+    saveGame();                                        // 以本裝置身分寫回 → 其他裝置換成暫停
+    toast("已載入最新進度，這台裝置繼續 ☁️");
+  }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
+}
 function saveUserCloud(){
-  if(!fbDB||!fbUser||!cloudReady)return;   // 尚未載入完成前不寫入
+  if(!fbDB||!fbUser||!cloudReady||cloudPaused)return;   // 尚未載入完成或已被別台接手時不寫入
   clearTimeout(fbSaveTimer);
   // 防抖 0.6 秒（必須小於遊戲心跳 1.5 秒，否則計時器會被一直重置而永遠不存）
-  fbSaveTimer=setTimeout(function(){ try{ G.ts=Date.now(); fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e),"r"); }); }catch(e){} }, 600);
+  fbSaveTimer=setTimeout(function(){ try{ if(cloudPaused)return; G.ts=Date.now(); G.dev=DEV_ID; fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e),"r"); }); }catch(e){} }, 600);
 }
 function cloudSaveNow(){
   if(!fbDB||!fbUser){toast("尚未登入");return;}
-  clearTimeout(fbSaveTimer); G.ts=Date.now();
+  clearTimeout(fbSaveTimer); G.ts=Date.now(); G.dev=DEV_ID; cloudPaused=false;
   fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G)))
     .then(function(){ toast("已存到雲端 ☁️"); log("☁️ 已手動覆寫雲端存檔。","g"); })
     .catch(function(e){ alert("雲端存檔失敗："+(e&&e.message||e)); });
@@ -894,7 +930,7 @@ function cloudLoadNow(){
   if(!confirm("用雲端進度覆蓋這台裝置目前的進度？"))return;
   fbDB.ref("users/"+fbUser.uid).once("value").then(function(snap){
     const d=snap.val();
-    if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); setScene(G.scene||"farm"); render(); toast("已從雲端讀取"); log("☁️ 已從雲端覆蓋本機進度。","b"); closeM(); }
+    if(d&&Array.isArray(d.plots)){ Object.assign(G,d); normalizeState(); cloudPaused=false; devSeenMine=false; const dm=document.getElementById("devMask"); if(dm)dm.style.display="none"; setScene(G.scene||"farm"); render(); toast("已從雲端讀取"); log("☁️ 已從雲端覆蓋本機進度。","b"); closeM(); }
     else toast("雲端目前沒有存檔");
   }).catch(function(e){ alert("讀取失敗："+(e&&e.message||e)); });
 }
