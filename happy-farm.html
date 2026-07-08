@@ -211,7 +211,7 @@
   @media(orientation:portrait) and (max-width:900px){ body:not(.sim) .rotertip{display:flex;} }
 
   /* 右側直立工具列 */
-  .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:20;}
+  .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
   .tool{
     width:48px;height:48px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;
     display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;
@@ -448,6 +448,7 @@
   .lbitems{display:flex;flex-direction:column;gap:8px;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
   body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
+  body.narrow .zoomctrl{right:calc(58px + env(safe-area-inset-right));bottom:60px;}   /* 手機：縮放鈕移到工具列左側，不與肥料/收成鈕重疊 */
   /* 底部選單：改成可左右滑動 */
   body.narrow .dock{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;scroll-snap-type:x proximity;}
