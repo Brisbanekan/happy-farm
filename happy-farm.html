@@ -1320,15 +1320,17 @@ function loadChart(){
   if(!ensureChart()){ if(lwTries++<20)setTimeout(loadChart,600); return; }   // CDN 尚未載入時重試
   const s=stockOf(curStock); const rq=++chartReq;
   const day=chartRange==="24H";
+  const tw=/\.TW$/.test(s.y);
+  const useDaily=day&&!tw;   // 台股 range=1d 不給分線 → 一律抓 5d 再切最後一日
   const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+
-    "?interval="+(day?"5m":"15m")+"&range="+(day?"1d":"5d")+"&includePrePost="+day+"&_ts="+Date.now();
+    "?interval="+(useDaily?"5m":"15m")+"&range="+(useDaily?"1d":"5d")+"&includePrePost="+useDaily+"&_ts="+Date.now();
   yFetch(u,function(d){
     if(rq!==chartReq)return;
     const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
     const ts=res.timestamp||[], q=(res.indicators&&res.indicators.quote&&res.indicators.quote[0])||{}, cl=q.close||[];
     let pts=[];
     for(let i=0;i<ts.length;i++){ if(cl[i]!=null)pts.push({time:ts[i]+CHART_TZOFF,value:Math.round(cl[i]*100)/100}); }
-    const nd=chartRange==="2D"?2:chartRange==="3D"?3:0;   // 2日/3日：從5日資料取最後N個交易日
+    const nd=chartRange==="2D"?2:chartRange==="3D"?3:(day&&tw?1:0);   // 2日/3日（台股24小時=1日）：從5日資料取最後N個交易日
     if(nd){ const keys=[]; pts.forEach(p=>{const k=Math.floor(p.time/86400);if(keys.indexOf(k)<0)keys.push(k);});
       const keep=keys.slice(-nd); pts=pts.filter(p=>keep.indexOf(Math.floor(p.time/86400))>=0); }
     if(!pts.length)return;
@@ -1431,22 +1433,29 @@ function yFetch(u,ok,tryIdx){
 }
 function fetchQuote(t,cb){
   const s=stockOf(t);
+  const tw=/\.TW$/.test(s.y);   // 台股：Yahoo 不回 range=1d 分線 → 抓 5d/15m 再取最後一個交易日
   // _ts 快取破壞參數：避免 CORS 代理回舊快取造成報價與圖表不一致
-  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+"?interval=1m&range=1d&includePrePost=true&_ts="+Date.now();
+  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+(tw?"?interval=15m&range=5d":"?interval=1m&range=1d&includePrePost=true")+"&_ts="+Date.now();
   yFetch(u,function(d){
     const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
     const meta=res.meta||{}; const st=G.stocks[t]; if(!st)return;
     if(meta.regularMarketTime&&(Date.now()/1000-meta.regularMarketTime)>6*86400)return;   // 過期資料不採用
     let px=meta.regularMarketPrice;
     const q=res.indicators&&res.indicators.quote&&res.indicators.quote[0];
-    if(q&&q.close){for(let i=q.close.length-1;i>=0;i--){if(q.close[i]!=null){px=q.close[i];break;}}}   // 含盤前/盤後最新成交
-    if(q&&q.close){ const cs=q.close.filter(v=>v!=null);   // 首頁走勢小圖（降採樣約40點）
-      if(cs.length>2){ const step=Math.max(1,Math.floor(cs.length/40));
-        SPARKS[t]=cs.filter((_,i)=>i%step===0); if(SPARKS[t][SPARKS[t].length-1]!==cs[cs.length-1])SPARKS[t].push(cs[cs.length-1]);
-        try{localStorage.setItem("hfSparkCache",JSON.stringify({sp:SPARKS}));}catch(e){} } }
+    const tss=res.timestamp||[];
+    let cs=[],dayk=[];
+    if(q&&q.close){for(let i=0;i<q.close.length;i++){if(q.close[i]!=null){cs.push(q.close[i]);dayk.push(Math.floor(((tss[i]||0)+28800)/86400));}}}   // UTC+8 分日
+    let prevTW=null;
+    if(tw&&cs.length){const lastD=dayk[dayk.length-1];const idx=dayk.indexOf(lastD);
+      if(idx>0)prevTW=cs[idx-1];   // 前一交易日收盤＝昨收
+      cs=cs.slice(idx);}           // 只留最後一個交易日
+    if(cs.length)px=cs[cs.length-1];   // 最新成交（美股含盤前/盤後）
+    if(cs.length>2){ const step=Math.max(1,Math.floor(cs.length/40));   // 首頁走勢小圖（降採樣約40點）
+      SPARKS[t]=cs.filter((_,i)=>i%step===0); if(SPARKS[t][SPARKS[t].length-1]!==cs[cs.length-1])SPARKS[t].push(cs[cs.length-1]);
+      try{localStorage.setItem("hfSparkCache",JSON.stringify({sp:SPARKS}));}catch(e){} }
     if(!px)return;
     st.price=Math.round(px*100)/100;
-    if(meta.chartPreviousClose)st.prev=meta.chartPreviousClose;
+    if(tw&&prevTW)st.prev=prevTW; else if(meta.chartPreviousClose)st.prev=meta.chartPreviousClose;
     let sess="盤中";
     const ts=res.timestamp&&res.timestamp[res.timestamp.length-1];
     const tp=meta.currentTradingPeriod;
