@@ -1384,9 +1384,13 @@ function odQtyPct(r){ const q=Math.floor(G.gold*r/(odPriceNow()*(1-levB)));   //
   const el=document.getElementById("odQty"); if(el)el.value=(odUnit==="l"?Math.floor(q/1000):(q>0?q:0)); updOdCost(); }
 function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
   const qty=odQtyShares(); const total=Math.round(odPriceNow()*qty); const self=Math.round(total*(1-levB));
+  let liq="";
+  if(levB>0&&qty>0){ const st=G.stocks[curStock]||{}; const sh=Math.max(0,st.shares||0);
+    const nd=(sh>0?(st.debt||0):0)+total*levB, ns=sh+qty;
+    liq="　｜　預估強平價 <span style='color:#f6465d'>"+fmtP(1.3*nd/ns)+"</span>"; }   // 維持率130%＝市值/融資 → 強平價=1.3×融資/股數
   el.innerHTML=(levB>0?("自備款 "+CO+" "+self.toLocaleString()+"（融資 "+(total-self).toLocaleString()+"）")
                       :("預估成本 "+CO+" "+total.toLocaleString()))
-    +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+"股"):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString(); }
+    +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+"股"):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq; }
 function placeOrder(side){
   const st=G.stocks[curStock];
   const qty=odQtyShares();
@@ -1532,15 +1536,16 @@ function renderStockUI(){
   const body=document.getElementById("stkBody");
   if(stkTab==="pos"){
     if(!posRows.length){body.innerHTML='<div style="color:#848e9c;font-size:12px;padding:18px;text-align:center">目前沒有持倉，用右側面板下單開始交易。</div>';return;}
-    let h='<table><tr><th>標的</th><th>數量</th><th>開倉均價</th><th>現價</th><th>融資(維持率)</th><th>盈虧(ROI%)</th><th></th></tr>';
+    let h='<table><tr><th>標的</th><th>數量</th><th>開倉均價</th><th>現價</th><th>融資(維持率)</th><th>強平價</th><th>盈虧(ROI%)</th><th></th></tr>';
     posRows.forEach(x=>{const xs=G.stocks[x.t];const lg=xs.shares>0;
       const pnl=(xs.price-xs.avg)*xs.shares;
       const roi=xs.avg?(pnl/(xs.avg*Math.abs(xs.shares))*100):0;
-      let fin='—';
+      let fin='—', liq='—';
       if(lg&&(xs.debt||0)>0){const mr=xs.price*xs.shares/xs.debt*100;
-        fin=Math.round(xs.debt).toLocaleString()+'（<span class="'+(mr<140?'dn':'up')+'">'+Math.round(mr)+'%</span>）';}
+        fin=Math.round(xs.debt).toLocaleString()+'（<span class="'+(mr<140?'dn':'up')+'">'+Math.round(mr)+'%</span>）';
+        liq='<span class="dn">'+fmtP(1.3*xs.debt/xs.shares)+'</span>';}   // 跌到此價維持率=130%
       h+='<tr><td><b>'+x.n+'</b> <span class="'+(lg?'up':'dn')+'">'+(lg?'多':'空')+'</span></td>'+
-        '<td>'+fmtShares(xs.shares)+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td><td>'+fin+'</td>'+
+        '<td>'+fmtShares(xs.shares)+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td><td>'+fin+'</td><td>'+liq+'</td>'+
         '<td class="'+(pnl>=0?'up':'dn')+'">'+(pnl>=0?'+':'')+Math.round(pnl)+'（'+(roi>=0?'+':'')+roi.toFixed(2)+'%）</td>'+
         '<td><button class="cbtn" onclick="closePosition(\''+x.t+'\')">市價平倉</button></td></tr>';
     });
