@@ -1217,11 +1217,16 @@ function openStockTrade(t){
 const SICON={TSM:"#c62828",UMC:"#1565c0",ASX:"#6a1b9a",CHT:"#00897b",NVDA:"#76b900",AAPL:"#1c1c1e",GOOGL:"#4285f4",MSFT:"#0078d4",TSLA:"#cc0000",AMZN:"#ff9900"};
 const SPARKS={};   // 走勢小圖資料（不入雲端存檔）
 try{const _sc=JSON.parse(localStorage.getItem("hfSparkCache")||"null");if(_sc&&_sc.sp)Object.assign(SPARKS,_sc.sp);}catch(e){}   // 本機快取：首頁小圖立即顯示
-function sparkSvg(arr,color){
+function sparkSvg(arr,color,prev){
   if(!arr||arr.length<2)return '<svg width="110" height="34"></svg>';
-  const mn=Math.min.apply(null,arr),mx=Math.max.apply(null,arr),rg=(mx-mn)||1;
-  const pts=arr.map((v,i)=>((i/(arr.length-1)*106+2).toFixed(1)+','+(32-(v-mn)/rg*26-2).toFixed(1))).join(' ');
-  return '<svg width="110" height="34" viewBox="0 0 110 34"><polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
+  let mn=Math.min.apply(null,arr),mx=Math.max.apply(null,arr);
+  if(typeof prev==="number"&&prev>0){mn=Math.min(mn,prev);mx=Math.max(mx,prev);}   // 基準線納入比例尺
+  const rg=(mx-mn)||1, Y=v=>(32-(v-mn)/rg*26-2);
+  const pts=arr.map((v,i)=>((i/(arr.length-1)*106+2).toFixed(1)+','+Y(v).toFixed(1))).join(' ');
+  let base="";
+  if(typeof prev==="number"&&prev>0){const py=Y(prev).toFixed(1);
+    base='<line x1="2" y1="'+py+'" x2="108" y2="'+py+'" stroke="#9aa3b0" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>';}   // 昨收基準虛線
+  return '<svg width="110" height="34" viewBox="0 0 110 34">'+base+'<polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
 }
 function renderStockHome(){
   if(!stockOpen||stockView!=="home")return;
@@ -1231,7 +1236,7 @@ function renderStockHome(){
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
       '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+s.n.charAt(0)+'</div>'+
       '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
-      '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626')+'</div>'+
+      '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626',st.prev)+'</div>'+
       '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
   }).join("");
 }
