@@ -1323,7 +1323,7 @@ function loadChart(){
   const tw=/\.TW$/.test(s.y);
   const useDaily=day&&!tw;   // 台股 range=1d 不給分線 → 一律抓 5d 再切最後一日
   const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+
-    "?interval="+(useDaily?"5m":"15m")+"&range="+(useDaily?"1d":"5d")+"&includePrePost="+useDaily+"&_ts="+Date.now();
+    "?interval="+(day?"5m":"15m")+"&range="+(useDaily?"1d":"5d")+"&includePrePost="+useDaily+"&_ts="+Date.now();   // 24小時一律5分K（台股從5d切最後一日）
   yFetch(u,function(d){
     if(rq!==chartReq)return;
     const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
@@ -1435,7 +1435,7 @@ function fetchQuote(t,cb){
   const s=stockOf(t);
   const tw=/\.TW$/.test(s.y);   // 台股：Yahoo 不回 range=1d 分線 → 抓 5d/15m 再取最後一個交易日
   // _ts 快取破壞參數：避免 CORS 代理回舊快取造成報價與圖表不一致
-  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+(tw?"?interval=15m&range=5d":"?interval=1m&range=1d&includePrePost=true")+"&_ts="+Date.now();
+  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+(tw?"?interval=5m&range=5d":"?interval=5m&range=1d&includePrePost=true")+"&_ts="+Date.now();   // 台美股皆 5 分 K
   yFetch(u,function(d){
     const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
     const meta=res.meta||{}; const st=G.stocks[t]; if(!st)return;
