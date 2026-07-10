@@ -793,22 +793,22 @@ const SLOT_COST=50;
 // 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
 const STOCKS=[
   // 台股權值股（Yahoo .TW 報價，價位為台幣）
-  {t:"2330", n:"台積電",    base:1050, y:"2330.TW"},
-  {t:"2317", n:"鴻海",      base:165,  y:"2317.TW"},
-  {t:"2454", n:"聯發科",    base:1300, y:"2454.TW"},
-  {t:"2308", n:"台達電",    base:400,  y:"2308.TW"},
-  {t:"2382", n:"廣達",      base:280,  y:"2382.TW"},
-  {t:"2881", n:"富邦金",    base:88,   y:"2881.TW"},
-  {t:"2882", n:"國泰金",    base:64,   y:"2882.TW"},
-  {t:"2412", n:"中華電",    base:123,  y:"2412.TW"},
-  {t:"2891", n:"中信金",    base:42,   y:"2891.TW"},
-  {t:"3711", n:"日月光投控", base:150, y:"3711.TW"},
+  {t:"2330", n:"農積電",    base:1050, y:"2330.TW"},
+  {t:"2317", n:"農海",      base:165,  y:"2317.TW"},
+  {t:"2454", n:"農發科",    base:1300, y:"2454.TW"},
+  {t:"2308", n:"農達電",    base:400,  y:"2308.TW"},
+  {t:"2382", n:"農達",      base:280,  y:"2382.TW"},
+  {t:"2881", n:"農邦金",    base:88,   y:"2881.TW"},
+  {t:"2882", n:"農泰金",    base:64,   y:"2882.TW"},
+  {t:"2412", n:"農華電",    base:123,  y:"2412.TW"},
+  {t:"2891", n:"農信金",    base:42,   y:"2891.TW"},
+  {t:"3711", n:"農月光投控", base:150, y:"3711.TW"},
   // 台股低價熱門標的
-  {t:"9105", n:"泰金寶-DR", base:13, y:"9105.TW"},
-  {t:"3481", n:"群創",     base:14, y:"3481.TW"},
-  {t:"2409", n:"友達",     base:16, y:"2409.TW"},
-  {t:"2610", n:"華航",     base:22, y:"2610.TW"},
-  {t:"2002", n:"中鋼",     base:21, y:"2002.TW"}
+  {t:"9105", n:"農金寶-DR", base:13, y:"9105.TW"},
+  {t:"3481", n:"農創",     base:14, y:"3481.TW"},
+  {t:"2409", n:"農達光",   base:16, y:"2409.TW"},
+  {t:"2610", n:"農航",     base:22, y:"2610.TW"},
+  {t:"2002", n:"農鋼",     base:21, y:"2002.TW"}
 ];
 // 已下架標的（舊 ADR/美股與更早的代號）：讀檔時以最後價格結算持倉返還金幣
 const STOCK_DELIST=["TSM","UMC","ASX","CHT","NVDA","AAPL","GOOGL","MSFT","TSLA","AMZN","NTSMC","NFAK","NHAI","TNPC","NAPL","NOOG","NSFT","NSLA","NMZN"];
@@ -1256,7 +1256,7 @@ function renderStockHome(){
     '<div class="shSpark">當日走勢（虛線＝昨收）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
   el.innerHTML=head+STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
-      '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+s.n.charAt(0)+'</div>'+
+      '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+(s.n.charAt(0)==="農"&&s.n.length>1?s.n.charAt(1):s.n.charAt(0))+'</div>'+
       '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
       '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626',st.prev)+'</div>'+
       '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
