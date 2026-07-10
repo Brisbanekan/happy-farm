@@ -325,8 +325,11 @@
   .shNews .nItem:hover{background:#f4f6fa;}
   .shNews .nt{color:#8a93a3;font-size:10.5px;margin-top:2px;}
   body.narrow .shNews{width:280px;}
+  .shHead{display:flex;align-items:center;gap:12px;padding:9px 16px 6px;position:sticky;top:0;background:#fff;z-index:1;
+    font-size:11px;color:#8a93a3;border-bottom:1px solid #eceef3;}
+  .shHead .hIcon{width:42px;flex-shrink:0;}
   .shRow{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-top:1px solid #f0f1f5;}
-  .shRow:first-child{border-top:none;}
+  .shRow:first-of-type{border-top:none;}
   .shRow:hover{background:#f7f8fb;}
   .shIcon{width:42px;height:42px;border-radius:11px;color:#fff;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .shName{display:flex;flex-direction:column;min-width:0;width:104px;flex-shrink:0;}
@@ -1232,7 +1235,9 @@ function renderStockHome(){
   if(!stockOpen||stockView!=="home")return;
   const el=document.getElementById("shList"); if(!el)return;
   document.getElementById("shCash").textContent=G.gold.toLocaleString();
-  el.innerHTML=STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
+  const head='<div class="shHead"><div class="hIcon"></div><div class="shName">標的（名稱／代號）</div>'+
+    '<div class="shSpark">當日走勢（虛線＝昨收）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
+  el.innerHTML=head+STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
       '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+s.n.charAt(0)+'</div>'+
       '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
