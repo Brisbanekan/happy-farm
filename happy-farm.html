@@ -663,7 +663,7 @@
         <label>委託價格</label>
         <div class="inrow"><input id="odPrice" type="number" step="0.01" oninput="updOdCost()"><span>金幣</span><button onclick="odUseCur()">現價</button></div>
         <label>數量</label>
-        <div class="inrow"><input id="odQty" type="number" step="1" min="0" oninput="updOdCost()"><span>股</span></div>
+        <div class="inrow"><input id="odQty" type="number" step="1" min="0" oninput="updOdCost()"><button id="odUnit" onclick="toggleOdUnit()">股 ▾</button></div>
         <div class="pct"><button onclick="odQtyPct(.25)">25%</button><button onclick="odQtyPct(.5)">50%</button><button onclick="odQtyPct(.75)">75%</button><button onclick="odQtyPct(1)">全部</button></div>
         <button class="stkBuy" onclick="placeOrder(1)">買入 / 做多</button>
         <button class="stkSell" onclick="placeOrder(-1)">賣出 / 做空</button>
@@ -1336,14 +1336,24 @@ function odUseCur(){const p=document.getElementById("odPrice");if(p)p.value=G.st
 function odPriceNow(){ const st=G.stocks[curStock];
   if(orderType==="market")return st.price;
   return parseFloat((document.getElementById("odPrice")||{}).value)||st.price; }
+let odUnit="s";   // 數量單位：s=股、l=張（1張=1000股）
+function toggleOdUnit(){ odUnit=(odUnit==="s"?"l":"s");
+  const b=document.getElementById("odUnit"); if(b)b.textContent=(odUnit==="s"?"股 ▾":"張 ▾");
+  const el=document.getElementById("odQty"); if(el)el.value="";
+  updOdCost(); }
+function odQtyShares(){ const v=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
+  return odUnit==="l"?v*1000:v; }
+function fmtShares(n){ const a=Math.abs(n||0); if(a<1000)return n+"股";
+  const lots=Math.floor(a/1000), rem=a%1000;
+  return (n<0?"-":"")+lots+"張"+(rem?rem+"股":""); }
 function odQtyPct(r){ const q=Math.floor(G.gold*r/odPriceNow());
-  const el=document.getElementById("odQty"); if(el)el.value=q>0?q:0; updOdCost(); }
+  const el=document.getElementById("odQty"); if(el)el.value=(odUnit==="l"?Math.floor(q/1000):(q>0?q:0)); updOdCost(); }
 function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
-  const qty=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
-  el.innerHTML="預估成本 "+CO+" "+Math.round(odPriceNow()*qty).toLocaleString()+"　｜　可用 "+CO+" "+G.gold.toLocaleString(); }
+  const qty=odQtyShares();
+  el.innerHTML="預估成本 "+CO+" "+Math.round(odPriceNow()*qty).toLocaleString()+(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+"股"):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString(); }
 function placeOrder(side){
   const st=G.stocks[curStock];
-  const qty=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
+  const qty=odQtyShares();
   if(qty<=0){toast("請輸入數量");return;}
   if(orderType==="market"){execTrade(curStock,side,qty,st.price);return;}
   const price=Math.round((parseFloat((document.getElementById("odPrice")||{}).value)||0)*100)/100;
@@ -1447,7 +1457,7 @@ function renderStockUI(){
   const ce=document.getElementById("stkChg"); ce.textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%"; ce.style.color=chg>=0?"#0ecb81":"#f6465d";
   const se=document.getElementById("stkSess"); if(se){se.textContent=st.sess||"--";se.style.color=st.sess==="盤中"?"#0ecb81":(st.sess?"#f0b90b":"#848e9c");}
   const posEl=document.getElementById("stkPos");
-  posEl.textContent=st.shares?((st.shares>0?"+":"")+st.shares+" 股"):"--";
+  posEl.textContent=st.shares?((st.shares>0?"+":"")+fmtShares(st.shares)):"--";
   posEl.style.color=st.shares>0?"#0ecb81":(st.shares<0?"#f6465d":"#eaecef");
   document.getElementById("stkCash").textContent=G.gold.toLocaleString();
   document.getElementById("stkStar").classList.toggle("on",!!G.stockFav[curStock]);
@@ -1473,7 +1483,7 @@ function renderStockUI(){
       const pnl=(xs.price-xs.avg)*xs.shares;
       const roi=xs.avg?(pnl/(xs.avg*Math.abs(xs.shares))*100):0;
       h+='<tr><td><b>'+x.n+'</b> <span class="'+(lg?'up':'dn')+'">'+(lg?'多':'空')+'</span></td>'+
-        '<td>'+xs.shares+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td>'+
+        '<td>'+fmtShares(xs.shares)+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td>'+
         '<td class="'+(pnl>=0?'up':'dn')+'">'+(pnl>=0?'+':'')+Math.round(pnl)+'（'+(roi>=0?'+':'')+roi.toFixed(2)+'%）</td>'+
         '<td><button class="cbtn" onclick="closePosition(\''+x.t+'\')">市價平倉</button></td></tr>';
     });
@@ -1482,7 +1492,7 @@ function renderStockUI(){
     const os=G.stockOrders||[];
     if(!os.length){body.innerHTML='<div style="color:#848e9c;font-size:12px;padding:18px;text-align:center">沒有掛單中的委託。</div>';return;}
     let h='<table><tr><th>標的</th><th>方向</th><th>委託價</th><th>數量</th><th></th></tr>';
-    os.forEach(o=>{h+='<tr><td><b>'+stockName(o.t)+'</b></td><td class="'+(o.side>0?'up':'dn')+'">'+(o.side>0?'買入/做多':'賣出/做空')+'</td><td>'+fmtP(o.price)+'</td><td>'+o.qty+'</td>'+
+    os.forEach(o=>{h+='<tr><td><b>'+stockName(o.t)+'</b></td><td class="'+(o.side>0?'up':'dn')+'">'+(o.side>0?'買入/做多':'賣出/做空')+'</td><td>'+fmtP(o.price)+'</td><td>'+fmtShares(o.qty)+'</td>'+
       '<td><button class="cbtn" onclick="cancelOrder('+o.id+')">取消</button></td></tr>';});
     body.innerHTML=h+'</table>';
   }
