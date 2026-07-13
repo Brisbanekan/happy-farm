@@ -614,6 +614,7 @@
       <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
       <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
       <div class="lbtn" onclick="toggleLog();closeLeftbar()">📜<small>紀錄</small></div>
+      <div class="lbtn" onclick="toggleEditor();closeLeftbar()">🛠️<small>佈局</small></div>
     </div>
   </div>
 
@@ -2438,6 +2439,15 @@ function initPan(){
 
 /* ====== 佈局編輯模式（?edit=1）：拖曳素材、輸出座標（CSS 仍為正式來源） ====== */
 const EDIT_MODE=/[?&]edit=1/.test(location.search);
+let editOn=false, editInited=false;
+function toggleEditor(){
+  editOn=!editOn;
+  if(editOn&&!editInited){ initEditorCore(); editInited=true; }
+  document.body.classList.toggle("editmode",editOn);
+  const hud=document.getElementById("editHud"); if(hud)hud.style.display=editOn?"block":"none";
+  if(!editOn){ document.querySelectorAll(".edsel").forEach(n=>n.classList.remove("edsel")); edSel=null; }
+  toast("🛠️ 佈局編輯模式"+(editOn?"開啟：拖曳素材調位置":"關閉（重新整理可還原預覽的變動）"));
+}
 const EDT=[   // tpl 中 {r}=旋轉角、{s}=縮放；mode:"w"=用寬度縮放、"tf"=用 transform scale
   {s:"#world .bld.storage", tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
   {s:"#world .bld.bhouse",  tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
@@ -2482,12 +2492,11 @@ function edScale(d){
   }
   edUpdate(true);
 }
-function initEditor(){
-  if(!EDIT_MODE)return;
-  document.body.classList.add("editmode");
+function initEditor(){ if(EDIT_MODE)toggleEditor(); }   // 網址 ?edit=1 仍可直接進入
+function initEditorCore(){
   const hud=document.createElement("div");
   hud.id="editHud";
-  hud.innerHTML="🛠️ 佈局編輯：拖曳移動；點選素材後可旋轉/縮放微調"+
+  hud.innerHTML="🛠️ 佈局編輯：拖曳移動；點選素材後可旋轉/縮放微調 <button onclick=\"toggleEditor()\" style=\"float:right;border:none;background:#c62828;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer\">✕ 關閉</button>"+
     "<div id=\"editRot\"><button onclick=\"edRot(-5)\">-5°</button><button onclick=\"edRot(-1)\">-1°</button>"+
     "<span id=\"edDeg\">--</span><button onclick=\"edRot(1)\">+1°</button><button onclick=\"edRot(5)\">+5°</button></div>"+
     "<div id=\"editRot\"><button onclick=\"edScale(-0.05)\">-5%</button><button onclick=\"edScale(-0.01)\">-1%</button>"+
@@ -2497,6 +2506,7 @@ function initEditor(){
   EDT.forEach(function(t){
     const el=document.querySelector(t.s); if(!el)return;
     function down(e){
+      if(!editOn)return;   // 編輯模式關閉時不攔截，遊戲照常
       e.stopPropagation(); if(e.cancelable)e.preventDefault();   // 擋掉世界平移與田地點擊
       document.querySelectorAll(".edsel").forEach(n=>n.classList.remove("edsel"));
       el.classList.add("edsel"); edSel=t; edUpdate(false);
