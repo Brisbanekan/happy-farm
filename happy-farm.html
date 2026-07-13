@@ -438,7 +438,7 @@
   .ranchui .radd{width:34px;height:34px;border-radius:50%;background:#fffef6;border:2px solid #f0c544;color:#c9920f;
     font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
   .ranchui .radd:active{transform:translateY(2px);box-shadow:none;}
-  @media(max-width:760px){ .sceneswitch{top:auto;bottom:96px;} }
+  @media(max-width:760px){ .sceneswitch{top:calc(6px + env(safe-area-inset-top));bottom:auto;left:auto;right:calc(70px + env(safe-area-inset-right));transform:none;} }   /* 小螢幕固定右上角，避免各機型位置不一 */
   /* 登入畫面 */
   .loginmask{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
     background:linear-gradient(#aee6ff,#bfe39a 55%,#8fce5a);}
