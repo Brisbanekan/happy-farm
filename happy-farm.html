@@ -37,6 +37,7 @@
   #world .bld.bhouse{left:606px;top:340px;width:382px;}
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
+  #world .bld.factory{left:1250px;top:300px;width:300px;}   /* 工廠（暫定位置，待使用者定案） */
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -600,6 +601,7 @@
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
   <div class="bld bhouse"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
+  <div class="bld factory"><img src="building/factory.png" alt="工廠"></div>
 
   <!-- 田地 -->
   <div class="fieldshadow"></div>
@@ -2456,6 +2458,7 @@ const EDT=[   // {r}=旋轉 {s}=縮放 {f}=水平翻轉；mode:"w"=寬度縮放(
   {s:"#world .bld.storage", tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:-1,f0:-1,mode:"w"},
   {s:"#world .bld.bhouse",  tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:1,f0:1,mode:"w"},
   {s:"#world .bld.doghouse",tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:-1,f0:-1,mode:"w"},
+  {s:"#world .bld.factory", tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:1,f0:1,mode:"w"},
   {s:"#world .field",       tpl:"translate(-50%,-50%) rotate({r}deg) scale({s}) scaleX({f}) scaleY(.5) rotate(45deg)", r:14,r0:14,sc:1,f:1,f0:1,mode:"tf"},
   {s:"#world .fieldshadow", tpl:"translate(-50%,-50%) rotate({r}deg)", r:0,r0:0,sc:1,f:1,f0:1,mode:"w",noflip:true},
   {s:"#ranchBg .ranchpen",  tpl:"rotate({r}deg) scale({s}) scaleX({f})", r:0,r0:0,sc:1,f:1,f0:1,mode:"tf"},
