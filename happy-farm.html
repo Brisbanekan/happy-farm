@@ -2452,31 +2452,50 @@ function toggleEditor(){
   if(!editOn){ document.querySelectorAll(".edsel").forEach(n=>n.classList.remove("edsel")); edSel=null; }
   toast("🛠️ 佈局編輯模式"+(editOn?"開啟：拖曳素材調位置":"關閉（重新整理可還原預覽的變動）"));
 }
-const EDT=[   // tpl 中 {r}=旋轉角、{s}=縮放；mode:"w"=用寬度縮放、"tf"=用 transform scale
-  {s:"#world .bld.storage", tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
-  {s:"#world .bld.bhouse",  tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
-  {s:"#world .field",       tpl:"translate(-50%,-50%) rotate({r}deg) scale({s}) scaleY(.5) rotate(45deg)", r:14, r0:14, sc:1, mode:"tf"},
-  {s:"#world .fieldshadow", tpl:"translate(-50%,-50%) rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
-  {s:"#ranchBg .ranchpen",  tpl:"rotate({r}deg) scale({s})", r:0, r0:0, sc:1, mode:"tf"},
-  {s:"#world .bld.doghouse",tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
-  {s:"#dog",                tpl:"rotate({r}deg) scale({s})", r:0, r0:0, sc:1, mode:"tf"}
+const EDT=[   // {r}=旋轉 {s}=縮放 {f}=水平翻轉；mode:"w"=寬度縮放(翻轉作用於img)、"tf"=transform
+  {s:"#world .bld.storage", tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:-1,f0:-1,mode:"w"},
+  {s:"#world .bld.bhouse",  tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:1,f0:1,mode:"w"},
+  {s:"#world .bld.doghouse",tpl:"rotate({r}deg)", r:0,r0:0,sc:1,f:-1,f0:-1,mode:"w"},
+  {s:"#world .field",       tpl:"translate(-50%,-50%) rotate({r}deg) scale({s}) scaleX({f}) scaleY(.5) rotate(45deg)", r:14,r0:14,sc:1,f:1,f0:1,mode:"tf"},
+  {s:"#world .fieldshadow", tpl:"translate(-50%,-50%) rotate({r}deg)", r:0,r0:0,sc:1,f:1,f0:1,mode:"w",noflip:true},
+  {s:"#ranchBg .ranchpen",  tpl:"rotate({r}deg) scale({s}) scaleX({f})", r:0,r0:0,sc:1,f:1,f0:1,mode:"tf"},
+  {s:"#dog",                tpl:"rotate({r}deg) scale({s}) scaleX({f})", r:0,r0:0,sc:1,f:1,f0:1,mode:"tf"}
 ];
 let edSel=null;
-function edApplyTf(t,el){ el.style.transform=t.tpl.replace("{r}",t.r).replace("{s}",t.sc); }
+function edApplyTf(t,el){ el.style.transform=t.tpl.replace("{r}",t.r).replace("{s}",t.sc).replace("{f}",t.f); }
 function edUpdate(copy){
   if(!edSel)return;
   const el=document.querySelector(edSel.s); if(!el)return;
   const l=Math.round(parseFloat(getComputedStyle(el).left))||0, tp=Math.round(parseFloat(getComputedStyle(el).top))||0;
-  const withTf=(edSel.r!==edSel.r0)||edSel.sc!==1||edSel.s.indexOf(".field{")>=0||edSel.s==="#world .field";
+  const withTf=(edSel.r!==edSel.r0)||edSel.sc!==1||(edSel.mode==="tf"&&edSel.f!==edSel.f0)||edSel.s==="#world .field";
   let css=edSel.s+"{left:"+l+"px;top:"+tp+"px;";
   if(edSel.mode==="w"&&edSel.w)css+="width:"+edSel.w+"px;";
-  if(withTf)css+="transform:"+edSel.tpl.replace("{r}",edSel.r).replace("{s}",edSel.sc)+";";
+  if(edSel.z!=null&&edSel.z!==edSel.z0)css+="z-index:"+edSel.z+";";
+  if(withTf)css+="transform:"+edSel.tpl.replace("{r}",edSel.r).replace("{s}",edSel.sc).replace("{f}",edSel.f)+";";
   css+="}";
+  if(edSel.mode==="w"&&edSel.f!==edSel.f0)css+=" "+edSel.s+" img{transform:"+(edSel.f===-1?"scaleX(-1)":"none")+";}";
   const info=document.getElementById("editInfo"); if(info)info.textContent=css;
   const dg=document.getElementById("edDeg"); if(dg)dg.textContent=edSel.r+"°";
   const sl=document.getElementById("edScl");
   if(sl)sl.textContent=(edSel.mode==="w")?((edSel.w||Math.round(parseFloat(getComputedStyle(el).width)))+"px"):(Math.round(edSel.sc*100)+"%");
+  const zl=document.getElementById("edZ"); if(zl)zl.textContent="z:"+(edSel.z!=null?edSel.z:"--");
   if(copy){ console.log("[edit]",css); try{navigator.clipboard.writeText(css);}catch(e){} }
+}
+function edLayer(d){
+  if(!edSel){toast&&toast("先點選一個素材");return;}
+  const el=document.querySelector(edSel.s); if(!el)return;
+  if(edSel.z==null){edSel.z0=edSel.z=parseInt(getComputedStyle(el).zIndex)||0;}
+  edSel.z+=d; el.style.zIndex=edSel.z;
+  edUpdate(true);
+}
+function edFlip(){
+  if(!edSel){toast&&toast("先點選一個素材");return;}
+  if(edSel.noflip){toast&&toast("此素材不支援翻轉");return;}
+  const el=document.querySelector(edSel.s); if(!el)return;
+  edSel.f=-edSel.f;
+  if(edSel.mode==="w"){ const im=el.querySelector("img"); if(im)im.style.transform=(edSel.f===-1?"scaleX(-1)":"none"); }
+  else edApplyTf(edSel,el);
+  edUpdate(true);
 }
 function edRot(d){
   if(!edSel){toast&&toast("先點選一個素材");return;}
@@ -2507,6 +2526,8 @@ function initEditorCore(){
     "<span id=\"edDeg\">--</span><button onclick=\"edRot(1)\">+1°</button><button onclick=\"edRot(5)\">+5°</button></div>"+
     "<div id=\"editRot\"><button onclick=\"edScale(-0.05)\">-5%</button><button onclick=\"edScale(-0.01)\">-1%</button>"+
     "<span id=\"edScl\">--</span><button onclick=\"edScale(0.01)\">+1%</button><button onclick=\"edScale(0.05)\">+5%</button></div>"+
+    "<div id=\"editRot\"><button onclick=\"edLayer(-1)\">⬇ 下層</button><span id=\"edZ\">z:--</span>"+
+    "<button onclick=\"edLayer(1)\">⬆ 上層</button><button onclick=\"edFlip()\">↔ 水平翻轉</button></div>"+
     "<div id=\"editInfo\">尚未選取</div>";
   document.body.appendChild(hud);
   EDT.forEach(function(t){
@@ -2515,7 +2536,9 @@ function initEditorCore(){
       if(!editOn)return;   // 編輯模式關閉時不攔截，遊戲照常
       e.stopPropagation(); if(e.cancelable)e.preventDefault();   // 擋掉世界平移與田地點擊
       document.querySelectorAll(".edsel").forEach(n=>n.classList.remove("edsel"));
-      el.classList.add("edsel"); edSel=t; edUpdate(false);
+      el.classList.add("edsel"); edSel=t;
+      if(t.z==null){t.z0=t.z=parseInt(getComputedStyle(el).zIndex)||0;}
+      edUpdate(false);
       const p=e.touches?e.touches[0]:e;
       const st={x:p.clientX,y:p.clientY,l:parseFloat(getComputedStyle(el).left)||0,t:parseFloat(getComputedStyle(el).top)||0};
       function mv(ev){
