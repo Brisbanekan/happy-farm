@@ -32,9 +32,10 @@
   #world .field{left:1155px;top:736px;transform:translate(-50%,-50%) rotate(14deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(14deg)＝整塊田順時針轉14度（不影響等角貼圖） */
   #world .fieldshadow{left:1155px;top:821px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
-  #world .bld.storage{left:18px;top:251px;width:350px;}
+  #world .bld.storage{left:1px;top:241px;width:390px;}
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
-  #world .bld.bhouse{left:656px;top:366px;width:350px;}
+  #world .bld.bhouse{left:606px;top:340px;width:382px;}
+  #world .bld.doghouse{left:1180px;top:640px;width:200px;}   /* 狗屋（暫定位置，待使用者定案） */
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -77,7 +78,7 @@
     transform:translate(-50%,-50%);filter:drop-shadow(0 4px 2px #00000022);}
   #dog::after{content:"";position:absolute;left:50%;bottom:-3px;width:58%;height:9px;transform:translateX(-50%);
     background:radial-gradient(closest-side,#00000033,transparent);border-radius:50%;z-index:-1;}
-  #dog .dogbody{display:inline-block;height:58px;width:auto;animation:hop .7s ease-in-out infinite;transition:transform .2s;filter:drop-shadow(0 3px 2px #0004);}
+  #dog .dogbody{display:inline-block;height:58px;width:auto;transition:transform .2s;filter:drop-shadow(0 3px 2px #0004);}   /* 已停用跳動動畫，狗為固定擺設 */
   .barn{top:27%;left:6%;font-size:62px;}
   .tfar1{top:25.5%;left:24%;font-size:34px;animation:sway 5s ease-in-out infinite;}
   .tfar2{top:25.5%;left:33%;font-size:30px;animation:sway 6s ease-in-out infinite;}
@@ -291,6 +292,7 @@
   /* ===== 佈局編輯模式（?edit=1） ===== */
   body.editmode .bld{pointer-events:auto!important;touch-action:none;cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
   body.editmode .field,body.editmode .fieldshadow,body.editmode #ranchBg .ranchpen{cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
+  body.editmode #dog{pointer-events:auto!important;touch-action:none;cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
   #editHud{position:fixed;left:10px;top:10px;z-index:99999;background:#000d;color:#fff;font-size:12px;padding:8px 12px;border-radius:10px;max-width:420px;line-height:1.7;}
   #editHud #editInfo{color:#ffd54f;font-weight:700;user-select:all;font-family:monospace;word-break:break-all;}
   #editHud #editRot{display:flex;align-items:center;gap:6px;margin:4px 0;}
@@ -596,6 +598,7 @@
   <!-- 建築物（家 / 倉庫） -->
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
   <div class="bld bhouse"><img src="building/house.png" alt="家"></div>
+  <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
 
   <!-- 田地 -->
   <div class="fieldshadow"></div>
@@ -2453,7 +2456,9 @@ const EDT=[   // tpl 中 {r}=旋轉角、{s}=縮放；mode:"w"=用寬度縮放�
   {s:"#world .bld.bhouse",  tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
   {s:"#world .field",       tpl:"translate(-50%,-50%) rotate({r}deg) scale({s}) scaleY(.5) rotate(45deg)", r:14, r0:14, sc:1, mode:"tf"},
   {s:"#world .fieldshadow", tpl:"translate(-50%,-50%) rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
-  {s:"#ranchBg .ranchpen",  tpl:"rotate({r}deg) scale({s})", r:0, r0:0, sc:1, mode:"tf"}
+  {s:"#ranchBg .ranchpen",  tpl:"rotate({r}deg) scale({s})", r:0, r0:0, sc:1, mode:"tf"},
+  {s:"#world .bld.doghouse",tpl:"rotate({r}deg)", r:0, r0:0, sc:1, mode:"w"},
+  {s:"#dog",                tpl:"rotate({r}deg) scale({s})", r:0, r0:0, sc:1, mode:"tf"}
 ];
 let edSel=null;
 function edApplyTf(t,el){ el.style.transform=t.tpl.replace("{r}",t.r).replace("{s}",t.sc); }
@@ -2542,7 +2547,7 @@ initPan();
 initEditor();
 initAuth();
 setInterval(tick,1500);
-setTimeout(walkDog,700);
+/* setTimeout(walkDog,700); */   // 狗散步已停用：狗與狗屋為固定擺設（佈局編輯模式可調位置）
 /* build-ok r12：移除K線切換鈕回歸預設、報價加快取破壞與過期防護修正與圖表不一致 */
 </script>
 </body>
