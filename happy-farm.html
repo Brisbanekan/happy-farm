@@ -29,12 +29,12 @@
   /* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
   #world .ground,#world .horizon,#world .sun,#world .cloud,#world .deco{display:none;}
   #world .groundgrid{display:none;}
-  #world .field{left:370px;top:680px;transform:translate(-50%,-50%) rotate(10deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(10deg)＝整塊田順時針轉10度（不影響等角貼圖） */
-  #world .fieldshadow{left:370px;top:765px;width:560px;transform:translate(-50%,-50%);}
+  #world .field{left:1047px;top:755px;transform:translate(-50%,-50%) rotate(10deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(10deg)＝整塊田順時針轉10度（不影響等角貼圖） */
+  #world .fieldshadow{left:1047px;top:840px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
   #world .bld.storage{left:18px;top:251px;width:350px;}
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
-  #world .bld.bhouse{left:855px;top:376px;width:350px;}
+  #world .bld.bhouse{left:656px;top:366px;width:350px;}
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
