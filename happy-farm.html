@@ -288,6 +288,12 @@
   #scene.visiting .sceneswitch{display:none;}
   .visitbar button{border:2px solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:16px;padding:4px 14px;font-weight:800;cursor:pointer;font-size:13px;}
   .visitbar button:active{transform:translateY(1px);}
+  /* ===== 佈局編輯模式（?edit=1） ===== */
+  body.editmode .bld{pointer-events:auto!important;touch-action:none;cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
+  body.editmode .field,body.editmode .fieldshadow,body.editmode #ranchBg .ranchpen{cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
+  #editHud{position:fixed;left:10px;top:10px;z-index:99999;background:#000d;color:#fff;font-size:12px;padding:8px 12px;border-radius:10px;max-width:360px;line-height:1.7;}
+  #editHud #editInfo{color:#ffd54f;font-weight:700;user-select:all;font-family:monospace;}
+
   /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
@@ -2425,12 +2431,55 @@ function initPan(){
   sc.addEventListener("wheel",function(e){ const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return; if(stockOpen)return; e.preventDefault(); pinchZoom(e.deltaY<0?1.12:1/1.12); },{passive:false});
 }
 
+/* ====== 佈局編輯模式（?edit=1）：拖曳素材、輸出座標（CSS 仍為正式來源） ====== */
+const EDIT_MODE=/[?&]edit=1/.test(location.search);
+function initEditor(){
+  if(!EDIT_MODE)return;
+  document.body.classList.add("editmode");
+  const hud=document.createElement("div");
+  hud.id="editHud";
+  hud.innerHTML="🛠️ 佈局編輯模式：直接拖曳素材，放開後座標自動複製<div id=\"editInfo\">尚未拖曳</div>";
+  document.body.appendChild(hud);
+  const targets=[["#world .bld.storage","#world .bld.storage"],["#world .bld.bhouse","#world .bld.bhouse"],
+                 ["#world .field","#world .field"],["#world .fieldshadow","#world .fieldshadow"],
+                 ["#ranchBg .ranchpen","#ranchBg .ranchpen"]];
+  targets.forEach(function(tg){
+    const el=document.querySelector(tg[0]); if(!el)return;
+    function down(e){
+      e.stopPropagation(); if(e.cancelable)e.preventDefault();   // 擋掉世界平移與田地點擊
+      const p=e.touches?e.touches[0]:e;
+      const st={x:p.clientX,y:p.clientY,l:parseFloat(getComputedStyle(el).left)||0,t:parseFloat(getComputedStyle(el).top)||0};
+      function mv(ev){
+        const q=ev.touches?ev.touches[0]:ev;
+        const k=(worldScale||1)*((typeof SIM!=="undefined"&&SIM)?simScale:1);   // 螢幕位移 → 世界座標
+        const nl=Math.round(st.l+(q.clientX-st.x)/k), nt=Math.round(st.t+(q.clientY-st.y)/k);
+        el.style.left=nl+"px"; el.style.top=nt+"px";
+        const info=document.getElementById("editInfo");
+        if(info)info.textContent=tg[1]+"{left:"+nl+"px;top:"+nt+"px;}";
+        if(ev.cancelable)ev.preventDefault();
+      }
+      function up(){
+        window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
+        window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
+        const info=document.getElementById("editInfo");
+        if(info&&info.textContent!=="尚未拖曳"){ console.log("[edit]",info.textContent);
+          try{navigator.clipboard.writeText(info.textContent);}catch(e){} }
+      }
+      window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
+      window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
+    }
+    el.addEventListener("mousedown",down);
+    el.addEventListener("touchstart",down,{passive:false});
+  });
+}
+
 /* ============ start ============ */
 buildWorld();
 init();
 setScene(G.scene||"farm");
 centerField();
 initPan();
+initEditor();
 initAuth();
 setInterval(tick,1500);
 setTimeout(walkDog,700);
