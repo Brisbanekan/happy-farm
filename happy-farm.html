@@ -2562,6 +2562,18 @@ function initEditorCore(){
   });
 }
 
+/* ====== Android 沉浸全螢幕保險：非 fullscreen 顯示模式時，觸控即進入全螢幕（隱藏狀態列/導覽列） ====== */
+(function(){
+  if(!/Android/i.test(navigator.userAgent))return;
+  if(window.matchMedia&&matchMedia('(display-mode: fullscreen)').matches)return;   // 已是全螢幕 PWA 就不用
+  window.addEventListener("pointerdown",function(){
+    const el=document.documentElement;
+    if(document.fullscreenElement)return;
+    const f=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(f){ try{ const p=f.call(el,{navigationUI:"hide"}); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
+  },{passive:true});
+})();
+
 /* ============ start ============ */
 buildWorld();
 init();
