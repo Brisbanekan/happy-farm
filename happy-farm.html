@@ -35,7 +35,8 @@
   #world .bld.storage{left:1px;top:241px;width:390px;}
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
   #world .bld.bhouse{left:606px;top:340px;width:382px;}
-  #world .bld.doghouse{left:1180px;top:640px;width:200px;}   /* 狗屋（暫定位置，待使用者定案） */
+  #world .bld.doghouse{left:936px;top:486px;width:72px;}
+  #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -74,7 +75,7 @@
     transform:translateX(-50%);background:radial-gradient(closest-side,#00000038,transparent);border-radius:50%;z-index:-1;}
   /* 遠景（小、靠近地平線） */
   .house{top:25%;right:6%;font-size:80px;animation:bob 5s ease-in-out infinite;}
-  #dog{position:absolute;left:80%;top:82%;z-index:1;font-size:42px;pointer-events:none;
+  #dog{position:absolute;left:1077px;top:519px;z-index:1;font-size:42px;pointer-events:none;
     transform:translate(-50%,-50%);filter:drop-shadow(0 4px 2px #00000022);}
   #dog::after{content:"";position:absolute;left:50%;bottom:-3px;width:58%;height:9px;transform:translateX(-50%);
     background:radial-gradient(closest-side,#00000033,transparent);border-radius:50%;z-index:-1;}
