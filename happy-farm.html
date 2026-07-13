@@ -306,7 +306,7 @@
   /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
-  #scene.s-stock .hud,#scene.s-stock .tools,#scene.s-stock .leftbar,#scene.s-stock .dock,#scene.s-stock .sceneswitch,#scene.s-stock .zoomctrl,#scene.s-stock .visitbar,#scene.s-stock .logpanel{display:none!important;}
+  #scene.s-stock .hud,#scene.s-stock .tools,#scene.s-stock .leftbar,#scene.s-stock .dock,#scene.s-stock .sceneswitch,#scene.s-stock .zoomctrl,#scene.s-stock .visitbar,#scene.s-stock .logpanel,#scene.s-stock .topmenu{display:none!important;}
   .stkTop{display:flex;align-items:center;gap:14px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#161a1e;border-bottom:1px solid #2b3139;position:relative;flex-wrap:wrap;}
   .stkBack{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;}
   .stkStar{cursor:pointer;font-size:18px;filter:grayscale(1);opacity:.55;}
@@ -465,6 +465,15 @@
   /* 左側功能：桌機常駐展開、隱藏摺疊鈕 */
   .leftbar .lbtoggle{display:none;}
   .lbitems{display:flex;flex-direction:column;gap:8px;}
+  /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
+  .topmenu{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
+  .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;cursor:pointer;user-select:none;}
+  .topmenu .lbtn small{font-size:9px;font-weight:800;color:#8a7350;margin-top:1px;}
+  .topmenu .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
+  .topmenu .tmitems{display:none;flex-direction:column;gap:8px;}
+  .topmenu.open .tmitems{display:flex;}
+  body.narrow .topmenu .lbtn{width:46px;height:46px;font-size:21px;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
   body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
   body.narrow .zoomctrl{right:calc(58px + env(safe-area-inset-right));bottom:60px;}   /* 手機：縮放鈕移到工具列左側，不與肥料/收成鈕重疊 */
@@ -619,8 +628,17 @@
       <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
       <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
       <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
-      <div class="lbtn" onclick="toggleLog();closeLeftbar()">📜<small>紀錄</small></div>
-      <div class="lbtn" onclick="toggleEditor();closeLeftbar()">🛠️<small>佈局</small></div>
+    </div>
+  </div>
+
+  <!-- 右上摺疊選單（同步/玩法/紀錄/佈局） -->
+  <div class="topmenu" id="topmenu">
+    <div class="lbtn" onclick="toggleTopmenu()">⚙️<small>選單</small></div>
+    <div class="tmitems" id="tmItems">
+      <div class="lbtn" onclick="openCloud();closeTopmenu()">☁️<small>同步</small></div>
+      <div class="lbtn" onclick="openHelp();closeTopmenu()">❓<small>玩法</small></div>
+      <div class="lbtn" onclick="toggleLog();closeTopmenu()">📜<small>紀錄</small></div>
+      <div class="lbtn" onclick="toggleEditor();closeTopmenu()">🛠️<small>佈局</small></div>
     </div>
   </div>
 
@@ -640,8 +658,6 @@
     <div class="grp">
       <div class="dbtn" onclick="openShop()">🛒<small>商店</small></div>
       <div class="dbtn" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
-      <div class="dbtn" onclick="openCloud()">☁️<small>同步</small></div>
-      <div class="dbtn" onclick="openHelp()">❓<small>玩法</small></div>
     </div>
   </div>
 
@@ -2407,7 +2423,7 @@ function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
-  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,.visitbar'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,.visitbar'))return;
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
@@ -2444,6 +2460,10 @@ function initPan(){
 }
 
 /* ====== 佈局編輯模式（?edit=1）：拖曳素材、輸出座標（CSS 仍為正式來源） ====== */
+/* 右上摺疊選單 */
+function toggleTopmenu(){document.getElementById("topmenu").classList.toggle("open");}
+function closeTopmenu(){document.getElementById("topmenu").classList.remove("open");}
+
 const EDIT_MODE=/[?&]edit=1/.test(location.search);
 let editOn=false, editInited=false;
 function toggleEditor(){
