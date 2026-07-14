@@ -1362,15 +1362,20 @@ function ensureChart(){
 }
 function updateLwLegend(param){
   const lg=document.getElementById("lwLegend"); if(!lg||!lwSeries)return;
-  let bar=null;
-  if(param&&param.time&&param.point&&param.point.x>=0&&param.point.y>=0)bar=param.seriesData.get(lwSeries);
+  let bar=null, ob=null;
+  if(param&&param.time&&param.point&&param.point.x>=0&&param.point.y>=0){
+    bar=param.seriesData.get(lwSeries);
+    if(lwOpenSeries)ob=param.seriesData.get(lwOpenSeries);
+  }
   if(!bar)bar=lwData[lwData.length-1];
   if(!bar){lg.innerHTML="";return;}
+  const openVal=(ob&&typeof ob.value==="number")?ob.value:lwBase;   // 十字線所在交易日的開盤
+  if(lwPriceLine){try{lwPriceLine.applyOptions({price:openVal});}catch(e){}}   // 右軸「開盤」標籤跟著換日
   const s=stockOf(curStock);
   const dt=new Date((bar.time-CHART_TZOFF)*1000);
   lg.innerHTML='<div class="l1">'+s.n+' <span>'+s.t+'</span></div>'+
     '<div class="l2">'+fmtP(bar.value)+'</div>'+
-    '<div class="l3">'+dt.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+'</div>';
+    '<div class="l3">'+dt.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+'　開盤 '+fmtP(openVal)+'</div>';
 }
 function setChartRange(r){chartRange=r;
   document.querySelectorAll('#stkRanges button').forEach(b=>b.classList.toggle('on',b.getAttribute('data-r')===r));
