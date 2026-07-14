@@ -635,15 +635,9 @@
     </div>
   </div>
 
-  <!-- 右上摺疊選單（同步/玩法/紀錄/佈局） -->
+  <!-- 右上選單（點擊開視窗：同步/玩法/紀錄/佈局） -->
   <div class="topmenu" id="topmenu">
-    <div class="lbtn" onclick="toggleTopmenu()">⚙️<small>選單</small></div>
-    <div class="tmitems" id="tmItems">
-      <div class="lbtn" onclick="openCloud();closeTopmenu()">☁️<small>同步</small></div>
-      <div class="lbtn" onclick="openHelp();closeTopmenu()">❓<small>玩法</small></div>
-      <div class="lbtn" onclick="toggleLog();closeTopmenu()">📜<small>紀錄</small></div>
-      <div class="lbtn" onclick="toggleEditor();closeTopmenu()">🛠️<small>佈局</small></div>
-    </div>
+    <div class="lbtn" onclick="openTopMenu()">⚙️<small>選單</small></div>
   </div>
 
   <!-- 紀錄面板（按鈕已整合進左側功能選單） -->
@@ -2496,9 +2490,50 @@ function initPan(){
 /* 左上個人資料收折（點頭像切換） */
 function toggleHud(){const h=document.querySelector(".hud");if(h)h.classList.toggle("fold");}
 
-/* 右上摺疊選單 */
-function toggleTopmenu(){document.getElementById("topmenu").classList.toggle("open");}
-function closeTopmenu(){document.getElementById("topmenu").classList.remove("open");}
+/* 右上選單：點擊開視窗 */
+function openTopMenu(){
+  showM('<h2>⚙️ 選單 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();openCloud()">☁️ 雲端同步</button>'+
+    '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();openHelp()">❓ 玩法說明</button>'+
+    '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleLog()">📜 農場紀錄</button>'+
+    '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleEditor()">🛠️ 佈局編輯</button>'+
+    '</div></div>');
+}
+/* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機 */
+function initFabDrag(){
+  const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!tg)return;
+  try{const p=JSON.parse(localStorage.getItem("hfFabPos")||"null");
+    if(p&&p.l<window.innerWidth-40&&p.t<window.innerHeight-40){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";}}catch(e){}
+  tg.removeAttribute("onclick");
+  function down(e){
+    e.stopPropagation();
+    const pt=e.touches?e.touches[0]:e;
+    const r=bar.getBoundingClientRect();
+    const sx=pt.clientX, sy=pt.clientY, bl=r.left, bt=r.top; let moved=false;
+    function mv(ev){
+      const q=ev.touches?ev.touches[0]:ev;
+      const dx=q.clientX-sx, dy=q.clientY-sy;
+      if(Math.abs(dx)+Math.abs(dy)>8)moved=true;
+      if(moved){
+        const nl=Math.max(0,Math.min(bl+dx,window.innerWidth-r.width));
+        const nt=Math.max(0,Math.min(bt+dy,window.innerHeight-56));
+        bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
+        if(ev.cancelable)ev.preventDefault();
+      }
+    }
+    function up(){
+      window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
+      window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
+      if(moved){const r2=bar.getBoundingClientRect();try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(r2.left),t:Math.round(r2.top)}));}catch(e){}}
+      else toggleLeftbar();   // 沒拖動＝點擊，照常開關選單
+    }
+    window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
+    window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
+  }
+  tg.addEventListener("mousedown",down);
+  tg.addEventListener("touchstart",down,{passive:true});
+}
 
 const EDIT_MODE=/[?&]edit=1/.test(location.search);
 let editOn=false, editInited=false;
@@ -2643,6 +2678,7 @@ setScene(G.scene||"farm");
 centerField();
 initPan();
 initEditor();
+initFabDrag();
 initAuth();
 setInterval(tick,1500);
 /* setTimeout(walkDog,700); */   // 狗散步已停用：狗與狗屋為固定擺設（佈局編輯模式可調位置）
