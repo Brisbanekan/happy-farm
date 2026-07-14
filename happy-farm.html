@@ -239,7 +239,7 @@
   .hud{left:calc(10px + env(safe-area-inset-left));}
   .leftbar{left:calc(8px + env(safe-area-inset-left));}
   .logbtn{left:calc(10px + env(safe-area-inset-left));}
-  .tools{right:calc(3px + env(safe-area-inset-right));}
+  .tools{right:min(calc(3px + env(safe-area-inset-right,0px)),6px);}   /* iOS 橫屏兩側 inset 會把工具列推離邊界，上限 6px 貼齊 */
   .sceneswitch{top:calc(8px + env(safe-area-inset-top));}
   .dock{padding-left:calc(10px + env(safe-area-inset-left));padding-right:calc(10px + env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom);}
   body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
@@ -481,7 +481,7 @@
   body.narrow .topmenu .lbtn{width:46px;height:46px;font-size:21px;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
   body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
-  body.narrow .zoomctrl{right:calc(58px + env(safe-area-inset-right));bottom:60px;}   /* 手機：縮放鈕移到工具列左側，不與肥料/收成鈕重疊 */
+  body.narrow .zoomctrl{right:min(calc(58px + env(safe-area-inset-right,0px)),61px);bottom:60px;}   /* 手機：縮放鈕移到工具列左側，跟隨工具列貼邊 */
   /* 底部選單：改成可左右滑動 */
   body.narrow .dock{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;scroll-snap-type:x proximity;}
@@ -2510,10 +2510,23 @@ function updateFabDir(){
   if(down){ bar.style.top=tr.top+"px"; bar.style.bottom="auto"; }              // 固定頂端，向下生長
   else{ bar.style.bottom=(window.innerHeight-tr.bottom)+"px"; bar.style.top="auto"; }   // 固定底端，向上生長
 }
+function clampFab(){   // 把功能鈕拉回畫面內（全螢幕切換/轉向/異常存檔都靠這個救回）
+  const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
+  const r=tg.getBoundingClientRect(); if(!r.width)return;
+  const nl=Math.max(0,Math.min(r.left,window.innerWidth-r.width));
+  const nt=Math.max(0,Math.min(r.top,window.innerHeight-r.height));
+  if(Math.abs(nl-r.left)>1||Math.abs(nt-r.top)>1){
+    bar.style.left=nl+"px"; bar.style.top=nt+"px"; bar.style.bottom="auto"; updateFabDir();
+    try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(nl),t:Math.round(nt)}));}catch(e){}
+  }
+}
+window.addEventListener("resize",function(){setTimeout(clampFab,150);});
 function initFabDrag(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!tg)return;
   try{const p=JSON.parse(localStorage.getItem("hfFabPos")||"null");
-    if(p&&p.l<window.innerWidth-40&&p.t<window.innerHeight-40){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}}catch(e){}
+    if(p&&p.l>=0&&p.t>=0&&p.l<window.innerWidth-30&&p.t<window.innerHeight-30){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}
+    else if(p){localStorage.removeItem("hfFabPos");}   // 異常位置直接丟棄，回預設
+    setTimeout(clampFab,300);}catch(e){}
   tg.removeAttribute("onclick");
   function down(e){
     e.stopPropagation();
