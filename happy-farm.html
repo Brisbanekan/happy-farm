@@ -2541,8 +2541,9 @@ function initFabDrag(){
     window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
     window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
   }
-  tg.addEventListener("mousedown",down);
-  tg.addEventListener("touchstart",down,{passive:true});
+  let lastTouch=0;   // 觸控後會補發合成 mouse 事件 → 擋掉避免 toggle 兩次
+  tg.addEventListener("touchstart",function(e){lastTouch=Date.now();down(e);},{passive:true});
+  tg.addEventListener("mousedown",function(e){if(Date.now()-lastTouch<800)return;down(e);});
 }
 
 const EDIT_MODE=/[?&]edit=1/.test(location.search);
