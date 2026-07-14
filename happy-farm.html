@@ -1270,28 +1270,29 @@ function openStockTrade(t){
 const SICON={"2330":"#c62828","2317":"#37474f","2454":"#6a1b9a","2308":"#1565c0","2382":"#00695c","2881":"#0d47a1","2882":"#00897b","2412":"#f9a825","2891":"#2e7d32","3711":"#5d4037","9105":"#f57c00","3481":"#5e35b1","2409":"#00838f","2610":"#c2185b","2002":"#455a64"};
 const SPARKS={};   // 走勢小圖資料（不入雲端存檔）
 try{const _sc=JSON.parse(localStorage.getItem("hfSparkCache")||"null");if(_sc&&_sc.sp)Object.assign(SPARKS,_sc.sp);}catch(e){}   // 本機快取：首頁小圖立即顯示
-function sparkSvg(arr,color,prev){
-  if(!arr||arr.length<2)return '<svg width="110" height="34"></svg>';
-  let mn=Math.min.apply(null,arr),mx=Math.max.apply(null,arr);
-  if(typeof prev==="number"&&prev>0){mn=Math.min(mn,prev);mx=Math.max(mx,prev);}   // 基準線納入比例尺
-  const rg=(mx-mn)||1, Y=v=>(32-(v-mn)/rg*26-2);
-  const pts=arr.map((v,i)=>((i/(arr.length-1)*106+2).toFixed(1)+','+Y(v).toFixed(1))).join(' ');
-  let base="";
-  if(typeof prev==="number"&&prev>0){const py=Y(prev).toFixed(1);
-    base='<line x1="2" y1="'+py+'" x2="108" y2="'+py+'" stroke="#9aa3b0" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>';}   // 昨收基準虛線
-  return '<svg width="110" height="34" viewBox="0 0 110 34">'+base+'<polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
+function sparkSvg(arr,color,prev,rng){
+  if(!arr||arr.length<2||!(prev>0))return '<svg width="110" height="34"></svg>';
+  const R=rng||1.5;   // 統一比例尺：全標的共用 ±R%，中央虛線＝昨收
+  const Y=v=>(16-((v-prev)/prev*100)/R*14).toFixed(1);
+  const pts=arr.map((v,i)=>((i/(arr.length-1)*106+2).toFixed(1)+','+Y(v))).join(' ');
+  return '<svg width="110" height="34" viewBox="0 0 110 34">'+
+    '<line x1="2" y1="16" x2="108" y2="16" stroke="#9aa3b0" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>'+
+    '<polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
 }
 function renderStockHome(){
   if(!stockOpen||stockView!=="home")return;
   const el=document.getElementById("shList"); if(!el)return;
   document.getElementById("shCash").textContent=G.gold.toLocaleString();
+  let gmax=1.5;   // 全標的統一 Y 軸範圍：取最大漲跌幅（下限 ±1.5%）
+  STOCKS.forEach(s=>{const st=G.stocks[s.t],sp=SPARKS[s.t];
+    if(sp&&st&&st.prev>0)sp.forEach(v=>{const p=Math.abs((v-st.prev)/st.prev*100);if(p>gmax)gmax=p;});});
   const head='<div class="shHead"><div class="hIcon"></div><div class="shName">標的（名稱／代號）</div>'+
-    '<div class="shSpark">當日走勢（虛線＝昨收）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
+    '<div class="shSpark">當日走勢（虛線＝昨收，±'+gmax.toFixed(1)+'%同比例）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
   el.innerHTML=head+STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
       '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+(s.n.charAt(0)==="農"&&s.n.length>1?s.n.charAt(1):s.n.charAt(0))+'</div>'+
       '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
-      '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626',st.prev)+'</div>'+
+      '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626',st.prev,gmax)+'</div>'+
       '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
   }).join("");
 }
@@ -1328,7 +1329,7 @@ function loadFinNews(force,fi){
   },0,function(){loadFinNews(force,fi+1);});
 }
 /* ---- Lightweight Charts 圖表（24小時～5個交易日） ---- */
-let lwChart=null,lwSeries=null,lwData=[],chartRange="24H",chartReq=0,lwTries=0;
+let lwChart=null,lwSeries=null,lwData=[],chartRange="24H",chartReq=0,lwTries=0,lwBase=0,lwPriceLine=null;
 const CHART_TZOFF=-new Date().getTimezoneOffset()*60;
 function ensureChart(){
   if(lwChart)return true;
@@ -1340,7 +1341,16 @@ function ensureChart(){
     timeScale:{timeVisible:true,secondsVisible:false,borderColor:'#2b3139'},
     crosshair:{horzLine:{visible:false,labelVisible:false}},
     grid:{vertLines:{visible:false},horzLines:{color:'#1c2126'}}});
-  lwSeries=lwChart.addSeries(LightweightCharts.AreaSeries,{lineWidth:2,crosshairMarkerVisible:false});
+  lwSeries=lwChart.addSeries(LightweightCharts.BaselineSeries,{
+    baseValue:{type:'price',price:0},lineWidth:2,crosshairMarkerVisible:false,
+    topLineColor:'#0ecb81',topFillColor1:'rgba(14,203,129,.28)',topFillColor2:'rgba(14,203,129,.03)',
+    bottomLineColor:'#f6465d',bottomFillColor1:'rgba(246,70,93,.03)',bottomFillColor2:'rgba(246,70,93,.28)',
+    autoscaleInfoProvider:function(){   // Y 軸以基準價為中心上下對稱，漲跌幅度視覺一致
+      if(!lwData.length||!lwBase)return null;
+      let dev=0; lwData.forEach(p=>{const d=Math.abs(p.value-lwBase); if(d>dev)dev=d;});
+      dev=Math.max(dev,lwBase*0.002)*1.08;
+      return {priceRange:{minValue:lwBase-dev,maxValue:lwBase+dev}};
+    }});
   lwChart.subscribeCrosshairMove(updateLwLegend);
   return true;
 }
@@ -1378,10 +1388,12 @@ function loadChart(){
     if(nd){ const keys=[]; pts.forEach(p=>{const k=Math.floor(p.time/86400);if(keys.indexOf(k)<0)keys.push(k);});
       const keep=keys.slice(-nd); pts=pts.filter(p=>keep.indexOf(Math.floor(p.time/86400))>=0); }
     if(!pts.length)return;
-    const up=pts[pts.length-1].value>=pts[0].value;
-    lwSeries.applyOptions(up?{lineColor:'#0ecb81',topColor:'rgba(14,203,129,.30)',bottomColor:'rgba(14,203,129,.03)'}
-                            :{lineColor:'#f6465d',topColor:'rgba(246,70,93,.30)',bottomColor:'rgba(246,70,93,.03)'});
-    lwData=pts; lwSeries.setData(pts); lwChart.timeScale().fitContent(); updateLwLegend();
+    lwBase=pts[0].value;   // 期初價（24小時＝當日開盤）為基準：上綠下紅
+    lwSeries.applyOptions({baseValue:{type:'price',price:lwBase}});
+    if(lwPriceLine){try{lwSeries.removePriceLine(lwPriceLine);}catch(e){} lwPriceLine=null;}
+    lwData=pts; lwSeries.setData(pts);
+    lwPriceLine=lwSeries.createPriceLine({price:lwBase,color:'#9aa3b0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'開盤'});
+    lwChart.timeScale().fitContent(); updateLwLegend();
   });
 }
 function pickStock(t){curStock=t;stockDropOpen=false;loadChart();odUseCur();renderStockUI();}
