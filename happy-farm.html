@@ -173,6 +173,8 @@
 
   /* 左上 HUD */
   .hud{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px;z-index:20;}
+  .hud .avatar{cursor:pointer;}
+  .hud.fold .xpwrap{display:none;}   /* 點頭像收折等級/經驗/金幣/鑽石/魅力 */
   .hudrow{display:flex;align-items:center;gap:6px;}
   .avatar{
     width:52px;height:52px;border-radius:50%;background:#ffe0b2;border:3px solid #fff;
@@ -580,7 +582,7 @@
   <div class="hud">
     <div class="hudrow">
       <div style="display:flex;flex-direction:column;align-items:center;">
-        <div class="avatar">🧑‍🌾</div>
+        <div class="avatar" onclick="toggleHud()" title="收折/展開資料">🧑‍🌾</div>
         <div class="namebox">Small Farm</div>
       </div>
       <div class="xpwrap">
@@ -2471,6 +2473,9 @@ function initPan(){
 }
 
 /* ====== 佈局編輯模式（?edit=1）：拖曳素材、輸出座標（CSS 仍為正式來源） ====== */
+/* 左上個人資料收折（點頭像切換） */
+function toggleHud(){const h=document.querySelector(".hud");if(h)h.classList.toggle("fold");}
+
 /* 右上摺疊選單 */
 function toggleTopmenu(){document.getElementById("topmenu").classList.toggle("open");}
 function closeTopmenu(){document.getElementById("topmenu").classList.remove("open");}
