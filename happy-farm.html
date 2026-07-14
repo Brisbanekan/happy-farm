@@ -2407,14 +2407,14 @@ function updateFade(){
   const sc=document.getElementById("scene"); if(!sc)return;
   const sr=sc.getBoundingClientRect();
   const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
-  const cx=VW()/2, cy=VH()/2;
-  const rad=Math.min(VW(),VH())*0.52;   // 淡化半徑：離中心超過半個畫面
+  const cx=VW()/2, cy=VH()/2, m=30;   // 中心點正對素材（含30px邊緣）才保持清楚，其餘淡化
   FADE_SEL.forEach(function(s){
     const el=document.querySelector("#world "+s); if(!el)return;
     if(!on){el.classList.remove("zoomfade");return;}
     const r=el.getBoundingClientRect();
-    const ex=((r.left+r.right)/2-sr.left)/k, ey=((r.top+r.bottom)/2-sr.top)/k;
-    el.classList.toggle("zoomfade",Math.hypot(ex-cx,ey-cy)>rad);
+    const x1=(r.left-sr.left)/k, x2=(r.right-sr.left)/k, y1=(r.top-sr.top)/k, y2=(r.bottom-sr.top)/k;
+    const inside=cx>=x1-m&&cx<=x2+m&&cy>=y1-m&&cy<=y2+m;
+    el.classList.toggle("zoomfade",!inside);
   });
 }
 function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY;
