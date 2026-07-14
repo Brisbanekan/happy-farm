@@ -311,6 +311,56 @@
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
   #scene.s-stock .hud,#scene.s-stock .tools,#scene.s-stock .leftbar,#scene.s-stock .dock,#scene.s-stock .sceneswitch,#scene.s-stock .zoomctrl,#scene.s-stock .visitbar,#scene.s-stock .logpanel,#scene.s-stock .topmenu{display:none!important;}
+
+  /* ===== 農青哥拉霸場景（明亮版） ===== */
+  #slotScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;color:#4e342e;
+    background:linear-gradient(180deg,#bfe9ff 0%,#dff6e3 45%,#b5e3a0 100%);}
+  #scene.s-slot #slotScene{display:flex;}
+  #scene.s-slot .hud,#scene.s-slot .tools,#scene.s-slot .leftbar,#scene.s-slot .dock,#scene.s-slot .sceneswitch,#scene.s-slot .zoomctrl,#scene.s-slot .visitbar,#scene.s-slot .logpanel,#scene.s-slot .topmenu{display:none!important;}
+  .slTop{display:flex;align-items:center;gap:12px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#ffffffd9;border-bottom:2px solid #ffcc66;}
+  .slTop .ttl{font-size:17px;font-weight:900;color:#e65100;text-shadow:0 1px 0 #fff;}
+  .slTop .slGold{margin-left:auto;font-size:14px;font-weight:800;color:#a05a00;background:#fff;border:1px solid #e6a817;border-radius:20px;padding:4px 14px;}
+  .slFsBanner{display:none;text-align:center;font-size:14px;font-weight:900;color:#8e24aa;padding:4px;background:#f3e5f5ee;letter-spacing:1px;}
+  .slFsBanner.on{display:block;animation:fsGlow 1.2s ease-in-out infinite alternate;}
+  @keyframes fsGlow{from{box-shadow:inset 0 0 12px #ce93d866;}to{box-shadow:inset 0 0 30px #ce93d8cc;}}
+  .slMid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:8px;}
+  .slGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:min(92vw,600px,118vh);
+    background:#fffdf2f2;border:3px solid #e6a817;border-radius:14px;padding:10px;box-shadow:0 6px 24px #00000030,inset 0 0 20px #ffe08266;}
+  .slCell{position:relative;aspect-ratio:1/.82;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#ffffff,#f1e8ff);border:1px solid #d5c5ee;border-radius:9px;
+    font-size:clamp(22px,5.4vmin,40px);user-select:none;overflow:hidden;}
+  .suS{color:#3f51b5;font-weight:900;text-shadow:0 1px 0 #fff;}
+  .suH{color:#e53935;font-weight:900;text-shadow:0 1px 0 #fff;}
+  .suD{color:#fb8c00;font-weight:900;text-shadow:0 1px 0 #fff;}
+  .suC{color:#43a047;font-weight:900;text-shadow:0 1px 0 #fff;}
+  .slCell.win{border-color:#ffd54f;box-shadow:0 0 12px #ffd54f,inset 0 0 14px #ffd54f66;animation:slPop .45s ease;}
+  @keyframes slPop{0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);}}
+  .slCell.spin span{animation:slBlur .1s linear infinite;}
+  @keyframes slBlur{from{filter:blur(1.5px);transform:translateY(-2px);}to{filter:blur(1.5px);transform:translateY(2px);}}
+  .slCell .mult{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:900;color:#e53935;text-shadow:0 1px 0 #fff,0 0 3px #fff;}
+  .slCell.wildDrop{animation:wildIn .4s ease;}
+  @keyframes wildIn{from{transform:scale(0) rotate(-180deg);}to{transform:scale(1) rotate(0);}}
+  .fRed{filter:hue-rotate(225deg) saturate(1.7) brightness(1.05);}
+  .fYel{filter:hue-rotate(-68deg) saturate(1.5) brightness(1.15);}
+  .fBlu{filter:hue-rotate(115deg) saturate(1.4);}
+  .fWild{filter:drop-shadow(0 0 5px #69f0ae);}
+  .fScat{filter:drop-shadow(0 0 3px #ff6f00) drop-shadow(0 0 8px #ff8f00);}
+  .slBot{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));background:#ffffffd9;border-top:2px solid #ffcc66;}
+  .slBet{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e6a817;border-radius:22px;padding:4px 8px;}
+  .slBet button{width:30px;height:30px;border-radius:50%;border:none;background:#f0b429;color:#5d4037;font-size:18px;font-weight:900;cursor:pointer;}
+  .slBet button:disabled{opacity:.35;cursor:default;}
+  .slBet .bv{min-width:64px;text-align:center;font-size:15px;font-weight:900;color:#a05a00;}
+  .slSpinBtn{border:none;border-radius:26px;padding:12px 34px;font-size:17px;font-weight:900;cursor:pointer;color:#241640;
+    background:linear-gradient(180deg,#ffe082,#e6a817);box-shadow:0 4px 14px #0008,inset 0 1px 0 #fff8;letter-spacing:1px;}
+  .slSpinBtn:active{transform:translateY(1px);}
+  .slSpinBtn:disabled{filter:grayscale(.7);opacity:.7;cursor:default;}
+  .slSpinBtn.fs{background:linear-gradient(180deg,#ea80fc,#8e24aa);color:#fff;}
+  .slRes{width:100%;text-align:center;font-size:14px;font-weight:800;min-height:20px;color:#7e6a95;}
+  .slRes.w{color:#e65100;text-shadow:0 1px 0 #fff,0 0 8px #ffd54f;}
+  .slInfoBtn{border:1px solid #e6a817;background:#fff;color:#a05a00;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+  .slPayTbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .slPayTbl td,.slPayTbl th{border-bottom:1px solid #0002;padding:4px 6px;text-align:center;}
+  .slPayTbl td:first-child{font-size:18px;}
   .stkTop{display:flex;align-items:center;gap:14px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#161a1e;border-bottom:1px solid #2b3139;position:relative;flex-wrap:wrap;}
   .stkBack{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;}
   .stkStar{cursor:pointer;font-size:18px;filter:grayscale(1);opacity:.55;}
@@ -660,6 +710,27 @@
     </div>
   </div>
 
+  <!-- 農青哥拉霸場景 -->
+  <div id="slotScene">
+    <div class="slTop">
+      <button class="stkBack" onclick="exitSlot()">← 農場</button>
+      <span class="ttl">🐸 農青哥</span>
+      <button class="slInfoBtn" onclick="openSlotPay()">📖 賠率說明</button>
+      <span class="slGold">💰 <b id="slGold">--</b></span>
+    </div>
+    <div class="slFsBanner" id="slFsBanner">✨ FREE GAME ✨ 剩餘 <span id="slFsN">0</span> 局</div>
+    <div class="slMid"><div class="slGrid" id="slGrid"></div></div>
+    <div class="slBot">
+      <div class="slRes" id="slRes">祝你好運!螢火蟲 ✨ ×3 觸發 FREE GAME</div>
+      <div class="slBet">
+        <button id="slBetDn" onclick="slBetAdj(-1)">−</button>
+        <span class="bv">押注 <span id="slBetV">50</span></span>
+        <button id="slBetUp" onclick="slBetAdj(1)">＋</button>
+      </div>
+      <button class="slSpinBtn" id="slSpinBtn" onclick="slSpin()">SPIN</button>
+    </div>
+  </div>
+
   <!-- 股市交易場景 -->
   <div id="stockScene">
     <div id="stockHome">
@@ -785,7 +856,7 @@ const CROPS = {
   sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:160, sell:300, grow:92, xp:32, charm:3},
   rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:280, sell:540, grow:115,xp:48, charm:4},
   hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:450, sell:900, grow:140,xp:70, charm:6},
-  lotus:    {name:"蓮花",   emoji:"🪷", grown:"🪷", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:170,xp:100,charm:8},
+  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:170,xp:100,charm:8},
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
@@ -818,14 +889,41 @@ const DAILY_REWARDS=[
   {g:3000, h:5, s:{corn:2}},
   {g:6000, c:5, h:10, s:{strawberry:3}}
 ];
-// 拉霸機（星城風格 3×3 多線）：w=權重，pay=每條線金幣獎，cred=每條線鑽石獎
-const SLOT_SYM=[
-  {s:"🍒",w:30,pay:30}, {s:"🍋",w:24,pay:50}, {s:"🍉",w:18,pay:90},
-  {s:"🔔",w:12,pay:180}, {s:"⭐",w:7,pay:400}, {s:"💎",w:2.6,cred:2}, {s:"7️⃣",w:0.4,pay:3000}
+// ===== 農青哥拉霸（5×4 盤面、50 線、FREE GAME）=====
+// w=權重；pay={連線數:賠率}，中獎彩金 = 押注額 × 賠率（多線可同中加總）
+const SL_SYMS=[
+  {k:"wild",s:"🍃",cls:"fWild",w:4.5, pay:{3:1,4:2,5:4},   name:"荷葉(WILD)"},
+  {k:"scat",s:"✨",cls:"fScat",w:2.6, pay:null,            name:"螢火蟲(SCATTER)"},
+  {k:"rf",  s:"🐸",cls:"fRed", w:5,   pay:{3:1,4:2,5:4},   name:"紅色青蛙"},
+  {k:"yf",  s:"🐸",cls:"fYel", w:7,   pay:{3:.5,4:1,5:2},  name:"黃色青蛙"},
+  {k:"bf",  s:"🐸",cls:"fBlu", w:7,   pay:{3:.5,4:1,5:2},  name:"藍色青蛙"},
+  {k:"lo",  s:"🌺",cls:"",     w:11,  pay:{3:.2,4:.4,5:.8},name:"荷花"},
+  {k:"ca",  s:"🌼",cls:"",     w:11,  pay:{3:.2,4:.4,5:.8},name:"馬蹄蓮"},
+  {k:"na",  s:"🌸",cls:"",     w:11,  pay:{3:.2,4:.4,5:.8},name:"水仙"},
+  {k:"sp",  s:"♠",cls:"suS",  w:10.5,pay:{3:.1,4:.2,5:.4},name:"黑桃"},
+  {k:"he",  s:"♥",cls:"suH",  w:10.5,pay:{3:.1,4:.2,5:.4},name:"紅心"},
+  {k:"di",  s:"♦",cls:"suD",  w:10.5,pay:{3:.1,4:.2,5:.4},name:"方塊"},
+  {k:"cl",  s:"♣",cls:"suC",  w:8.5, pay:{3:.1,4:.2,5:.4},name:"梅花"}
 ];
-// 3×3 格子索引：0 1 2 / 3 4 5 / 6 7 8；5 條線（3 橫＋2 斜）
-const SLOT_LINES=[[0,1,2],[3,4,5],[6,7,8],[0,4,8],[6,4,2]];
-const SLOT_COST=50;
+// 50 條連線：每條 = 5 欄各取的列(0~3)，格子索引 = 列*5+欄
+const SL_LINES=[
+ [0,0,0,0,0],[1,1,1,1,1],[2,2,2,2,2],[3,3,3,3,3],
+ [0,1,2,1,0],[3,2,1,2,3],[1,0,1,0,1],[2,3,2,3,2],
+ [0,1,0,1,0],[3,2,3,2,3],[1,2,1,2,1],[2,1,2,1,2],
+ [0,0,1,0,0],[3,3,2,3,3],[1,1,0,1,1],[2,2,3,2,2],
+ [0,1,1,1,0],[3,2,2,2,3],[1,0,0,0,1],[2,3,3,3,2],
+ [0,2,0,2,0],[3,1,3,1,3],[1,3,1,3,1],[2,0,2,0,2],
+ [0,1,2,3,3],[3,2,1,0,0],[0,0,1,2,3],[3,3,2,1,0],
+ [1,2,3,2,1],[2,1,0,1,2],[0,2,2,2,0],[3,1,1,1,3],
+ [1,1,2,1,1],[2,2,1,2,2],[0,3,0,3,0],[3,0,3,0,3],
+ [1,2,2,2,1],[2,1,1,1,2],[0,0,2,0,0],[3,3,1,3,3],
+ [1,0,1,2,1],[2,3,2,1,2],[0,1,3,1,0],[3,2,0,2,3],
+ [1,1,3,1,1],[2,2,0,2,2],[0,3,3,3,0],[3,0,0,0,3],
+ [1,3,3,3,1],[2,0,0,0,2]
+];
+const SL_BETS=[50,100,500,1000];   // 可調押注檔位
+const SL_FS_AWARD=10;              // SCATTER ×3+ 送 10 局
+const SL_WILD_DROP=0.35;           // 免費局灑 WILD 機率(模擬 20 萬轉 RTP≈0.95)
 // 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
 const STOCKS=[
   // 台股權值股（Yahoo .TW 報價，價位為台幣）
@@ -1201,50 +1299,138 @@ function openDaily(){
 }
 
 /* ============ 拉霸機（3×3 多線，星城風格） ============ */
-function pickSlot(){const tot=SLOT_SYM.reduce((a,x)=>a+x.w,0);let r=Math.random()*tot;for(const x of SLOT_SYM){if(r<x.w)return x;r-=x.w;}return SLOT_SYM[0];}
-let slotSpinning=false;
+function slSymByKey(k){return SL_SYMS.find(x=>x.k===k);}
+function slPick(){const tot=SL_SYMS.reduce((a,x)=>a+x.w,0);let r=Math.random()*tot;for(const x of SL_SYMS){if(r<x.w)return x;r-=x.w;}return SL_SYMS[0];}
+let slotSpinning=false, slFS=0, slBetIdx=0;
+function slBet(){return SL_BETS[slBetIdx];}
+// 進入拉霸場景（入口按鈕沿用 openSlot 名稱）
 function openSlot(){
-  let payinfo=SLOT_SYM.map(x=>x.s+"×3 = "+(x.cred?("💎"+x.cred):("<span class=coinico></span>"+x.pay))+"／線").join(" ｜ ");
-  let cells="";for(let i=0;i<9;i++)cells+='<div id="c'+i+'" class="scell">'+SLOT_SYM[i%SLOT_SYM.length].s+'</div>';
-  let h='<h2>🎰 拉霸機 <button class="x" onclick="closeM()">×</button></h2><div class="body" style="text-align:center">'+
-    '<p class="hint">每抽 <span class=coinico></span>'+SLOT_COST+'。3×3 共 5 條線（3 橫＋2 斜），任一條線三個相同就中獎，可同時中多條線！💎 給鑽石、7️⃣ 是頭獎。</p>'+
-    '<div class="slotgrid">'+cells+'</div>'+
-    '<div id="slotres" style="min-height:24px;font-size:14px;font-weight:700;margin-bottom:10px">轉動看看手氣！</div>'+
-    '<button class="bigbtn" onclick="doSpin()">🎰 抽一次（<span class=coinico></span>'+SLOT_COST+'）</button>'+
-    '<div style="margin-top:12px;font-size:11px;color:#8a7350;text-align:left;line-height:1.6">每線獎金：'+payinfo+'</div>'+
-  '</div>';showM(h);
+  slFS=G.slotFS||0;
+  const bi=SL_BETS.indexOf(G.slotBet||50); slBetIdx=bi>=0?bi:0;
+  document.getElementById("scene").classList.add("s-slot");
+  const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";
+  slBuildGrid(); slRenderUI();
 }
-function doSpin(){
+function exitSlot(){
   if(slotSpinning)return;
-  if(G.gold<SLOT_COST){toast("金幣不足");return;}
-  G.gold-=SLOT_COST;renderHUD();slotSpinning=true;
-  const grid=Array.from({length:9},()=>pickSlot());
-  const cells=[];for(let i=0;i<9;i++)cells.push(document.getElementById("c"+i));
-  cells.forEach(el=>{if(el)el.classList.remove("win");});
-  const res=document.getElementById("slotres");if(res)res.textContent="轉動中…";
+  document.getElementById("scene").classList.remove("s-slot");
+  const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
+  render();
+}
+function slBuildGrid(){
+  let h="";for(let i=0;i<20;i++){const sym=slPick();h+='<div class="slCell" id="sl'+i+'"><span class="'+sym.cls+'">'+sym.s+'</span></div>';}
+  document.getElementById("slGrid").innerHTML=h;
+}
+function slRenderUI(){
+  const g=document.getElementById("slGold"); if(g)g.textContent=Math.floor(G.gold).toLocaleString();
+  const bv=document.getElementById("slBetV"); if(bv)bv.textContent=slBet();
+  const bn=document.getElementById("slFsBanner"), fn=document.getElementById("slFsN");
+  if(bn)bn.classList.toggle("on",slFS>0); if(fn)fn.textContent=slFS;
+  const btn=document.getElementById("slSpinBtn");
+  if(btn){btn.classList.toggle("fs",slFS>0);btn.textContent=slotSpinning?"轉動中…":(slFS>0?("FREE SPIN ×"+slFS):"SPIN");btn.disabled=slotSpinning;}
+  const lock=slotSpinning||slFS>0;
+  const bd=document.getElementById("slBetDn"),bu=document.getElementById("slBetUp");
+  if(bd)bd.disabled=lock||slBetIdx<=0; if(bu)bu.disabled=lock||slBetIdx>=SL_BETS.length-1;
+}
+function slBetAdj(d){
+  if(slotSpinning||slFS>0)return;
+  slBetIdx=Math.max(0,Math.min(SL_BETS.length-1,slBetIdx+d));
+  G.slotBet=slBet(); saveGame(); slRenderUI();
+}
+function slSpin(){
+  if(slotSpinning)return;
+  const bet=slBet(); const isFS=slFS>0;
+  if(!isFS){ if(G.gold<bet){toast("金幣不足");return;} G.gold-=bet; }
+  else { slFS--; G.slotFS=slFS; }
+  G.slotBet=bet; renderHUD(); slotSpinning=true;
+  // 產生結果盤面
+  const grid=Array.from({length:20},()=>({sym:slPick(),mult:0}));
+  // 免費局：機率灑 3~6 個荷葉 WILD，部分帶 ×2/×3
+  const drops=new Set();
+  if(isFS&&Math.random()<SL_WILD_DROP){
+    const n=3+Math.floor(Math.random()*4);
+    const idxs=[...Array(20).keys()].sort(()=>Math.random()-.5).slice(0,n);
+    idxs.forEach(i=>{
+      if(grid[i].sym.k==="scat")return;
+      const r=Math.random();
+      grid[i]={sym:slSymByKey("wild"),mult:r<.6?0:(r<.9?2:3)};
+      drops.add(i);
+    });
+  }
+  const cells=[];for(let i=0;i<20;i++)cells.push(document.getElementById("sl"+i));
+  cells.forEach(el=>{if(el){el.classList.remove("win","wildDrop");el.classList.add("spin");}});
+  const res=document.getElementById("slRes");
+  if(res){res.className="slRes";res.textContent="轉動中…";}
+  slRenderUI();
   let ticks=0;
   const iv=setInterval(()=>{
-    cells.forEach(el=>{if(el)el.textContent=SLOT_SYM[Math.floor(Math.random()*SLOT_SYM.length)].s;});
     ticks++;
-    if(ticks>=16){clearInterval(iv);cells.forEach((el,i)=>{if(el)el.textContent=grid[i].s;});settleSlot(grid,cells);slotSpinning=false;}
-  },70);
+    for(let c=0;c<5;c++){
+      const stop=8+c*4;   // 逐欄停輪
+      for(let r2=0;r2<4;r2++){
+        const i=r2*5+c, el=cells[i]; if(!el)continue;
+        if(ticks<stop){ const s=slPick(); el.innerHTML='<span class="'+s.cls+'">'+s.s+'</span>'; }
+        else if(ticks===stop){
+          el.classList.remove("spin");
+          el.innerHTML='<span class="'+grid[i].sym.cls+'">'+grid[i].sym.s+'</span>'+(grid[i].mult?'<b class="mult">×'+grid[i].mult+'</b>':'');
+          if(drops.has(i))el.classList.add("wildDrop");
+        }
+      }
+    }
+    if(ticks>=8+4*4){clearInterval(iv);slSettle(grid,cells,bet,isFS);}
+  },65);
 }
-function settleSlot(grid,cells){
-  let winGold=0,winCred=0;const winSet=new Set();
-  SLOT_LINES.forEach(line=>{
-    const a=grid[line[0]],b=grid[line[1]],c=grid[line[2]];
-    if(a.s===b.s&&b.s===c.s){ if(a.cred)winCred+=a.cred; else winGold+=a.pay||0; line.forEach(i=>winSet.add(i)); }
+function slSettle(grid,cells,bet,isFS){
+  let win=0,lines=0;const winSet=new Set();
+  SL_LINES.forEach(line=>{
+    const cs=line.map((r,c)=>grid[r*5+c]);
+    let key=null;
+    for(const c of cs){ if(c.sym.k!=="wild"){key=c.sym.k;break;} }
+    if(key===null||key==="scat")key="wild";   // 純荷葉線用 WILD 賠率
+    const sym=slSymByKey(key);
+    let cnt=0,mult=1;
+    for(const c of cs){
+      if(c.sym.k===key||c.sym.k==="wild"){cnt++;if(c.mult)mult*=c.mult;}
+      else break;
+    }
+    const pay=sym.pay&&sym.pay[Math.min(cnt,5)];
+    if(pay&&cnt>=3){ win+=bet*pay*mult; lines++; line.forEach((r,c)=>{if(c<cnt)winSet.add(r*5+c);}); }
   });
+  win=Math.round(win);
+  // SCATTER：3+ 觸發 FREE GAME（免費局中可重複觸發）
+  const sc=grid.filter(x=>x.sym.k==="scat").length;
+  let fsMsg="";
+  if(sc>=3){
+    slFS+=SL_FS_AWARD; G.slotFS=slFS;
+    fsMsg="✨ 螢火蟲 ×"+sc+"!觸發 FREE GAME +"+SL_FS_AWARD+" 局!";
+    grid.forEach((x,i)=>{if(x.sym.k==="scat")winSet.add(i);});
+    log("拉霸觸發 FREE GAME +"+SL_FS_AWARD+" 局","b");
+  }
   winSet.forEach(i=>{if(cells[i])cells[i].classList.add("win");});
-  if(winGold)G.gold+=winGold; if(winCred)G.credit+=winCred;
-  const res=document.getElementById("slotres");
-  let msg,col="#999";
-  if(winGold||winCred){
-    let p=[];if(winGold)p.push("<span class=coinico></span>"+winGold);if(winCred)p.push("💎"+winCred);
-    msg="🎉 中獎！"+p.join(" ＋ ");col="#2e7d32";toast(msg);log("拉霸中獎 "+p.join(" "),winCred?"b":"g");
-  }else msg="沒中，再來一次！";
-  if(res)res.innerHTML='<span style="color:'+col+'">'+msg+'</span>';
-  renderHUD();saveGame();
+  if(win){G.gold+=win;log("拉霸中獎 💰"+win.toLocaleString()+"("+lines+" 線)","g");}
+  const res=document.getElementById("slRes");
+  if(res){
+    if(win&&fsMsg){res.className="slRes w";res.textContent="🎉 贏得 💰"+win.toLocaleString()+"("+lines+" 線) "+fsMsg;}
+    else if(win){res.className="slRes w";res.textContent="🎉 贏得 💰"+win.toLocaleString()+"("+lines+" 線)!";}
+    else if(fsMsg){res.className="slRes w";res.textContent=fsMsg;}
+    else{res.className="slRes";res.textContent=isFS?"免費局沒中,再接再厲!":"沒中,再試一次!";}
+  }
+  if(win)toast("🎉 拉霸贏得 "+win.toLocaleString()+" 金幣!");
+  slotSpinning=false;
+  renderHUD();saveGame();slRenderUI();
+}
+// 賠率說明
+function openSlotPay(){
+  let rows=SL_SYMS.filter(x=>x.pay).map(x=>
+    '<tr><td><span class="'+x.cls+'">'+x.s+'</span></td><td style="text-align:left">'+x.name+'</td>'+
+    '<td>'+(x.pay[5]||"—")+'</td><td>'+(x.pay[4]||"—")+'</td><td>'+(x.pay[3]||"—")+'</td></tr>').join("");
+  let h='<h2>🐸 農青哥-賠率說明 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
+    '<p class="hint">彩金計算方式:押注額 × 圖示賠率 = 獲得彩金。5×4 盤面、共 50 種連線方式,由最左欄起連續相同圖示 3 個以上即中獎,多線可同時中獎加總。</p>'+
+    '<table class="slPayTbl"><tr><th></th><th style="text-align:left">圖示</th><th>×5</th><th>×4</th><th>×3</th></tr>'+rows+'</table>'+
+    '<p class="hint" style="margin-top:10px">🍃 荷葉(WILD):可代替任何圖示,螢火蟲(SCATTER)除外。</p>'+
+    '<p class="hint">✨ 螢火蟲(SCATTER):盤面出現 3 個以上,觸發 '+SL_FS_AWARD+' 局 FREE SPINS(免費局中可再觸發)。</p>'+
+    '<p class="hint">FREE GAME 中每次 SPIN 有機率隨機生成 3~6 個荷葉(WILD),且有機率帶 ×2 或 ×3 倍數,連線彩金乘上倍數!免費局押注額沿用觸發當下的押注。</p>'+
+  '</div>';showM(h);
 }
 
 /* ============ 股市 ============ */
@@ -2483,7 +2669,7 @@ function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
-  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,.visitbar'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,#slotScene,.visitbar'))return;
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
