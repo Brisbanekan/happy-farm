@@ -323,12 +323,28 @@
   .slFsBanner{display:none;text-align:center;font-size:14px;font-weight:900;color:#8e24aa;padding:4px;background:#f3e5f5ee;letter-spacing:1px;}
   .slFsBanner.on{display:block;animation:fsGlow 1.2s ease-in-out infinite alternate;}
   @keyframes fsGlow{from{box-shadow:inset 0 0 12px #ce93d866;}to{box-shadow:inset 0 0 30px #ce93d8cc;}}
-  .slMid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:8px;}
-  .slGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:min(92vw,600px,118vh);
+  .slMid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px;}
+  /* 盤面寬度由「可用高度」反推（高度 ≈ 寬度×0.656+38px），確保 4 列在任何螢幕都放得下 */
+  .slGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
+    width:min(92vw,600px,max(220px,calc(152vh - 330px)));
+    width:min(92vw,600px,max(220px,calc(152dvh - 330px)));
     background:#fffdf2f2;border:3px solid #e6a817;border-radius:14px;padding:10px;box-shadow:0 6px 24px #00000030,inset 0 0 20px #ffe08266;}
   .slCell{position:relative;aspect-ratio:1/.82;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#ffffff,#f1e8ff);border:1px solid #d5c5ee;border-radius:9px;
-    font-size:clamp(22px,5.4vmin,40px);user-select:none;overflow:hidden;}
+    font-size:clamp(15px,5.4vmin,40px);user-select:none;overflow:hidden;}
+  /* 矮螢幕（手機橫屏）：壓縮上下欄，把空間留給盤面 */
+  @media (max-height:520px){
+    .slTop{padding:4px 10px 4px calc(10px + env(safe-area-inset-left,0px));gap:8px;}
+    .slTop .ttl{font-size:14px;}
+    .slTop .slGold{font-size:12px;padding:3px 10px;}
+    .slInfoBtn{padding:4px 10px;font-size:12px;}
+    .slFsBanner{font-size:12px;padding:2px;}
+    .slBot{padding:4px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;}
+    .slRes{font-size:12px;min-height:16px;}
+    .slBet button{width:26px;height:26px;font-size:15px;}
+    .slBet .bv{font-size:13px;min-width:56px;}
+    .slSpinBtn{padding:8px 24px;font-size:15px;}
+  }
   .suS{color:#3f51b5;font-weight:900;text-shadow:0 1px 0 #fff;}
   .suH{color:#e53935;font-weight:900;text-shadow:0 1px 0 #fff;}
   .suD{color:#fb8c00;font-weight:900;text-shadow:0 1px 0 #fff;}
@@ -2645,6 +2661,21 @@ function layout(){
 }
 window.addEventListener("resize",function(){ layout(); if(isNarrow())centerField(); });
 window.addEventListener("orientationchange",function(){setTimeout(function(){layout();centerField();},200);});
+/* ====== 視窗尺寸保險：手機剛開啟/從背景喚醒時，瀏覽器常已改變尺寸卻不發 resize 事件，
+   造成畫面縮放錯誤要翻轉手機才恢復。這裡只要偵測到尺寸與上次排版不同就自動重排。 ====== */
+let lastLayW=0,lastLayH=0;
+function relayoutIfChanged(){
+  if(SIM)return;
+  if(window.innerWidth!==lastLayW||window.innerHeight!==lastLayH){
+    lastLayW=window.innerWidth; lastLayH=window.innerHeight;
+    layout(); if(isNarrow())centerField();
+  }
+}
+[120,350,700,1500,3000].forEach(function(ms){setTimeout(relayoutIfChanged,ms);});          // 開場後多次補查（載入瞬間尺寸未穩定）
+window.addEventListener("pageshow",function(){setTimeout(relayoutIfChanged,60);});          // 從快取返回
+document.addEventListener("visibilitychange",function(){ if(!document.hidden)setTimeout(relayoutIfChanged,60); });  // 從背景喚醒
+if(window.visualViewport)window.visualViewport.addEventListener("resize",relayoutIfChanged); // 網址列收合等
+setInterval(relayoutIfChanged,2000);                                                        // 常駐保險
 
 /* ====== 拖移平移 + 雙指縮放 / 滾輪縮放 ====== */
 let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
