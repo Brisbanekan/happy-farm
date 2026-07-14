@@ -909,7 +909,7 @@ const DAILY_REWARDS=[
 // w=權重；pay={連線數:賠率}，中獎彩金 = 押注額 × 賠率（多線可同中加總）
 const SL_SYMS=[
   {k:"wild",s:"🍃",cls:"fWild",w:4.5, pay:{3:1,4:2,5:4},   name:"荷葉(WILD)"},
-  {k:"scat",s:"✨",cls:"fScat",w:2.6, pay:null,            name:"螢火蟲(SCATTER)"},
+  {k:"scat",s:"✨",cls:"fScat",w:5.75,pay:null,            name:"螢火蟲(SCATTER)"},
   {k:"rf",  s:"🐸",cls:"fRed", w:5,   pay:{3:1,4:2,5:4},   name:"紅色青蛙"},
   {k:"yf",  s:"🐸",cls:"fYel", w:7,   pay:{3:.5,4:1,5:2},  name:"黃色青蛙"},
   {k:"bf",  s:"🐸",cls:"fBlu", w:7,   pay:{3:.5,4:1,5:2},  name:"藍色青蛙"},
@@ -939,7 +939,7 @@ const SL_LINES=[
 ];
 const SL_BETS=[50,100,500,1000];   // 可調押注檔位
 const SL_FS_AWARD=10;              // SCATTER ×3+ 送 10 局
-const SL_WILD_DROP=0.35;           // 免費局灑 WILD 機率(模擬 20 萬轉 RTP≈0.95)
+const SL_WILD_DROP=0.14;           // 免費局灑 WILD 機率(模擬 80 萬轉:觸發率≈10%、總RTP≈97%)
 // 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
 const STOCKS=[
   // 台股權值股（Yahoo .TW 報價，價位為台幣）
@@ -1361,15 +1361,15 @@ function slSpin(){
   G.slotBet=bet; renderHUD(); slotSpinning=true;
   // 產生結果盤面
   const grid=Array.from({length:20},()=>({sym:slPick(),mult:0}));
-  // 免費局：機率灑 3~6 個荷葉 WILD，部分帶 ×2/×3
+  // 免費局：機率灑 2~4 個荷葉 WILD，部分帶 ×2/×3
   const drops=new Set();
   if(isFS&&Math.random()<SL_WILD_DROP){
-    const n=3+Math.floor(Math.random()*4);
+    const n=2+Math.floor(Math.random()*3);
     const idxs=[...Array(20).keys()].sort(()=>Math.random()-.5).slice(0,n);
     idxs.forEach(i=>{
       if(grid[i].sym.k==="scat")return;
       const r=Math.random();
-      grid[i]={sym:slSymByKey("wild"),mult:r<.6?0:(r<.9?2:3)};
+      grid[i]={sym:slSymByKey("wild"),mult:r<.75?0:(r<.95?2:3)};
       drops.add(i);
     });
   }
@@ -1413,10 +1413,10 @@ function slSettle(grid,cells,bet,isFS){
     if(pay&&cnt>=3){ win+=bet*pay*mult; lines++; line.forEach((r,c)=>{if(c<cnt)winSet.add(r*5+c);}); }
   });
   win=Math.round(win);
-  // SCATTER：3+ 觸發 FREE GAME（免費局中可重複觸發）
+  // SCATTER：3+ 觸發 FREE GAME（免費局中不再觸發，避免無限連鎖）
   const sc=grid.filter(x=>x.sym.k==="scat").length;
   let fsMsg="";
-  if(sc>=3){
+  if(sc>=3&&!isFS){
     slFS+=SL_FS_AWARD; G.slotFS=slFS;
     fsMsg="✨ 螢火蟲 ×"+sc+"!觸發 FREE GAME +"+SL_FS_AWARD+" 局!";
     grid.forEach((x,i)=>{if(x.sym.k==="scat")winSet.add(i);});
@@ -1444,8 +1444,8 @@ function openSlotPay(){
     '<p class="hint">彩金計算方式:押注額 × 圖示賠率 = 獲得彩金。5×4 盤面、共 50 種連線方式,由最左欄起連續相同圖示 3 個以上即中獎,多線可同時中獎加總。</p>'+
     '<table class="slPayTbl"><tr><th></th><th style="text-align:left">圖示</th><th>×5</th><th>×4</th><th>×3</th></tr>'+rows+'</table>'+
     '<p class="hint" style="margin-top:10px">🍃 荷葉(WILD):可代替任何圖示,螢火蟲(SCATTER)除外。</p>'+
-    '<p class="hint">✨ 螢火蟲(SCATTER):盤面出現 3 個以上,觸發 '+SL_FS_AWARD+' 局 FREE SPINS(免費局中可再觸發)。</p>'+
-    '<p class="hint">FREE GAME 中每次 SPIN 有機率隨機生成 3~6 個荷葉(WILD),且有機率帶 ×2 或 ×3 倍數,連線彩金乘上倍數!免費局押注額沿用觸發當下的押注。</p>'+
+    '<p class="hint">✨ 螢火蟲(SCATTER):盤面出現 3 個以上,觸發 '+SL_FS_AWARD+' 局 FREE SPINS(每轉觸發率約 10%;免費局中不再觸發)。</p>'+
+    '<p class="hint">FREE GAME 中每次 SPIN 有機率隨機生成 2~4 個荷葉(WILD),且有機率帶 ×2 或 ×3 倍數,連線彩金乘上倍數!免費局押注額沿用觸發當下的押注。本機台長期回報率(RTP)約 97%。</p>'+
   '</div>';showM(h);
 }
 
