@@ -2410,13 +2410,19 @@ window.addEventListener("orientationchange",function(){setTimeout(function(){lay
 let dragActive=false,dragSX=0,dragSY=0,panSX=0,panSY=0,panMoved=false,lastPanEnd=0;
 let pinchActive=false, pinchDist=0;
 function tDist(e){const a=e.touches[0],b=e.touches[1];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
-// 以視窗中心為基準縮放
-function pinchZoom(ratio){
+// 以焦點（兩指中點/游標）為基準縮放；未指定則用視窗中心
+function zoomFocal(clientX,clientY){
+  const sc=document.getElementById("scene"); if(!sc)return null;
+  const r=sc.getBoundingClientRect(); const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
+  return {x:(clientX-r.left)/k, y:(clientY-r.top)/k};
+}
+function pinchZoom(ratio,fx,fy){
   const oldS=worldScale||1;
-  const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;
+  if(fx==null)fx=VW()/2; if(fy==null)fy=VH()/2;
+  const cx=(fx-panX)/oldS, cy=(fy-panY)/oldS;
   userZoom=Math.max(1, Math.min(userZoom*ratio, 5));
   worldScale=calcWorldScale();
-  panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
+  panX=fx-cx*worldScale; panY=fy-cy*worldScale;
   clampPan(); applyWorld();
 }
 function panDown(e){
@@ -2429,7 +2435,10 @@ function panDown(e){
 function panMove(e){
   if(pinchActive){
     if(e.touches&&e.touches.length>=2){ if(e.cancelable)e.preventDefault(); const d=tDist(e);
-      if(pinchDist>0){ const r=d/pinchDist; if(Math.abs(r-1)>0.008){ pinchZoom(r); pinchDist=d; } } }
+      if(pinchDist>0){ const r=d/pinchDist; if(Math.abs(r-1)>0.008){
+        const a=e.touches[0],b=e.touches[1];
+        const f=zoomFocal((a.clientX+b.clientX)/2,(a.clientY+b.clientY)/2);   // 以兩指中點為縮放焦點
+        pinchZoom(r,f&&f.x,f&&f.y); pinchDist=d; } } }
     return;
   }
   if(!dragActive)return;
@@ -2456,7 +2465,9 @@ function initPan(){
   sc.addEventListener("mousedown",panDown);
   window.addEventListener("mousemove",panMove);
   window.addEventListener("mouseup",panUp);
-  sc.addEventListener("wheel",function(e){ const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return; if(stockOpen)return; e.preventDefault(); pinchZoom(e.deltaY<0?1.12:1/1.12); },{passive:false});
+  sc.addEventListener("wheel",function(e){ const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return; if(stockOpen)return; e.preventDefault();
+    const f=zoomFocal(e.clientX,e.clientY);   // 滾輪以游標位置為縮放焦點
+    pinchZoom(e.deltaY<0?1.12:1/1.12,f&&f.x,f&&f.y); },{passive:false});
 }
 
 /* ====== 佈局編輯模式（?edit=1）：拖曳素材、輸出座標（CSS 仍為正式來源） ====== */
