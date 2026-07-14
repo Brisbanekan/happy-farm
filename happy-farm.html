@@ -2585,6 +2585,9 @@ function initEditorCore(){
   });
 }
 
+/* ====== Service Worker 註冊：讓 Chrome 視為可安裝 PWA（安裝後開啟即全螢幕） ====== */
+if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
+
 /* ====== Android 沉浸全螢幕保險：非 fullscreen 顯示模式時，觸控即進入全螢幕（隱藏狀態列/導覽列） ====== */
 (function(){
   if(!/Android/i.test(navigator.userAgent))return;
