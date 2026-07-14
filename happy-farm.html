@@ -118,7 +118,9 @@
     position:absolute;left:28%;top:56%;transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);z-index:2;
   }
   /* 建築物（家 / 倉庫）素材圖 */
-  .bld{position:absolute;z-index:1;pointer-events:none;filter:drop-shadow(0 10px 8px #00000033);}
+  .bld{position:absolute;z-index:1;pointer-events:none;filter:drop-shadow(0 10px 8px #00000033);transition:opacity .35s;}
+  .zoomfade{opacity:.22;}   /* 放大聚焦時淡化周邊素材 */
+  #dog{transition:opacity .35s;}
   .bld img{display:block;width:100%;height:auto;}
   .grid{
     display:grid;grid-template-columns:repeat(3,97px);grid-auto-rows:97px;gap:3px;
@@ -2396,7 +2398,25 @@ function clampPan(){
 }
 function applyWorld(){ const t="translate("+Math.round(panX)+"px,"+Math.round(panY)+"px) scale("+worldScale.toFixed(3)+")";
   const w=document.getElementById("world"); if(w)w.style.transform=t;
-  const rb=document.getElementById("ranchBg"); if(rb)rb.style.transform=t; }
+  const rb=document.getElementById("ranchBg"); if(rb)rb.style.transform=t;
+  updateFade(); }
+/* 聚焦淡化：放大超過門檻後，離畫面中心較遠的建築/狗淡化，聚焦目前放大的區域 */
+const FADE_SEL=[".bld.storage",".bld.bhouse",".bld.doghouse",".bld.factory","#dog"];
+function updateFade(){
+  const on=(userZoom>1.5)&&!(typeof editOn!=="undefined"&&editOn);   // 編輯模式不淡化
+  const sc=document.getElementById("scene"); if(!sc)return;
+  const sr=sc.getBoundingClientRect();
+  const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
+  const cx=VW()/2, cy=VH()/2;
+  const rad=Math.min(VW(),VH())*0.52;   // 淡化半徑：離中心超過半個畫面
+  FADE_SEL.forEach(function(s){
+    const el=document.querySelector("#world "+s); if(!el)return;
+    if(!on){el.classList.remove("zoomfade");return;}
+    const r=el.getBoundingClientRect();
+    const ex=((r.left+r.right)/2-sr.left)/k, ey=((r.top+r.bottom)/2-sr.top)/k;
+    el.classList.toggle("zoomfade",Math.hypot(ex-cx,ey-cy)>rad);
+  });
+}
 function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY;
   panX=VW()/2 - fx*worldScale; panY=VH()/2 - fy*worldScale; clampPan(); applyWorld(); }
 function layout(){
