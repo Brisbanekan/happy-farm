@@ -1332,7 +1332,7 @@ function loadFinNews(force,fi){
   },0,function(){loadFinNews(force,fi+1);});
 }
 /* ---- Lightweight Charts 圖表（24小時～5個交易日） ---- */
-let lwChart=null,lwSeries=null,lwOpenSeries=null,lwData=[],chartRange="24H",chartReq=0,lwTries=0,lwBase=0,lwPriceLine=null;
+let lwChart=null,lwSeries=null,lwOpenSeries=null,lwData=[],chartRange="24H",chartReq=0,lwTries=0,lwBase=0,lwPriceLine=null,lwCurLine=null;
 const CHART_TZOFF=-new Date().getTimezoneOffset()*60;
 function ensureChart(){
   if(lwChart)return true;
@@ -1371,6 +1371,10 @@ function updateLwLegend(param){
   if(!bar){lg.innerHTML="";return;}
   const openVal=(ob&&typeof ob.value==="number")?ob.value:lwBase;   // 十字線所在交易日的開盤
   if(lwPriceLine){try{lwPriceLine.applyOptions({price:openVal});}catch(e){}}   // 右軸「開盤」標籤跟著換日
+  try{   // 游標價標籤：跟著十字線位置顯示該點價格
+    if(!lwCurLine&&lwSeries)lwCurLine=lwSeries.createPriceLine({price:bar.value,color:'#f0b90b',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,lineVisible:false,axisLabelVisible:true,title:''});
+    else if(lwCurLine)lwCurLine.applyOptions({price:bar.value});
+  }catch(e){}
   const s=stockOf(curStock);
   const dt=new Date((bar.time-CHART_TZOFF)*1000);
   lg.innerHTML='<div class="l1">'+s.n+' <span>'+s.t+'</span></div>'+
@@ -1407,6 +1411,7 @@ function loadChart(){
     lwBase=dayOpen;   // 基準色以最後一個交易日的開盤為準
     lwSeries.applyOptions({baseValue:{type:'price',price:lwBase}});
     if(lwPriceLine){try{lwSeries.removePriceLine(lwPriceLine);}catch(e){} lwPriceLine=null;}
+    if(lwCurLine){try{lwSeries.removePriceLine(lwCurLine);}catch(e){} lwCurLine=null;}
     lwData=pts; lwSeries.setData(pts);
     if(lwOpenSeries)lwOpenSeries.setData(opens);
     lwPriceLine=lwSeries.createPriceLine({price:lwBase,color:'#9aa3b0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'開盤',lineVisible:false});
