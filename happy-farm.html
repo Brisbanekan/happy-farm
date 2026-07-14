@@ -469,6 +469,7 @@
   /* 左側功能：桌機常駐展開、隱藏摺疊鈕 */
   .leftbar .lbtoggle{display:none;}
   .lbitems{display:flex;flex-direction:column;gap:8px;}
+  .leftbar.expand-down{flex-direction:column;}   /* 功能鈕在上半部時往下展開 */
   /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
   .topmenu{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
   .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
@@ -2500,24 +2501,32 @@ function openTopMenu(){
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleEditor()">🛠️ 佈局編輯</button>'+
     '</div></div>');
 }
-/* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機 */
+/* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機；依所在位置自動決定展開方向 */
+function updateFabDir(){
+  const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
+  const tr=tg.getBoundingClientRect();
+  const down=(tr.top+tr.bottom)/2 < window.innerHeight/2;   // 上半部→往下展開；下半部→往上展開
+  bar.classList.toggle("expand-down",down);
+  if(down){ bar.style.top=tr.top+"px"; bar.style.bottom="auto"; }              // 固定頂端，向下生長
+  else{ bar.style.bottom=(window.innerHeight-tr.bottom)+"px"; bar.style.top="auto"; }   // 固定底端，向上生長
+}
 function initFabDrag(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!tg)return;
   try{const p=JSON.parse(localStorage.getItem("hfFabPos")||"null");
-    if(p&&p.l<window.innerWidth-40&&p.t<window.innerHeight-40){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";}}catch(e){}
+    if(p&&p.l<window.innerWidth-40&&p.t<window.innerHeight-40){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}}catch(e){}
   tg.removeAttribute("onclick");
   function down(e){
     e.stopPropagation();
     const pt=e.touches?e.touches[0]:e;
-    const r=bar.getBoundingClientRect();
+    const r=tg.getBoundingClientRect();
     const sx=pt.clientX, sy=pt.clientY, bl=r.left, bt=r.top; let moved=false;
     function mv(ev){
       const q=ev.touches?ev.touches[0]:ev;
       const dx=q.clientX-sx, dy=q.clientY-sy;
-      if(Math.abs(dx)+Math.abs(dy)>8)moved=true;
+      if(!moved&&Math.abs(dx)+Math.abs(dy)>8){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合
       if(moved){
         const nl=Math.max(0,Math.min(bl+dx,window.innerWidth-r.width));
-        const nt=Math.max(0,Math.min(bt+dy,window.innerHeight-56));
+        const nt=Math.max(0,Math.min(bt+dy,window.innerHeight-r.height));
         bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
         if(ev.cancelable)ev.preventDefault();
       }
@@ -2525,7 +2534,8 @@ function initFabDrag(){
     function up(){
       window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
       window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
-      if(moved){const r2=bar.getBoundingClientRect();try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(r2.left),t:Math.round(r2.top)}));}catch(e){}}
+      updateFabDir();   // 依落點決定展開方向與錨點
+      if(moved){const r2=tg.getBoundingClientRect();try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(r2.left),t:Math.round(r2.top)}));}catch(e){}}
       else toggleLeftbar();   // 沒拖動＝點擊，照常開關選單
     }
     window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
