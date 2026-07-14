@@ -1882,15 +1882,6 @@ function openShop(tab){
     const capLeft=Math.max(0,cap-G.ranch.length);
     h+='<div style="font-size:13px;font-weight:800;background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:6px 10px;margin:0 0 10px">'+
       '🐾 牧場容量 '+G.ranch.length+'/'+cap+'｜目前最多還可購買 <span style="color:#c9920f;font-size:15px">'+capLeft+'</span> 隻動物</div>';
-    if(G.ranch.length){
-      h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
-      G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
-        h+='<div class="shopitem">'+animalIcon(s.a)+'<div class="meta"><b>'+a.name+'</b>'+
-          '<div>'+(s.ready?'✅ 可收成 '+CO+a.yield:'生產中…')+'</div></div>'+
-          '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 '+CO+sellRefund(s.a)+'</button></div>';
-      });
-      h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
-    }
     h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">購買動物</div>'+
       '<p class="hint">買下的動物會在「🐮 牧場」分頁裡自由走動並定時生產，產物出現時點一下動物即可收成換 '+CO+'。售出可回收一半購買金。'+
       (G.ranch.length>=cap?'<br><span class="locktag">牧場已滿，提升等級可增加容量。</span>':'')+'</p>';
@@ -1900,6 +1891,15 @@ function openShop(tab){
         '<div>每 '+a.time+'s 產 '+a.prod+' ＝ '+CO+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
         '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'>'+CO+a.cost+'</button></div>';
     });
+    if(G.ranch.length){
+      h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
+      h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
+      G.ranch.forEach((s,i)=>{const a=ANIMALS[s.a];
+        h+='<div class="shopitem">'+animalIcon(s.a)+'<div class="meta"><b>'+a.name+'</b>'+
+          '<div>'+(s.ready?'✅ 可收成 '+CO+a.yield:'生產中…')+'</div></div>'+
+          '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="sellAnimal('+i+')">售出 '+CO+sellRefund(s.a)+'</button></div>';
+      });
+    }
     h+='</div>';showM(h);return;
   }
   if(tab==="fert"){
