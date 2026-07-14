@@ -34,7 +34,7 @@
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
   #world .bld.storage{left:1px;top:241px;width:390px;}
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
-  #world .bld.bhouse{left:606px;top:340px;width:382px;}
+  #world .bld.bhouse{left:606px;top:340px;width:382px;cursor:pointer;}
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
   #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);}
@@ -377,6 +377,23 @@
   .slPayTbl{width:100%;border-collapse:collapse;font-size:12.5px;}
   .slPayTbl td,.slPayTbl th{border-bottom:1px solid #0002;padding:4px 6px;text-align:center;}
   .slPayTbl td:first-child{font-size:18px;}
+  /* ===== 角色資料 / 成就 ===== */
+  .ptabs{display:flex;gap:8px;margin-bottom:10px;}
+  .ptabs button{flex:1;border:1px solid #d7ccc8;background:#f5efe3;border-radius:10px;padding:7px;font-size:14px;font-weight:800;cursor:pointer;color:#8a7350;}
+  .ptabs button.on{background:#7cb342;border-color:#7cb342;color:#fff;}
+  .pcard{display:flex;align-items:center;gap:10px;background:#f5efe3;border-radius:12px;padding:10px;margin-bottom:10px;}
+  .pav{font-size:34px;}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .pbox{background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:8px;text-align:center;}
+  .pbox small{display:block;color:#8a7350;font-size:11px;margin-bottom:2px;}
+  .pbox b{font-size:14px;}
+  .achlist{display:flex;flex-direction:column;gap:6px;}
+  .achrow{display:flex;align-items:center;gap:10px;background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:8px 10px;opacity:.62;}
+  .achrow.ok{opacity:1;background:#f1f8e9;border-color:#c5e1a5;}
+  .achrow .aico{font-size:22px;}
+  .achrow .atx{flex:1;min-width:0;} .achrow .atx b{font-size:13.5px;display:block;} .achrow .atx small{color:#8a7350;font-size:11px;}
+  .achrow .apg{font-size:11px;color:#8a7350;font-weight:700;white-space:nowrap;}
+  .achrow .ast{font-size:15px;}
   .stkTop{display:flex;align-items:center;gap:14px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#161a1e;border-bottom:1px solid #2b3139;position:relative;flex-wrap:wrap;}
   .stkBack{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;}
   .stkStar{cursor:pointer;font-size:18px;filter:grayscale(1);opacity:.55;}
@@ -679,7 +696,7 @@
 
   <!-- 建築物（家 / 倉庫） -->
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
-  <div class="bld bhouse"><img src="building/house.png" alt="家"></div>
+  <div class="bld bhouse" onclick="openProfile()" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
   <div class="bld factory"><img src="building/factory.png" alt="工廠"></div>
 
@@ -1125,6 +1142,8 @@ function normalizeState(){
   if(!G.ferts)G.ferts={f1:0,f2:0,bigspray:0};
   if(!G.seeds)G.seeds={};
   if(!G.harvest)G.harvest={};
+  if(!G.ach||typeof G.ach!=="object")G.ach={};      // 成就解鎖紀錄
+  if(!G.stat||typeof G.stat!=="object")G.stat={};   // 累積統計（收成、拉霸等）
   if(!Array.isArray(G.ranch))G.ranch=[];
   if(!G.pals||typeof G.pals!=="object"||Array.isArray(G.pals))G.pals={};
   if(typeof G.myCode!=="string")G.myCode="";
@@ -1413,10 +1432,12 @@ function slSettle(grid,cells,bet,isFS){
     if(pay&&cnt>=3){ win+=bet*pay*mult; lines++; line.forEach((r,c)=>{if(c<cnt)winSet.add(r*5+c);}); }
   });
   win=Math.round(win);
+  if(win>=bet*50)achStat("big50");
   // SCATTER：3+ 觸發 FREE GAME（免費局中不再觸發，避免無限連鎖）
   const sc=grid.filter(x=>x.sym.k==="scat").length;
   let fsMsg="";
   if(sc>=3&&!isFS){
+    achStat("fs");
     slFS+=SL_FS_AWARD; G.slotFS=slFS;
     fsMsg="✨ 螢火蟲 ×"+sc+"!觸發 FREE GAME +"+SL_FS_AWARD+" 局!";
     grid.forEach((x,i)=>{if(x.sym.k==="scat")winSet.add(i);});
@@ -1447,6 +1468,77 @@ function openSlotPay(){
     '<p class="hint">✨ 螢火蟲(SCATTER):盤面出現 3 個以上,觸發 '+SL_FS_AWARD+' 局 FREE SPINS(每轉觸發率約 10%;免費局中不再觸發)。</p>'+
     '<p class="hint">FREE GAME 中每次 SPIN 有機率隨機生成 2~4 個荷葉(WILD),且有機率帶 ×2 或 ×3 倍數,連線彩金乘上倍數!免費局押注額沿用觸發當下的押注。本機台長期回報率(RTP)約 97%。</p>'+
   '</div>';showM(h);
+}
+
+/* ============ 角色資料 / 成就系統 ============ */
+function achStat(k){ if(!G.stat)G.stat={}; G.stat[k]=(G.stat[k]||0)+1; }
+function achSt(k){ return (G.stat&&G.stat[k])||0; }
+const ACH=[
+ {id:"lv5",   ico:"🌱",n:"初出茅廬",  d:"等級達到 Lv.5",         c:()=>G.level>=5,   p:()=>"Lv."+G.level+"/5"},
+ {id:"lv10",  ico:"🌾",n:"熟練農夫",  d:"等級達到 Lv.10",        c:()=>G.level>=10,  p:()=>"Lv."+G.level+"/10"},
+ {id:"lv20",  ico:"👑",n:"農場大亨",  d:"等級達到 Lv.20",        c:()=>G.level>=20,  p:()=>"Lv."+G.level+"/20"},
+ {id:"gold1", ico:"💰",n:"第一桶金",  d:"持有金幣達 10,000",     c:()=>G.gold>=10000,   p:()=>Math.min(Math.floor(G.gold),10000).toLocaleString()+"/10,000"},
+ {id:"gold2", ico:"🏦",n:"百萬富翁",  d:"持有金幣達 1,000,000",  c:()=>G.gold>=1000000, p:()=>Math.min(Math.floor(G.gold),1000000).toLocaleString()+"/1,000,000"},
+ {id:"land",  ico:"🗺️",n:"開疆闢土", d:"解鎖全部農地",          c:()=>G.plots.every(p=>p.unlocked), p:()=>G.plots.filter(p=>p.unlocked).length+"/"+G.plots.length+" 塊"},
+ {id:"harv100",ico:"🧺",n:"勤勞農夫", d:"累積收成 100 次",       c:()=>achSt("harv")>=100, p:()=>achSt("harv")+"/100"},
+ {id:"harv500",ico:"🌟",n:"豐收之神", d:"累積收成 500 次",       c:()=>achSt("harv")>=500, p:()=>achSt("harv")+"/500"},
+ {id:"animal5",ico:"🐮",n:"動物之友", d:"牧場同時飼養 5 隻動物", c:()=>G.ranch.length>=5,  p:()=>G.ranch.length+"/5 隻"},
+ {id:"dog",   ico:"🐕",n:"忠實夥伴",  d:"飼養一隻看門狗",        c:()=>!!G.dog},
+ {id:"dogmax",ico:"🦮",n:"最佳拍檔",  d:"看門狗升到 Lv.5",       c:()=>!!G.dog&&(G.dog.level||1)>=5, p:()=>"Lv."+(G.dog?(G.dog.level||1):0)+"/5"},
+ {id:"day7",  ico:"📅",n:"全勤農夫",  d:"累積簽到 7 天",         c:()=>(G.totalDays||0)>=7, p:()=>(G.totalDays||0)+"/7 天"},
+ {id:"pal",   ico:"🤝",n:"呼朋引伴",  d:"新增 1 位真人好友",     c:()=>Object.keys(G.pals||{}).length>=1},
+ {id:"fs",    ico:"🎰",n:"螢光起舞",  d:"觸發拉霸 FREE GAME",    c:()=>achSt("fs")>=1},
+ {id:"slot50",ico:"💎",n:"一夜致富",  d:"拉霸單轉贏得 50 倍押注",c:()=>achSt("big50")>=1},
+ {id:"stock", ico:"📈",n:"進軍華爾街",d:"持有任一檔股票",        c:()=>Object.values(G.stocks||{}).some(s=>s&&s.shares)}
+];
+function checkAch(){
+  if(!G||!Array.isArray(G.plots))return;
+  if(!G.ach)G.ach={};
+  ACH.forEach(a=>{
+    if(G.ach[a.id])return;
+    let ok=false; try{ok=!!a.c();}catch(e){}
+    if(ok){ G.ach[a.id]=Date.now(); toast("🏆 達成成就:"+a.n+"!"); log("🏆 達成成就【"+a.n+"】"+a.d,"b"); }
+  });
+}
+function openProfile(tab){
+  if(!G.ach)G.ach={};
+  checkAch();
+  const done=ACH.filter(a=>G.ach[a.id]).length;
+  const tabs='<div class="ptabs">'+
+    '<button class="'+(tab==="ach"?"":"on")+'" onclick="openProfile()">👤 總覽</button>'+
+    '<button class="'+(tab==="ach"?"on":"")+'" onclick="openProfile(\'ach\')">🏆 成就('+done+'/'+ACH.length+')</button></div>';
+  let body="";
+  if(tab==="ach"){
+    body='<div class="achlist">'+ACH.map(a=>{
+      const ok=!!G.ach[a.id];
+      const pg=(!ok&&a.p)?('<span class="apg">'+a.p()+'</span>'):"";
+      return '<div class="achrow'+(ok?" ok":"")+'"><span class="aico">'+(ok?a.ico:"🔒")+'</span>'+
+        '<div class="atx"><b>'+a.n+'</b><small>'+a.d+'</small></div>'+pg+
+        '<span class="ast">'+(ok?"✅":"")+'</span></div>';
+    }).join("")+'</div>';
+  }else{
+    const unlocked=G.plots.filter(p=>p.unlocked).length;
+    const crops=Object.values(G.harvest||{}).reduce((a,b)=>a+b,0);
+    const seeds=Object.values(G.seeds||{}).reduce((a,b)=>a+b,0);
+    const need=XP_NEED(G.level);
+    body=
+    '<div class="pcard"><div class="pav">🧑‍🌾</div><div><b>'+myName()+'</b><br><small>Lv.'+G.level+'（XP '+G.xp+'/'+need+'）</small></div></div>'+
+    '<div class="pgrid">'+
+    '<div class="pbox"><small>💰 金幣</small><b>'+Math.floor(G.gold).toLocaleString()+'</b></div>'+
+    '<div class="pbox"><small>💎 鑽石</small><b>'+G.credit+'</b></div>'+
+    '<div class="pbox"><small>❤️ 魅力</small><b>'+G.charm+'</b></div>'+
+    '<div class="pbox"><small>🌾 農地</small><b>'+unlocked+'/'+G.plots.length+' 塊</b></div>'+
+    '<div class="pbox"><small>🎒 倉庫作物</small><b>'+crops+'</b></div>'+
+    '<div class="pbox"><small>🌱 種子</small><b>'+seeds+'</b></div>'+
+    '<div class="pbox"><small>🐮 牧場動物</small><b>'+G.ranch.length+'/'+ranchCap()+' 隻</b></div>'+
+    '<div class="pbox"><small>🐕 看門狗</small><b>'+(G.dog?("Lv."+(G.dog.level||1)):"未飼養")+'</b></div>'+
+    '<div class="pbox"><small>🤝 好友</small><b>'+Object.keys(G.pals||{}).length+' 位</b></div>'+
+    '<div class="pbox"><small>📅 累積簽到</small><b>'+(G.totalDays||0)+' 天</b></div>'+
+    '<div class="pbox"><small>🧺 累積收成</small><b>'+achSt("harv")+' 次</b></div>'+
+    '<div class="pbox"><small>🎰 FREE GAME</small><b>'+achSt("fs")+' 次</b></div>'+
+    '</div>';
+  }
+  showM('<h2>🏡 角色資料 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+tabs+body+'</div>');
 }
 
 /* ============ 股市 ============ */
@@ -2001,6 +2093,7 @@ function renderHUD(){
   const need=XP_NEED(G.level);
   document.getElementById("xpFill").style.width=Math.min(100,G.xp/need*100)+"%";
   document.getElementById("xpText").textContent=G.xp+"/"+need;
+  checkAch();   // 順便檢查是否有新成就達成
 }
 function renderGrid(){
   const grid=document.getElementById("grid");grid.innerHTML="";
@@ -2081,7 +2174,7 @@ function doPlant(i,key){
 function harvest(i){
   const p=G.plots[i];const c=CROPS[p.crop];
   let qty=4-p.stolen;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty=Math.max(1,qty);
-  G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;gainXp(c.xp);
+  G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;achStat("harv");gainXp(c.xp);
   if(c.type==="flower"){G.charm+=c.charm;log("收成 "+c.emoji+c.name+" ×"+qty+"，魅力 +"+c.charm+" ❤️","b");}
   else log("收成 "+c.emoji+c.name+" ×"+qty+"！記得到倉庫賣錢","g");
   Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0});
