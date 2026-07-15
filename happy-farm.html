@@ -2908,8 +2908,13 @@ function relayoutIfChanged(){
   }
 }
 window.addEventListener("scroll",function(){ if(!SIM&&(window.scrollY||window.pageYOffset))window.scrollTo(0,0); },{passive:true});
-/* ?debug=1 排版診斷面板：顯示實機視窗與世界縮放數值 */
-if(/[?&]debug=1/.test(location.search)){
+/* ?debug=1 或選單開關：排版診斷面板（記在本機，PWA 重開仍生效） */
+function dbgToggle(){
+  try{ if(localStorage.getItem("hfDebug")==="1"){localStorage.removeItem("hfDebug");toast("診斷面板關閉，重新整理生效");}
+       else{localStorage.setItem("hfDebug","1");toast("診斷面板開啟，重新整理生效");} }catch(e){}
+  closeM();
+}
+if(/[?&]debug=1/.test(location.search)||(function(){try{return localStorage.getItem("hfDebug")==="1";}catch(e){return false;}})()){
   const dbg=document.createElement("div");
   dbg.style.cssText="position:fixed;left:4px;bottom:4px;z-index:999999;background:#000c;color:#0f0;font:10px/1.5 monospace;padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre";
   document.body.appendChild(dbg);
@@ -2925,7 +2930,10 @@ if(/[?&]debug=1/.test(location.search)){
       "\nws "+worldScale.toFixed(3)+" base "+computeBaseScale().toFixed(3)+" cover "+coverScale().toFixed(3)+
       "\npan "+Math.round(panX)+","+Math.round(panY)+" zoom "+userZoom.toFixed(2)+" narrow "+isNarrow()+
       "\nworldRect t"+Math.round(wr.top)+" l"+Math.round(wr.left)+" "+Math.round(wr.width)+"x"+Math.round(wr.height)+
-      "\nsceneRect "+JSON.stringify((r=>({t:Math.round(r.top),l:Math.round(r.left),w:Math.round(r.width),h:Math.round(r.height)}))(document.getElementById("scene").getBoundingClientRect()));
+      "\nsceneRect "+JSON.stringify((r=>({t:Math.round(r.top),l:Math.round(r.left),w:Math.round(r.width),h:Math.round(r.height)}))(document.getElementById("scene").getBoundingClientRect()))+
+      "\nscStyle "+(document.getElementById("scene").style.width||"-")+" x "+(document.getElementById("scene").style.height||"-")+
+      "\ndvh "+(function(){const d=document.createElement("div");d.style.cssText="position:fixed;height:100dvh;width:0;visibility:hidden";document.body.appendChild(d);const h=d.offsetHeight;d.remove();return h;})()+
+      " standalone:"+(window.matchMedia&&matchMedia('(display-mode: standalone),(display-mode: fullscreen)').matches);
   },800);
 }
 [120,350,700,1500,3000].forEach(function(ms){setTimeout(relayoutIfChanged,ms);});          // 開場後多次補查（載入瞬間尺寸未穩定）
@@ -3011,6 +3019,7 @@ function openTopMenu(){
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();openHelp()">❓ 玩法說明</button>'+
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleLog()">📜 農場紀錄</button>'+
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleEditor()">🛠️ 佈局編輯</button>'+
+    '<button class="pbtn" style="padding:14px 8px;font-size:14px" onclick="dbgToggle()">🔧 診斷面板</button>'+
     '</div></div>');
 }
 /* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機；依所在位置自動決定展開方向 */
