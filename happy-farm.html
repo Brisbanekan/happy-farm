@@ -128,6 +128,8 @@
     touch-action:none;
   }
   .field,.groundgrid,.fieldshadow{touch-action:none;}
+  #world,#ranchBg{touch-action:none;}   /* 世界層交給遊戲手勢處理，瀏覽器不接手（下拉刷新/滾動）；UI與彈窗不受影響 */
+  html,body{overscroll-behavior:none;}
   /* 注意：手機不要改欄數，否則田會被轉置（方向顛倒）且與地面格線對不上 */
   .plot{
     position:relative;cursor:pointer;z-index:1;touch-action:none;background:transparent;
@@ -2931,11 +2933,12 @@ function panMove(e){
   const p=e.touches?e.touches[0]:e;
   const k=SIM?simScale:1;
   const dx=(p.clientX-dragSX)/k, dy=(p.clientY-dragSY)/k;
-  if(Math.abs(dx)+Math.abs(dy)>(e.touches?14:6))panMoved=true;   // 觸控門檻放寬：手指自然抖動不算拖曳，點田地才不會被吃掉
-  if(e.touches&&e.cancelable)e.preventDefault();
+  if(Math.abs(dx)+Math.abs(dy)>(e.touches?14:6))panMoved=true;   // 觸控門檻放寬：手指自然抖動不算拖曳
+  // 注意：只在「確定拖曳」時才 preventDefault——touchmove 一旦被 preventDefault，Chrome 不會再合成 click，
+  // 高觸控採樣率的手機（如 OPPO Reno 系列）輕點也會產生 touchmove，先前寫法會吃掉所有點擊。
   if(panMoved){
     panX=panSX+dx; panY=panSY+dy; clampPan(); applyWorld();
-    if(!e.touches&&e.cancelable)e.preventDefault();
+    if(e.cancelable)e.preventDefault();
   }
 }
 function panUp(e){
