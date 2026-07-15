@@ -2766,7 +2766,7 @@ function spawnBalloon(){
 }
 function hideBalloon(){ balloonActive=false;
   const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transition="none";b.style.left="-90px";} }
-const BEVENTS=[   // w=權重；好事共80、壞事共20
+const BEVENTS=[   // w=權重；機會共80、命運共80（50:50）
   {w:15,f:function(){const v=(50+Math.floor(Math.random()*100))*Math.max(1,Math.floor(G.level/2));G.gold+=v;
     return{e:"🪙",t:"機會",d:"熱氣球灑下金幣雨！<br>獲得 <b>"+v.toLocaleString()+"</b> 金幣"};}},
   {w:8,f:function(){const v=1+(Math.random()<0.2?1:0);G.credit+=v;
@@ -2787,13 +2787,13 @@ const BEVENTS=[   // w=權重；好事共80、壞事共20
     return{e:"💩",t:"機會",d:"撿到熱氣球掉落的包裹：<br><b>普通肥料 ×2</b>"};}},
   {w:9,f:function(){const v=G.level*10;gainXp(v);
     return{e:"⭐",t:"機會",d:"看熱氣球看出了靈感！<br>經驗 +<b>"+v+"</b>"};}},
-  {w:7,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.bug);
+  {w:28,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.bug);
     if(pl.length){pl[Math.floor(Math.random()*pl.length)].bug=1;
       return{e:"🐜",t:"命運",bad:1,d:"熱氣球嚇跑了鳥群，蟲蟲趁虛而入！<br>一塊田生蟲了，快去除蟲"};}
     return{e:"🐜",t:"命運",bad:1,d:"蟲群飛過農場…<br>幸好沒有作物受害"};}},
-  {w:7,f:function(){const v=Math.min(G.gold,Math.round(G.gold*0.03)+20);G.gold-=v;
+  {w:28,f:function(){const v=Math.min(G.gold,Math.round(G.gold*0.03)+20);G.gold-=v;
     return{e:"💸",t:"命運",bad:1,d:"熱氣球緊急降落壓壞了圍籬…<br>賠了 <b>"+v.toLocaleString()+"</b> 金幣修理費"};}},
-  {w:6,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.dry);
+  {w:24,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.dry);
     if(pl.length){pl[Math.floor(Math.random()*pl.length)].dry=true;
       return{e:"🌪️",t:"命運",bad:1,d:"熱氣球捲起一陣強風！<br>一塊田變乾旱了，記得澆水"};}
     return{e:"🌪️",t:"命運",bad:1,d:"一陣強風吹過…<br>幸好田地無恙"};}}
