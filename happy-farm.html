@@ -2885,14 +2885,21 @@ window.addEventListener("resize",function(){ layout(); if(isNarrow())centerField
 window.addEventListener("orientationchange",function(){setTimeout(function(){layout();centerField();},200);});
 /* ====== 視窗尺寸保險：手機剛開啟/從背景喚醒時，瀏覽器常已改變尺寸卻不發 resize 事件，
    造成畫面縮放錯誤要翻轉手機才恢復。這裡只要偵測到尺寸與上次排版不同就自動重排。 ====== */
-let lastLayW=0,lastLayH=0;
+let lastLayW=0,lastLayH=0,lastVVH=0;
 function relayoutIfChanged(){
   if(SIM)return;
-  if(window.innerWidth!==lastLayW||window.innerHeight!==lastLayH){
-    lastLayW=window.innerWidth; lastLayH=window.innerHeight;
+  // iPhone 橫置開啟：網址列收合後頁面殘留捲動位移，畫面整體下移露出綠底 → 強制回到原點
+  if(window.scrollY||window.pageYOffset||(window.visualViewport&&visualViewport.offsetTop)){
+    window.scrollTo(0,0);
+  }
+  // iOS 常見：visualViewport 高度變了但 innerWidth/innerHeight 沒變 → 一併納入比對
+  const vvh=window.visualViewport?Math.round(window.visualViewport.height):0;
+  if(window.innerWidth!==lastLayW||window.innerHeight!==lastLayH||vvh!==lastVVH){
+    lastLayW=window.innerWidth; lastLayH=window.innerHeight; lastVVH=vvh;
     layout(); if(isNarrow())centerField();
   }
 }
+window.addEventListener("scroll",function(){ if(!SIM&&(window.scrollY||window.pageYOffset))window.scrollTo(0,0); },{passive:true});
 [120,350,700,1500,3000].forEach(function(ms){setTimeout(relayoutIfChanged,ms);});          // 開場後多次補查（載入瞬間尺寸未穩定）
 window.addEventListener("pageshow",function(){setTimeout(relayoutIfChanged,60);});          // 從快取返回
 document.addEventListener("visibilitychange",function(){ if(!document.hidden)setTimeout(relayoutIfChanged,60); });  // 從背景喚醒
