@@ -237,6 +237,8 @@
     background:none;z-index:20;padding:0 10px;   /* 取消綠色底條，只留按鈕 */
   }
   .dock .sp{display:none;}
+  .dock{pointer-events:none;}          /* 容器可穿透：dock 橫跨整個畫面，透明區不攔田地觸控 */
+  .dock .dbtn{pointer-events:auto;}    /* 只有按鈕本身接收點擊 */
   /* ===== 避開手機瀏海 / 圓角安全區（真機用 env()，模擬器左側假瀏海用 body.sim 位移） ===== */
   .hud{left:calc(10px + env(safe-area-inset-left));}
   .leftbar{left:calc(8px + env(safe-area-inset-left));}
