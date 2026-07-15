@@ -212,12 +212,15 @@
   body.sim #scene::before{content:"";position:absolute;top:50%;left:0;transform:translateY(-50%);
     width:26px;height:150px;background:#14171d;border-radius:0 16px 16px 0;z-index:9000;pointer-events:none;}
   /* 真手機直屏：提示轉為橫向（強制橫屏） */
-  .rotertip{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;
-    background:linear-gradient(#2e4a2c,#24391f);color:#fff;text-align:center;padding:28px;gap:14px;}
+  .rotertip{position:fixed;inset:-80px;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:linear-gradient(#2e4a2c,#24391f);color:#fff;text-align:center;padding:108px;gap:14px;}   /* 四邊外擴：iOS 轉向瞬間視窗變大也蓋得住 */
   .rotertip .ic{font-size:64px;animation:rotsway 1.6s ease-in-out infinite;}
   .rotertip b{font-size:20px;} .rotertip span{font-size:14px;opacity:.85;}
   @keyframes rotsway{0%,100%{transform:rotate(-12deg);}50%{transform:rotate(78deg);}}
-  @media(orientation:portrait) and (max-width:900px){ body:not(.sim) .rotertip{display:flex;} }
+  @media(orientation:portrait) and (max-width:900px){
+    body:not(.sim) .rotertip{display:flex;}
+    html,body:not(.sim){background:#2e4a2c;}   /* 直立時底色與轉向提示同色：轉向瞬間露邊也看不出來 */
+  }
 
   /* 右側直立工具列 */
   .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
