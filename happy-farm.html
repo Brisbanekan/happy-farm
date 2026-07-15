@@ -738,7 +738,6 @@
   <div class="dock">
     <div class="grp">
       <div class="dbtn" onclick="openFriends()">👑<small>好友</small></div>
-      <div class="dbtn" onclick="openDog()">🐕<small>養狗</small></div>
     </div>
     <div class="sp"></div>
     <div class="grp">
@@ -1516,10 +1515,13 @@ function openProfile(tab){
   checkAch();
   const done=ACH.filter(a=>G.ach[a.id]).length;
   const tabs='<div class="ptabs">'+
-    '<button class="'+(tab==="ach"?"":"on")+'" onclick="openProfile()">👤 總覽</button>'+
-    '<button class="'+(tab==="ach"?"on":"")+'" onclick="openProfile(\'ach\')">🏆 成就('+done+'/'+ACH.length+')</button></div>';
+    '<button class="'+(!tab?"on":"")+'" onclick="openProfile()">👤 總覽</button>'+
+    '<button class="'+(tab==="ach"?"on":"")+'" onclick="openProfile(\'ach\')">🏆 成就('+done+'/'+ACH.length+')</button>'+
+    '<button class="'+(tab==="dog"?"on":"")+'" onclick="openProfile(\'dog\')">🐕 養狗</button></div>';
   let body="";
-  if(tab==="ach"){
+  if(tab==="dog"){
+    body=dogBody();
+  }else if(tab==="ach"){
     body='<div class="achlist">'+ACH.map(a=>{
       const ok=!!G.ach[a.id];
       const pg=(!ok&&a.p)?('<span class="apg">'+a.p()+'</span>'):"";
@@ -2638,8 +2640,8 @@ function dogFed(){return !!(G.dog && G.dog.fedUntil && G.dog.fedUntil>Date.now()
 function dogFedLeftText(){if(!dogFed())return"";const ms=G.dog.fedUntil-Date.now();const hh=Math.floor(ms/3600000);const mm=Math.floor((ms%3600000)/60000);return hh>0?(hh+" 小時 "+mm+" 分"):(mm+" 分");}
 function dogBiteChance(lv){return Math.min(0.55, 0.30+((lv||1)-1)*0.0625);} // Lv1=30%…Lv5=55%（最高5等、最高55%）
 function dogUpCost(lv){return 3000*(lv||1);}
-function openDog(){
-  let h='<h2>🐕 養狗 <button class="x" onclick="closeM()">×</button></h2><div class="body"><p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 <span class=coinico></span> 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
+function dogBody(){   // 養狗內容（房屋面板分頁用）
+  let h='<p class="hint">看門狗會巡守農場，當好友來偷成熟作物時有機率咬住對方，讓對方失手、把偷到的東西掉一部分變成 <span class=coinico></span> 給你。升級可提高咬中機率與掉落金額。狗要餵食才會咬人。</p>';
   if(!G.dog){
     h+='<div class="shopitem"><span class="e">🐶</span><div class="meta"><b>看門狗 Lv.1</b><div>購買後守護你的農場</div></div><button class="pbtn gold" onclick="buyDog(\'gold\')" '+(G.gold>=1500?'':'disabled')+'>'+CO+'1500</button> <button class="pbtn blue" onclick="buyDog(\'blue\')" '+(G.credit>=3?'':'disabled')+'>💎3</button></div>';
   }else{
@@ -2649,8 +2651,9 @@ function openDog(){
       h+='<div class="shopitem"><span class="e">⬆️</span><div class="meta"><b>升級到 Lv.'+(lv+1)+'</b><div>咬中機率 '+ch+'% → '+Math.round(dogBiteChance(lv+1)*100)+'%，掉落金額更多</div></div><button class="pbtn gold" onclick="upgradeDog()" '+(G.gold>=cost?'':'disabled')+'>'+CO+cost+'</button></div>';
     }else h+='<p class="hint">看門狗已達最高 Lv.5 🎉</p>';
   }
-  h+='</div>';showM(h);
+  return h;
 }
+function openDog(){ openProfile('dog'); }   // 舊入口導向房屋面板的養狗分頁
 function buyDog(cur){if(cur==="gold"){if(G.gold<1500)return;G.gold-=1500;}else{if(G.credit<3)return;G.credit-=3;}G.dog={fedUntil:0,level:1};log("買了一隻看門狗 🐕","g");renderHUD();saveGame();openDog();}
 function feedDog(){if(G.gold<300){toast("金幣不足");return;}G.gold-=300;G.dog.fedUntil=Date.now()+DOG_FEED_MS;toast("狗狗吃飽了 🦴 守護 12 小時");renderHUD();saveGame();openDog();}
 function upgradeDog(){if(!G.dog)return;const lv=G.dog.level||1;if(lv>=5)return;const cost=dogUpCost(lv);if(G.gold<cost)return;G.gold-=cost;G.dog.level=lv+1;log("看門狗升級到 Lv."+(lv+1)+"！","g");toast("🐕 升級 Lv."+(lv+1));renderHUD();saveGame();openDog();}
