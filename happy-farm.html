@@ -37,7 +37,7 @@
   #world .bld.bhouse{left:606px;top:340px;width:382px;cursor:pointer;pointer-events:auto;}   /* 點房子開角色資料 */
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
-  #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);}
+  #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);cursor:pointer;pointer-events:auto;}   /* 點工廠開加工面板 */
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -698,7 +698,7 @@
   <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
   <div class="bld bhouse" onclick="openProfile()" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
-  <div class="bld factory"><img src="building/factory.png" alt="工廠"></div>
+  <div class="bld factory" onclick="openFactory()"><img src="building/factory.png" alt="工廠"></div>
 
   <!-- 田地 -->
   <div class="fieldshadow"></div>
@@ -1128,6 +1128,7 @@ function freshGame(){
   G.stockOrders=[];G.stockFav={};
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
   G.ranch=[];G.pals={};G.myCode="";
+  G.factory={lv:1,q:[]};G.goods={};G.buffs={};
   G.friends=FRIEND_NAMES.map(f=>({name:f[0],av:f[1],plots:Array.from({length:6},()=>makeFriendPlot())}));
 }
 function normalizeState(){
@@ -1168,6 +1169,12 @@ function normalizeState(){
   G.stockOrders=G.stockOrders.filter(o=>STOCKS.some(s=>s.t===o.t));   // 移除下架標的掛單
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
+  if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
+  if(typeof G.factory.lv!=="number"||G.factory.lv<1)G.factory.lv=1;
+  if(G.factory.lv>10)G.factory.lv=10;
+  if(!Array.isArray(G.factory.q))G.factory.q=[];
+  if(!G.goods||typeof G.goods!=="object")G.goods={};
+  if(!G.buffs||typeof G.buffs!=="object")G.buffs={};
   applyOfflineGrowth();
 }
 // 離線生長：載入存檔後，用「現在時間 − 上次存檔時間(ts)」把作物補算成長（每 1.5 秒＝1 tick）
@@ -2180,8 +2187,103 @@ function harvest(i){
   Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0});
 }
 
+/* ============ 工廠：升級（1-10級，需魅力門檻）＋農產加工 ============ */
+const FGOODS={
+  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:360,   need:{radish:5,cucumber:5}},
+  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:640,   need:{tomato:8}},
+  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:880,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
+  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2700,  need:{strawberry:8}},
+  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3800,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
+  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4900,  need:{pumpkin:6,strawberry:4}},
+  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:4600,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
+  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:12500, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
+  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:18500, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
+  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:25000, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
+};
+const FLV=[null,null,   // FLV[n]＝升到 n 級的需求；魅力為門檻不消耗
+  {gold:3000,  charm:10,  fx:"解鎖玉米濃湯"},
+  {gold:8000,  charm:25,  fx:"解鎖草莓果醬、加工速度 -10%"},
+  {gold:18000, charm:45,  fx:"解鎖辣椒醬、加工佇列 +1"},
+  {gold:35000, charm:70,  fx:"解鎖南瓜派/西瓜汁、售價 +5%"},
+  {gold:60000, charm:100, fx:"加工速度 -20%"},
+  {gold:100000,charm:140, fx:"解鎖葡萄酒、加工佇列 +1"},
+  {gold:160000,charm:190, fx:"解鎖綜合果盤、售價 +10%"},
+  {gold:240000,charm:250, fx:"加工速度 -30%"},
+  {gold:350000,charm:320, fx:"解鎖滿漢農宴禮盒、售價 +15%"}
+];
+function fSpeed(){const lv=G.factory.lv;return lv>=9?0.7:lv>=6?0.8:lv>=3?0.9:1;}
+function fSlots(){const lv=G.factory.lv;return 1+(lv>=4?1:0)+(lv>=7?1:0);}
+function fSellBonus(){const lv=G.factory.lv;return 1+(lv>=10?0.15:lv>=8?0.10:lv>=5?0.05:0);}
+function buffOn(k){const b=G.buffs||{};const t=Date.now();return !!((b[k]&&b[k]>t)||(b.all&&b.all>t));}
+function upFactory(){
+  const nl=G.factory.lv+1, c=FLV[nl]; if(!c){toast("工廠已滿級");return;}
+  if(G.charm<c.charm){toast("魅力不足（需 ❤️"+c.charm+"）");return;}
+  if(G.gold<c.gold){toast("金幣不足");return;}
+  G.gold-=c.gold; G.factory.lv=nl;
+  log("🏭 工廠升級 Lv."+nl+"！"+c.fx,"g"); toast("🏭 工廠 Lv."+nl);
+  renderHUD(); saveGame(); openFactory();
+}
+function fCraft(k){
+  const r=FGOODS[k]; if(!r)return;
+  if(G.factory.lv<r.lv){toast("工廠等級不足");return;}
+  if(G.factory.q.length>=fSlots()){toast("加工佇列已滿");return;}
+  for(const m in r.need){if((G.harvest[m]||0)<r.need[m]){toast("原料不足："+CROPS[m].name);return;}}
+  for(const m in r.need){G.harvest[m]-=r.need[m];if(G.harvest[m]<=0)delete G.harvest[m];}
+  G.factory.q.push({k:k,end:Date.now()+Math.round(r.time*fSpeed())*1000});
+  log("🏭 開始加工 "+r.emoji+r.name,"b"); saveGame(); openFactory();
+}
+function fSell(k){
+  if(!(G.goods[k]>0))return; const r=FGOODS[k];
+  const v=Math.round(r.sell*fSellBonus()*(buffOn("sell")?1.15:1));
+  G.goods[k]--; if(G.goods[k]<=0)delete G.goods[k];
+  G.gold+=v; log("賣出 "+r.emoji+r.name+"＝<span class=coinico></span>"+v,"g"); toast("<span class=coinico></span> +"+v);
+  renderHUD(); saveGame(); openFactory();
+}
+function fUse(k){
+  if(!(G.goods[k]>0))return; const r=FGOODS[k]; if(!r.buff)return;
+  G.goods[k]--; if(G.goods[k]<=0)delete G.goods[k];
+  const until=Date.now()+r.buff.min*60000;
+  if(r.buff.k==="all")["grow","sell","animal","xp"].forEach(b=>{G.buffs[b]=Math.max(G.buffs[b]||0,until);});
+  else G.buffs[r.buff.k]=Math.max(G.buffs[r.buff.k]||0,until);
+  log("使用 "+r.emoji+r.name+"："+r.buff.desc,"b"); toast(r.buff.desc);
+  saveGame(); openFactory();
+}
+function openFactory(){
+  if(typeof editOn!=="undefined"&&editOn)return;   // 佈局編輯中不開面板
+  const f=G.factory, now=Date.now();
+  let h='<h2>🏭 農產加工廠 Lv.'+f.lv+' <button class="x" onclick="closeM()">×</button></h2><div class="body" id="factPanel">';
+  const c=FLV[f.lv+1];
+  if(c){const can=G.gold>=c.gold&&G.charm>=c.charm;
+    h+='<div style="background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px">'+
+      '<b>升級 Lv.'+(f.lv+1)+'</b>：'+c.fx+'<br>需 <span class=coinico></span>'+c.gold.toLocaleString()+'＋魅力門檻 ❤️'+c.charm+'（目前 ❤️'+G.charm+'）'+
+      '<button class="pbtn gold" style="float:right;margin-top:-18px" onclick="upFactory()" '+(can?'':'disabled')+'>升級</button><div style="clear:both"></div></div>';}
+  else h+='<p class="hint">🎉 已達最高等級 Lv.10</p>';
+  h+='<p class="hint" style="margin:2px 0 8px">佇列 '+f.q.length+'/'+fSlots()+'｜加工時間 ×'+fSpeed().toFixed(1)+'｜售價加成 +'+Math.round((fSellBonus()-1)*100)+'%</p>';
+  const bn={grow:"🌱成長+20%",sell:"💰賣價+15%",animal:"🐮生產+20%",xp:"⭐經驗+30%"};
+  const act=Object.keys(bn).filter(b=>buffOn(b));
+  if(act.length)h+='<div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:8px">加乘中：'+act.map(b=>{const u=Math.max(G.buffs[b]||0,G.buffs.all||0);return bn[b]+"（剩"+Math.ceil((u-now)/60000)+"分）";}).join('、')+'</div>';
+  f.q.forEach(x=>{const r=FGOODS[x.k];
+    h+='<div class="shopitem"><span class="e">'+r.emoji+'</span><div class="meta"><b>'+r.name+'</b><div>⏳ 加工中…剩 '+Math.max(0,Math.ceil((x.end-now)/1000))+'s</div></div></div>';});
+  const gk=Object.keys(G.goods||{}).filter(k=>G.goods[k]>0);
+  if(gk.length){h+='<div style="font-size:13px;font-weight:800;margin:8px 0 4px">加工品庫存</div>';
+    gk.forEach(k=>{const r=FGOODS[k];if(!r)return;
+      h+='<div class="shopitem"><span class="e">'+r.emoji+'</span><div class="meta"><b>'+r.name+'</b> ×'+G.goods[k]+(r.buff?'<div>'+r.buff.desc+'</div>':'')+'</div>'+
+        (r.buff?'<button class="pbtn blue" onclick="fUse(\''+k+'\')">使用</button>':'')+
+        '<button class="pbtn gold" onclick="fSell(\''+k+'\')">賣 '+Math.round(r.sell*fSellBonus()).toLocaleString()+'</button></div>';});}
+  h+='<div style="font-size:13px;font-weight:800;margin:10px 0 4px">配方（原料取自倉庫作物）</div>';
+  Object.keys(FGOODS).forEach(k=>{const r=FGOODS[k];const locked=f.lv<r.lv;
+    const needTxt=Object.keys(r.need).map(m=>CROPS[m].emoji+r.need[m]+'/'+(G.harvest[m]||0)).join(' ');
+    const ok=!locked&&f.q.length<fSlots()&&Object.keys(r.need).every(m=>(G.harvest[m]||0)>=r.need[m]);
+    h+='<div class="shopitem"><span class="e">'+r.emoji+'</span><div class="meta"><b>'+r.name+'</b>'+(locked?' <span class="locktag">需工廠 Lv.'+r.lv+'</span>':'')+
+      '<div>'+needTxt+'｜'+Math.round(r.time*fSpeed())+'s｜賣 '+r.sell.toLocaleString()+(r.buff?'｜'+r.buff.desc:'')+'</div></div>'+
+      '<button class="pbtn gold" onclick="fCraft(\''+k+'\')" '+(ok?'':'disabled')+'>加工</button></div>';});
+  h+='<p class="hint">升級需同時滿足金幣與魅力值門檻（魅力不會被扣除）。加工離線也會繼續倒數。</p></div>';
+  showM(h);
+}
+
 /* ============ 經驗 / 升級 ============ */
 function gainXp(n){
+  if(buffOn("xp"))n=Math.round(n*1.3);   // 葡萄酒加乘
   G.xp+=n;
   while(G.xp>=XP_NEED(G.level)){
     G.xp-=XP_NEED(G.level);G.level++;G.credit+=1;G.charm+=2;
@@ -2287,10 +2389,11 @@ function openInv(tab){
 function sqClamp(k){const el=document.getElementById("sq_"+k);if(!el)return;let n=parseInt(el.value)||1;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sqStep(k,d){const el=document.getElementById("sq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sellQtyInput(k){const el=document.getElementById("sq_"+k);let n=parseInt(el&&el.value)||1;sellQty(k,n);}
-function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));G.gold+=CROPS[k].sell*n;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+(CROPS[k].sell*n));renderHUD();saveGame();openInv("harvest");}
+function sellMul(){return buffOn("sell")?1.15:1;}   // 辣椒醬賣價加乘
+function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));const v=Math.round(CROPS[k].sell*n*sellMul());G.gold+=v;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+v);renderHUD();saveGame();openInv("harvest");}
 function sellOne(k){sellQty(k,1);}
-function sellAll(k){if(!G.harvest[k])return;G.gold+=CROPS[k].sell*G.harvest[k];delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
-function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=CROPS[k].sell*G.harvest[k]);G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
+function sellAll(k){if(!G.harvest[k])return;G.gold+=Math.round(CROPS[k].sell*G.harvest[k]*sellMul());delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
+function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=CROPS[k].sell*G.harvest[k]);t=Math.round(t*sellMul());G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
 function selectSeed(k){window.__plantSel=k;G.tool="plant";renderTools();toast("已選 "+CROPS[k].name+"，點翻好的田播種");closeM();}
 
 /* ============ 肥料 ============ */
@@ -2620,7 +2723,7 @@ function walkDog(){
 function tick(){
   G.plots.forEach(p=>{
     if(p.unlocked&&p.state==="planted"&&!p.ripe){
-      let s=1;if(p.dry)s*=.4;if(p.weed)s*=.6;if(p.bug)s*=.6;p.grow+=s;
+      let s=1;if(p.dry)s*=.4;if(p.weed)s*=.6;if(p.bug)s*=.6;if(buffOn("grow"))s*=1.2;p.grow+=s;
       if(p.grow>=CROPS[p.crop].grow){p.grow=CROPS[p.crop].grow;p.ripe=true;log(CROPS[p.crop].emoji+CROPS[p.crop].name+" 成熟了，快收成！","g");}
     }
   });
@@ -2630,8 +2733,16 @@ function tick(){
   if(Math.random()<0.3){const f=G.friends[Math.floor(Math.random()*G.friends.length)];f.plots[Math.floor(Math.random()*f.plots.length)]=makeFriendPlot();}
   // 牧場動物生產
   if(Array.isArray(G.ranch))G.ranch.forEach(s=>{
-    if(s&&!s.ready){s.prod+=1;if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}}
+    if(s&&!s.ready){s.prod+=(buffOn("animal")?1.2:1);if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}}
   });
+  // 工廠加工完成
+  if(G.factory&&Array.isArray(G.factory.q)&&G.factory.q.length){
+    const nowT=Date.now(); const done=G.factory.q.filter(x=>x.end<=nowT);
+    if(done.length){ G.factory.q=G.factory.q.filter(x=>x.end>nowT);
+      done.forEach(x=>{const r=FGOODS[x.k]; if(!r)return;
+        G.goods[x.k]=(G.goods[x.k]||0)+1;
+        log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
+  if(document.getElementById("factPanel"))openFactory();   // 面板開著時刷新倒數
   stockTick();   // 股價波動＋限價單撮合
   render();
   saveGame();
