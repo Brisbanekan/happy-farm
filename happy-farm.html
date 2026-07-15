@@ -3009,44 +3009,57 @@ function openTopMenu(){
     '</div></div>');
 }
 /* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機；依所在位置自動決定展開方向 */
+function fabEnv(){   // 功能鈕座標一律用 #scene 內部座標（手機預覽的縮放/置中、桌機都正確）
+  const sc=document.getElementById("scene");
+  const r=sc?sc.getBoundingClientRect():{left:0,top:0};
+  const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
+  return {sx:r.left,sy:r.top,k:k};
+}
 function updateFabDir(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
-  const tr=tg.getBoundingClientRect();
-  const down=(tr.top+tr.bottom)/2 < window.innerHeight/2;   // 上半部→往下展開；下半部→往上展開
+  const e=fabEnv(); const tr=tg.getBoundingClientRect();
+  const top=(tr.top-e.sy)/e.k, bot=(tr.bottom-e.sy)/e.k;
+  const down=(top+bot)/2 < VH()/2;   // 上半部→往下展開；下半部→往上展開
   bar.classList.toggle("expand-down",down);
-  if(down){ bar.style.top=tr.top+"px"; bar.style.bottom="auto"; }              // 固定頂端，向下生長
-  else{ bar.style.bottom=(window.innerHeight-tr.bottom)+"px"; bar.style.top="auto"; }   // 固定底端，向上生長
+  if(down){ bar.style.top=top+"px"; bar.style.bottom="auto"; }
+  else{ bar.style.bottom=(VH()-bot)+"px"; bar.style.top="auto"; }
 }
-function clampFab(){   // 把功能鈕拉回畫面內（全螢幕切換/轉向/異常存檔都靠這個救回）
+function clampFab(){   // 把功能鈕拉回 scene 範圍內（全螢幕切換/轉向/模式切換/異常存檔都靠這個救回）
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
   const r=tg.getBoundingClientRect(); if(!r.width)return;
-  const nl=Math.max(0,Math.min(r.left,window.innerWidth-r.width));
-  const nt=Math.max(0,Math.min(r.top,window.innerHeight-r.height));
-  if(Math.abs(nl-r.left)>1||Math.abs(nt-r.top)>1){
+  const e=fabEnv();
+  const w=r.width/e.k, h=r.height/e.k;
+  const lx=(r.left-e.sx)/e.k, ly=(r.top-e.sy)/e.k;
+  const nl=Math.max(0,Math.min(lx,VW()-w));
+  const nt=Math.max(0,Math.min(ly,VH()-h));
+  if(Math.abs(nl-lx)>1||Math.abs(nt-ly)>1){
     bar.style.left=nl+"px"; bar.style.top=nt+"px"; bar.style.bottom="auto"; updateFabDir();
-    try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(nl),t:Math.round(nt)}));}catch(e){}
+    try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(nl),t:Math.round(nt)}));}catch(e2){}
   }
 }
 window.addEventListener("resize",function(){setTimeout(clampFab,150);});
 function initFabDrag(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!tg)return;
   try{const p=JSON.parse(localStorage.getItem("hfFabPos")||"null");
-    if(p&&p.l>=0&&p.t>=0&&p.l<window.innerWidth-30&&p.t<window.innerHeight-30){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}
-    else if(p){localStorage.removeItem("hfFabPos");}   // 異常位置直接丟棄，回預設
+    if(p&&isNarrow()&&p.l>=0&&p.t>=0&&p.l<VW()-30&&p.t<VH()-30){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}   // 桌機非窄版不套用記憶位置
+    else if(p&&isNarrow()){localStorage.removeItem("hfFabPos");}   // 異常位置直接丟棄，回預設
     setTimeout(clampFab,300);}catch(e){}
   tg.removeAttribute("onclick");
   function down(e){
     e.stopPropagation();
+    const env=fabEnv();
     const pt=e.touches?e.touches[0]:e;
     const r=tg.getBoundingClientRect();
-    const sx=pt.clientX, sy=pt.clientY, bl=r.left, bt=r.top; let moved=false;
+    const w=r.width/env.k, h=r.height/env.k;
+    const bl=(r.left-env.sx)/env.k, bt=(r.top-env.sy)/env.k;   // scene 內部座標
+    const sx=pt.clientX, sy=pt.clientY; let moved=false;
     function mv(ev){
       const q=ev.touches?ev.touches[0]:ev;
-      const dx=q.clientX-sx, dy=q.clientY-sy;
+      const dx=(q.clientX-sx)/env.k, dy=(q.clientY-sy)/env.k;
       if(!moved&&Math.abs(dx)+Math.abs(dy)>(ev.touches?12:8)){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合（觸控門檻放寬）
       if(moved){
-        const nl=Math.max(0,Math.min(bl+dx,window.innerWidth-r.width));
-        const nt=Math.max(0,Math.min(bt+dy,window.innerHeight-r.height));
+        const nl=Math.max(0,Math.min(bl+dx,VW()-w));
+        const nt=Math.max(0,Math.min(bt+dy,VH()-h));
         bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
         if(ev.cancelable)ev.preventDefault();
       }
@@ -3055,7 +3068,8 @@ function initFabDrag(){
       window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
       window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
       updateFabDir();   // 依落點決定展開方向與錨點
-      if(moved){const r2=tg.getBoundingClientRect();try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(r2.left),t:Math.round(r2.top)}));}catch(e){}}
+      if(moved){const e2=fabEnv();const r2=tg.getBoundingClientRect();
+        try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round((r2.left-e2.sx)/e2.k),t:Math.round((r2.top-e2.sy)/e2.k)}));}catch(e3){}}
       else toggleLeftbar();   // 沒拖動＝點擊，照常開關選單
     }
     window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
