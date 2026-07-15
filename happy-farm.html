@@ -2822,7 +2822,7 @@ function calcWorldScale(){
   if(!isNarrow()) return Math.max(s, coverScale());                                   // 桌機維持填滿
   const sc=document.getElementById("scene");
   if(sc&&sc.classList.contains("s-ranch")) return Math.max(s, coverScale());          // 牧場維持填滿
-  return s;                                                                            // 農場（手機）：全景，可縮到看見整座農場
+  return Math.max(s, VW()/WORLD_W);   // 農場（手機）：全景，但至少填滿寬度——視窗比例>2.2（如橫置開啟時 Safari 工具列還在）會左右露出兩層背景錯位
 }
 // 使用者放大/縮小畫面
 function setZoom(mult){
