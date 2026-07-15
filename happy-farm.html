@@ -2794,8 +2794,10 @@ function setScene(s){
 /* ====== 手機畫面模擬器（開發預覽）：用邏輯視口讓世界依手機尺寸重新置中 ====== */
 let SIM=false, simScale=1;
 const SIM_W=844, SIM_H=390;   // 強制橫屏：模擬器改成橫向手機
-function VW(){ return SIM?SIM_W:window.innerWidth; }
-function VH(){ return SIM?SIM_H:window.innerHeight; }
+function VW(){ if(SIM)return SIM_W;
+  return Math.round(Math.max(window.innerWidth, window.visualViewport?window.visualViewport.width:0)); }   // 取較大值：iOS 啟動瞬間 inner 可能還是舊值
+function VH(){ if(SIM)return SIM_H;
+  return Math.round(Math.max(window.innerHeight, window.visualViewport?window.visualViewport.height:0)); }  // 用 max 也避免鍵盤彈出把 vv 縮小造成跳動
 function applySimScale(){
   const sc=document.getElementById("scene"); if(!sc)return;
   if(SIM){ simScale=Math.min(1,(window.innerHeight-40)/SIM_H,(window.innerWidth-40)/SIM_W);
@@ -2880,6 +2882,9 @@ function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY
   panX=VW()/2 - fx*worldScale; panY=VH()/2 - fy*worldScale; clampPan(); applyWorld(); }
 function layout(){
   applySimScale();
+  const sc=document.getElementById("scene");
+  if(sc){ if(SIM){ sc.style.width=""; sc.style.height=""; }               // 模擬器交給 CSS 固定尺寸
+    else{ sc.style.width=VW()+"px"; sc.style.height=VH()+"px"; } }        // 實機：JS 直接定尺寸——iOS PWA 橫置啟動 100dvh 會卡舊值，導致世界被裁、底部露綠帶
   document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
   worldScale=calcWorldScale();
   clampPan(); applyWorld();
