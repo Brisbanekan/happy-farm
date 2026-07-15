@@ -2900,6 +2900,26 @@ function relayoutIfChanged(){
   }
 }
 window.addEventListener("scroll",function(){ if(!SIM&&(window.scrollY||window.pageYOffset))window.scrollTo(0,0); },{passive:true});
+/* ?debug=1 排版診斷面板：顯示實機視窗與世界縮放數值 */
+if(/[?&]debug=1/.test(location.search)){
+  const dbg=document.createElement("div");
+  dbg.style.cssText="position:fixed;left:4px;bottom:4px;z-index:999999;background:#000c;color:#0f0;font:10px/1.5 monospace;padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre";
+  document.body.appendChild(dbg);
+  setInterval(function(){
+    const vv=window.visualViewport;
+    const w=document.getElementById("world");
+    const wr=w?w.getBoundingClientRect():{top:0,left:0,height:0,width:0};
+    dbg.textContent=
+      "inner "+window.innerWidth+"x"+window.innerHeight+
+      "\nvv "+(vv?Math.round(vv.width)+"x"+Math.round(vv.height)+" off "+Math.round(vv.offsetLeft)+","+Math.round(vv.offsetTop):"-")+
+      "\nscroll "+Math.round(window.scrollX)+","+Math.round(window.scrollY)+
+      "\nscreen "+screen.width+"x"+screen.height+" or:"+(screen.orientation?screen.orientation.type:"-")+
+      "\nws "+worldScale.toFixed(3)+" base "+computeBaseScale().toFixed(3)+" cover "+coverScale().toFixed(3)+
+      "\npan "+Math.round(panX)+","+Math.round(panY)+" zoom "+userZoom.toFixed(2)+" narrow "+isNarrow()+
+      "\nworldRect t"+Math.round(wr.top)+" l"+Math.round(wr.left)+" "+Math.round(wr.width)+"x"+Math.round(wr.height)+
+      "\nsceneRect "+JSON.stringify((r=>({t:Math.round(r.top),l:Math.round(r.left),w:Math.round(r.width),h:Math.round(r.height)}))(document.getElementById("scene").getBoundingClientRect()));
+  },800);
+}
 [120,350,700,1500,3000].forEach(function(ms){setTimeout(relayoutIfChanged,ms);});          // 開場後多次補查（載入瞬間尺寸未穩定）
 window.addEventListener("pageshow",function(){setTimeout(relayoutIfChanged,60);});          // 從快取返回
 document.addEventListener("visibilitychange",function(){ if(!document.hidden)setTimeout(relayoutIfChanged,60); });  // 從背景喚醒
