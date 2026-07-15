@@ -38,6 +38,11 @@
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
   #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);cursor:pointer;pointer-events:auto;}   /* 點工廠開加工面板 */
+  /* 熱氣球隨機事件 */
+  #balloon{position:absolute;left:-90px;top:120px;z-index:6;font-size:56px;cursor:pointer;display:none;
+    filter:drop-shadow(0 6px 4px #0003);user-select:none;}
+  #balloon.fly{display:block;}
+  body.editmode #balloon{pointer-events:none;}
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
   /* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
   .ground{position:absolute;left:0;right:0;top:24%;bottom:0;z-index:0;overflow:hidden;
@@ -706,6 +711,7 @@
   <div class="bld bhouse" onclick="openProfile()" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
   <div class="bld factory" onclick="openFactory()"><img src="building/factory.png" alt="工廠"></div>
+  <div id="balloon" onclick="popBalloon()">🎈</div>
 
   <!-- 田地 -->
   <div class="fieldshadow"></div>
@@ -2739,6 +2745,76 @@ function walkDog(){
   clearTimeout(dogTimer);dogTimer=setTimeout(walkDog, dur*1000 + 500 + Math.random()*1800);
 }
 
+/* ============ 熱氣球隨機事件（機會/命運） ============ */
+let balloonTimer=null, balloonActive=false;
+function scheduleBalloon(first){
+  clearTimeout(balloonTimer);
+  const ms=first?(60000+Math.random()*60000):(180000+Math.random()*180000);   // 首次1~2分，之後3~6分
+  balloonTimer=setTimeout(spawnBalloon,ms);
+}
+function spawnBalloon(){
+  const b=document.getElementById("balloon");
+  if(!b||balloonActive||VISIT.on||stockOpen||(typeof editOn!=="undefined"&&editOn)){scheduleBalloon();return;}
+  balloonActive=true;
+  const y=60+Math.random()*200, dur=38;
+  b.style.transition="none"; b.style.left="-90px"; b.style.top=y+"px"; b.classList.add("fly");
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    b.style.transition="left "+dur+"s linear, top "+dur+"s ease-in-out";
+    b.style.left="1480px"; b.style.top=(y+(Math.random()*60-30))+"px";
+  });});
+  setTimeout(function(){ if(balloonActive){hideBalloon();scheduleBalloon();} }, dur*1000+500);   // 沒點到就飄走
+}
+function hideBalloon(){ balloonActive=false;
+  const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transition="none";b.style.left="-90px";} }
+const BEVENTS=[   // w=權重；好事共80、壞事共20
+  {w:15,f:function(){const v=(50+Math.floor(Math.random()*100))*Math.max(1,Math.floor(G.level/2));G.gold+=v;
+    return{e:"🪙",t:"機會",d:"熱氣球灑下金幣雨！<br>獲得 <b>"+v.toLocaleString()+"</b> 金幣"};}},
+  {w:8,f:function(){const v=1+(Math.random()<0.2?1:0);G.credit+=v;
+    return{e:"💎",t:"機會",d:"空投補給箱！<br>獲得 <b>"+v+"</b> 顆鑽石"};}},
+  {w:12,f:function(){let n=0;G.plots.forEach(function(p){if(p.unlocked&&p.state==="planted"&&!p.ripe){p.grow+=30;n++;
+      const t=CROPS[p.crop].grow;if(p.grow>=t){p.grow=t;p.ripe=true;}}});
+    return{e:"🌱",t:"機會",d:n?("春風拂過農場！<br><b>"+n+"</b> 塊田的作物成長 +30 秒"):"春風拂過農場！<br>可惜現在沒有成長中的作物"};}},
+  {w:10,f:function(){const v=3+Math.floor(Math.random()*6);G.charm+=v;
+    return{e:"❤️",t:"機會",d:"農場網紅來拍片打卡！<br>魅力 +<b>"+v+"</b>"};}},
+  {w:10,f:function(){const ks=Object.keys(CROPS).filter(k=>CROPS[k].type==="crop"&&CROPS[k].lvl<=G.level);
+    const k=ks[Math.floor(Math.random()*ks.length)];const n=5+Math.floor(Math.random()*6);
+    G.harvest[k]=(G.harvest[k]||0)+n;
+    return{e:CROPS[k].emoji,t:"機會",d:"路過的商隊送你<br><b>"+CROPS[k].name+" ×"+n+"</b>"};}},
+  {w:8,f:function(){let n=0;if(Array.isArray(G.ranch))G.ranch.forEach(function(s){if(s&&!s.ready){
+      s.prod+=ANIMALS[s.a].time*0.5;if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}n++;}});
+    return{e:"🐮",t:"機會",d:n?("動物們心情大好！<br><b>"+n+"</b> 隻動物生產進度 +50%"):"動物們心情大好！<br>但牧場目前沒有生產中的動物"};}},
+  {w:8,f:function(){G.ferts.f1=(G.ferts.f1||0)+2;
+    return{e:"💩",t:"機會",d:"撿到熱氣球掉落的包裹：<br><b>普通肥料 ×2</b>"};}},
+  {w:9,f:function(){const v=G.level*10;gainXp(v);
+    return{e:"⭐",t:"機會",d:"看熱氣球看出了靈感！<br>經驗 +<b>"+v+"</b>"};}},
+  {w:7,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.bug);
+    if(pl.length){pl[Math.floor(Math.random()*pl.length)].bug=1;
+      return{e:"🐜",t:"命運",bad:1,d:"熱氣球嚇跑了鳥群，蟲蟲趁虛而入！<br>一塊田生蟲了，快去除蟲"};}
+    return{e:"🐜",t:"命運",bad:1,d:"蟲群飛過農場…<br>幸好沒有作物受害"};}},
+  {w:7,f:function(){const v=Math.min(G.gold,Math.round(G.gold*0.03)+20);G.gold-=v;
+    return{e:"💸",t:"命運",bad:1,d:"熱氣球緊急降落壓壞了圍籬…<br>賠了 <b>"+v.toLocaleString()+"</b> 金幣修理費"};}},
+  {w:6,f:function(){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.dry);
+    if(pl.length){pl[Math.floor(Math.random()*pl.length)].dry=true;
+      return{e:"🌪️",t:"命運",bad:1,d:"熱氣球捲起一陣強風！<br>一塊田變乾旱了，記得澆水"};}
+    return{e:"🌪️",t:"命運",bad:1,d:"一陣強風吹過…<br>幸好田地無恙"};}}
+];
+function popBalloon(){
+  if(typeof editOn!=="undefined"&&editOn)return;
+  if(!balloonActive)return;
+  hideBalloon(); scheduleBalloon();
+  const tot=BEVENTS.reduce(function(a,x){return a+x.w;},0);
+  let r=Math.random()*tot, ev=BEVENTS[0];
+  for(let i=0;i<BEVENTS.length;i++){ r-=BEVENTS[i].w; if(r<=0){ev=BEVENTS[i];break;} }
+  const res=ev.f();
+  log("🎈 "+res.t+"："+res.d.replace(/<[^>]*>/g,""),(res.bad?"r":"g"));
+  showM('<h2>🎈 '+(res.bad?"命運":"機會")+' <button class="x" onclick="closeM()">×</button></h2>'+
+    '<div class="body" style="text-align:center">'+
+    '<div style="font-size:64px;margin:10px 0">'+res.e+'</div>'+
+    '<p style="font-size:15px;font-weight:800;line-height:1.8">'+res.d+'</p>'+
+    '<button class="pbtn gold" style="padding:10px 28px" onclick="closeM()">確定</button></div>');
+  renderHUD(); render(); saveGame();
+}
+
 /* ============ 時間循環 ============ */
 function tick(){
   G.plots.forEach(p=>{
@@ -2859,7 +2935,7 @@ function buildWorld(){
   const wc=document.createElement("div"); wc.className="wcontent";
   world.appendChild(wc);
   sc.insertBefore(world, sc.firstChild);
-  sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,.bld,#dog").forEach(function(n){wc.appendChild(n);});
+  sc.querySelectorAll(".ground,.horizon,.groundgrid,.fieldshadow,.field,.sun,.cloud,.deco,.bld,#dog,#balloon").forEach(function(n){wc.appendChild(n);});
 }
 function clampPan(){
   const vw=VW(), vh=VH(), ww=WORLD_W*worldScale, wh=WORLD_H*worldScale;
@@ -3253,6 +3329,7 @@ initEditor();
 initFabDrag();
 initAuth();
 setInterval(tick,1500);
+scheduleBalloon(true);   // 熱氣球隨機事件：首次 1~2 分鐘後出現
 /* setTimeout(walkDog,700); */   // 狗散步已停用：狗與狗屋為固定擺設（佈局編輯模式可調位置）
 /* build-ok r12：移除K線切換鈕回歸預設、報價加快取破壞與過期防護修正與圖表不一致 */
 </script>
