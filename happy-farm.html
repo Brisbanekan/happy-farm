@@ -2752,7 +2752,8 @@ function tick(){
       done.forEach(x=>{const r=FGOODS[x.k]; if(!r)return;
         G.goods[x.k]=(G.goods[x.k]||0)+1;
         log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
-  if(document.getElementById("factPanel"))openFactory();   // 面板開著時刷新倒數
+  { const mk=document.getElementById("mask");   // 面板「真的開著」（遮罩顯示中）才刷新倒數，避免關閉後又自己跳出
+    if(document.getElementById("factPanel")&&mk&&mk.classList.contains("on"))openFactory(); }
   stockTick();   // 股價波動＋限價單撮合
   render();
   saveGame();
