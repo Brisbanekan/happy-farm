@@ -2931,7 +2931,7 @@ function panMove(e){
   const p=e.touches?e.touches[0]:e;
   const k=SIM?simScale:1;
   const dx=(p.clientX-dragSX)/k, dy=(p.clientY-dragSY)/k;
-  if(Math.abs(dx)+Math.abs(dy)>6)panMoved=true;
+  if(Math.abs(dx)+Math.abs(dy)>(e.touches?14:6))panMoved=true;   // 觸控門檻放寬：手指自然抖動不算拖曳，點田地才不會被吃掉
   if(e.touches&&e.cancelable)e.preventDefault();
   if(panMoved){
     panX=panSX+dx; panY=panSY+dy; clampPan(); applyWorld();
@@ -3005,7 +3005,7 @@ function initFabDrag(){
     function mv(ev){
       const q=ev.touches?ev.touches[0]:ev;
       const dx=q.clientX-sx, dy=q.clientY-sy;
-      if(!moved&&Math.abs(dx)+Math.abs(dy)>8){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合
+      if(!moved&&Math.abs(dx)+Math.abs(dy)>(ev.touches?12:8)){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合（觸控門檻放寬）
       if(moved){
         const nl=Math.max(0,Math.min(bl+dx,window.innerWidth-r.width));
         const nt=Math.max(0,Math.min(bt+dy,window.innerHeight-r.height));
@@ -3156,7 +3156,7 @@ if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js")
 (function(){
   if(!/Android/i.test(navigator.userAgent))return;
   if(window.matchMedia&&matchMedia('(display-mode: fullscreen)').matches)return;   // 已是全螢幕 PWA 就不用
-  window.addEventListener("pointerdown",function(){
+  window.addEventListener("pointerup",function(){   // 放開才進全螢幕：避免按下瞬間視窗改變讓點擊落空
     const el=document.documentElement;
     if(document.fullscreenElement)return;
     const f=el.requestFullscreen||el.webkitRequestFullscreen;
