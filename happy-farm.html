@@ -32,7 +32,7 @@
   #world .field{left:1155px;top:736px;transform:translate(-50%,-50%) rotate(14deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(14deg)＝整塊田順時針轉14度（不影響等角貼圖） */
   #world .fieldshadow{left:1155px;top:821px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
-  #world .bld.storage{left:1px;top:241px;width:390px;}
+  #world .bld.storage{left:1px;top:241px;width:390px;cursor:pointer;pointer-events:auto;}   /* 點倉庫開倉庫面板 */
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
   #world .bld.bhouse{left:606px;top:340px;width:382px;cursor:pointer;pointer-events:auto;}   /* 點房子開角色資料 */
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
@@ -707,7 +707,7 @@
   <div class="visitbar"><span id="visitName"></span><button onclick="leaveVisit()">🏡 離開</button></div>
 
   <!-- 建築物（家 / 倉庫） -->
-  <div class="bld storage"><img src="building/storage.png" alt="倉庫"></div>
+  <div class="bld storage" onclick="if(!(typeof editOn!=='undefined'&&editOn))openInv('harvest')"><img src="building/storage.png" alt="倉庫"></div>
   <div class="bld bhouse" onclick="openProfile()" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
   <div class="bld factory" onclick="openFactory()"><img src="building/factory.png" alt="工廠"></div>
