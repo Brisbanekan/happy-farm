@@ -2752,19 +2752,24 @@ function scheduleBalloon(first){
   const ms=first?(60000+Math.random()*60000):(180000+Math.random()*180000);   // 首次1~2分，之後3~6分
   balloonTimer=setTimeout(spawnBalloon,ms);
 }
+let balloonEnd=0;
 function spawnBalloon(){
   const b=document.getElementById("balloon");
   if(!b||balloonActive||VISIT.on||stockOpen||(typeof editOn!=="undefined"&&editOn)){scheduleBalloon();return;}
   balloonActive=true;
   const y=60+Math.random()*200, dur=38;
   b.style.transition="none"; b.style.left="-90px"; b.style.top=y+"px"; b.classList.add("fly");
-  requestAnimationFrame(function(){requestAnimationFrame(function(){
+  void b.offsetWidth;   // 強制 reflow，讓上面的初始位置生效，下一步的 transition 才會動畫
+  setTimeout(function(){
+    if(!balloonActive)return;
     b.style.transition="left "+dur+"s linear, top "+dur+"s ease-in-out";
     b.style.left="1480px"; b.style.top=(y+(Math.random()*60-30))+"px";
-  });});
-  setTimeout(function(){ if(balloonActive){hideBalloon();scheduleBalloon();} }, dur*1000+500);   // 沒點到就飄走
+  },30);
+  balloonEnd=Date.now()+dur*1000+800;
+  clearTimeout(balloonTimer);
+  balloonTimer=setTimeout(function(){ if(balloonActive){hideBalloon();scheduleBalloon();} }, dur*1000+800);   // 沒點到就飄走
 }
-function hideBalloon(){ balloonActive=false;
+function hideBalloon(){ balloonActive=false; balloonEnd=0;
   const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transition="none";b.style.left="-90px";} }
 const BEVENTS=[   // w=權重；機會共80（8種）、命運共80（9種）＝50:50
   {w:15,f:function(){const v=(50+Math.floor(Math.random()*100))*Math.max(1,Math.floor(G.level/2));G.gold+=v;
@@ -2861,6 +2866,8 @@ function tick(){
         log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
   { const mk=document.getElementById("mask");   // 面板「真的開著」（遮罩顯示中）才刷新倒數，避免關閉後又自己跳出
     if(document.getElementById("factPanel")&&mk&&mk.classList.contains("on"))openFactory(); }
+  // 熱氣球逾時保險：任何原因卡住（分頁休眠、動畫沒觸發）超過預定時間就強制回收並重新排程
+  if(balloonActive&&balloonEnd&&Date.now()>balloonEnd+2000){ hideBalloon(); scheduleBalloon(); }
   stockTick();   // 股價波動＋限價單撮合
   render();
   saveGame();
