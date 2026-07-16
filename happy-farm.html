@@ -39,8 +39,8 @@
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
   #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);cursor:pointer;pointer-events:auto;}   /* 點工廠開加工面板 */
   /* 熱氣球隨機事件 */
-  #balloon{position:absolute;left:-90px;top:120px;z-index:6;font-size:56px;cursor:pointer;display:none;
-    filter:drop-shadow(0 6px 4px #0003);user-select:none;}
+  #balloon{position:absolute;left:0;top:120px;z-index:6;font-size:56px;cursor:pointer;display:none;
+    filter:drop-shadow(0 6px 4px #0003);user-select:none;will-change:transform;transform:translateX(-140px);}
   #balloon.fly{display:block;}
   body.editmode #balloon{pointer-events:none;}
   .bld,.bld img{animation:none!important;}   /* 建築物完全靜止 */
@@ -2758,19 +2758,19 @@ function spawnBalloon(){
   if(!b||balloonActive||VISIT.on||stockOpen||(typeof editOn!=="undefined"&&editOn)){scheduleBalloon();return;}
   balloonActive=true;
   const y=60+Math.random()*200, dur=38;
-  b.style.transition="none"; b.style.left="-90px"; b.style.top=y+"px"; b.classList.add("fly");
-  void b.offsetWidth;   // 強制 reflow，讓上面的初始位置生效，下一步的 transition 才會動畫
+  b.style.transition="none"; b.style.transform="translateX(-140px)"; b.style.top=y+"px"; b.classList.add("fly");
+  void b.offsetWidth;   // 強制 reflow，讓初始 transform 生效，下一步才會動畫
   setTimeout(function(){
     if(!balloonActive)return;
-    b.style.transition="left "+dur+"s linear, top "+dur+"s ease-in-out";
-    b.style.left="1480px"; b.style.top=(y+(Math.random()*60-30))+"px";
+    b.style.transition="transform "+dur+"s linear";   // 用 transform 動畫：不受 #world 縮放/合成層干擾
+    b.style.transform="translateX(2340px)";           // 橫跨整個世界寬(2200)＋兩側緩衝
   },30);
   balloonEnd=Date.now()+dur*1000+800;
   clearTimeout(balloonTimer);
   balloonTimer=setTimeout(function(){ if(balloonActive){hideBalloon();scheduleBalloon();} }, dur*1000+800);   // 沒點到就飄走
 }
 function hideBalloon(){ balloonActive=false; balloonEnd=0;
-  const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transition="none";b.style.left="-90px";} }
+  const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transition="none";b.style.transform="translateX(-140px)";} }
 const BEVENTS=[   // w=權重；機會共80（8種）、命運共80（9種）＝50:50
   {w:15,f:function(){const v=(50+Math.floor(Math.random()*100))*Math.max(1,Math.floor(G.level/2));G.gold+=v;
     return{e:"🪙",t:"機會",d:"熱氣球灑下金幣雨！<br>獲得 <b>"+v.toLocaleString()+"</b> 金幣"};}},
