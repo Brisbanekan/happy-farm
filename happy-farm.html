@@ -2752,29 +2752,29 @@ function scheduleBalloon(first){
   const ms=first?(60000+Math.random()*60000):(180000+Math.random()*180000);   // 首次1~2分，之後3~6分
   balloonTimer=setTimeout(spawnBalloon,ms);
 }
-let balloonEnd=0, balloonRAF=0, balloonY0=0, balloonY1=0;
+let balloonEnd=0, balloonInt=0, balloonY0=0, balloonY1=0, balloonStart=0;
 const BALLOON_X0=-140, BALLOON_X1=2340, BALLOON_DUR=38000;
+function balloonFrame(){
+  if(!balloonActive)return;
+  const b=document.getElementById("balloon"); if(!b)return;
+  const t=Math.min(1,(Date.now()-balloonStart)/BALLOON_DUR);
+  const x=BALLOON_X0+(BALLOON_X1-BALLOON_X0)*t;
+  const y=balloonY0+(balloonY1-balloonY0)*t + Math.sin(t*Math.PI*2)*8;   // 略帶上下起伏
+  b.style.transform="translate("+x.toFixed(1)+"px,"+y.toFixed(1)+"px)";
+  if(t>=1){ hideBalloon(); scheduleBalloon(); }
+}
 function spawnBalloon(){
   const b=document.getElementById("balloon");
   if(!b||balloonActive||VISIT.on||stockOpen||(typeof editOn!=="undefined"&&editOn)){scheduleBalloon();return;}
   balloonActive=true;
   balloonY0=60+Math.random()*200; balloonY1=balloonY0+(Math.random()*60-30);
   b.style.transition="none"; b.classList.add("fly");
-  const start=Date.now(); balloonEnd=start+BALLOON_DUR+800;
-  // JS 逐幀動畫：繞過 CSS transition（使用者若開「減少動態效果」，transition 會被瀏覽器忽略）
-  function step(){
-    if(!balloonActive)return;
-    const t=Math.min(1,(Date.now()-start)/BALLOON_DUR);
-    const x=BALLOON_X0+(BALLOON_X1-BALLOON_X0)*t;
-    const y=balloonY0+(balloonY1-balloonY0)*t + Math.sin(t*Math.PI*2)*8;   // 略帶上下起伏
-    b.style.transform="translate("+x.toFixed(1)+"px,"+y.toFixed(1)+"px)";
-    if(t>=1){ hideBalloon(); scheduleBalloon(); return; }
-    balloonRAF=requestAnimationFrame(step);
-  }
-  balloonRAF=requestAnimationFrame(step);
+  balloonStart=Date.now(); balloonEnd=balloonStart+BALLOON_DUR+800;
+  // 用 setInterval 逐幀：繞過 CSS transition（reduced-motion 會被忽略）與 RAF（背景分頁會暫停）兩個坑
+  clearInterval(balloonInt); balloonInt=setInterval(balloonFrame,50); balloonFrame();
 }
 function hideBalloon(){ balloonActive=false; balloonEnd=0;
-  if(balloonRAF)cancelAnimationFrame(balloonRAF); balloonRAF=0;
+  clearInterval(balloonInt); balloonInt=0;
   const b=document.getElementById("balloon"); if(b){b.classList.remove("fly");b.style.transform="translate("+BALLOON_X0+"px,0)";} }
 const BEVENTS=[   // w=權重；機會共80（8種）、命運共80（9種）＝50:50
   {w:15,f:function(){const v=(50+Math.floor(Math.random()*100))*Math.max(1,Math.floor(G.level/2));G.gold+=v;
