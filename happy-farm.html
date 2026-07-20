@@ -3013,6 +3013,10 @@ function layout(){
   if(sc){ if(SIM){ sc.style.width=""; sc.style.height=""; }               // 模擬器交給 CSS 固定尺寸
     else{ sc.style.width=VW()+"px"; sc.style.height=VH()+"px"; } }        // 實機：JS 直接定尺寸——iOS PWA 橫置啟動 100dvh 會卡舊值，導致世界被裁、底部露綠帶
   document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
+  if(!isNarrow()){   // 桌機/網頁：清掉手機拖曳留下的行內定位與展開狀態，讓功能列固定回 CSS 版面（每日/拉霸/股市不再位移）
+    const lb=document.getElementById("leftbar");
+    if(lb){ lb.style.left=""; lb.style.top=""; lb.style.bottom=""; lb.classList.remove("expand-down","open"); lb._fab=null; }
+  }
   worldScale=calcWorldScale();
   clampPan(); applyWorld();
 }
