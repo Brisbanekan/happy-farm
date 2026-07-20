@@ -2883,7 +2883,9 @@ function showM(h){document.getElementById("modal").innerHTML=h;document.getEleme
 function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
-function toggleLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.toggle("open");}
+function toggleLeftbar(){const lb=document.getElementById("leftbar");if(!lb)return;
+  if(!lb.classList.contains("open")&&typeof updateFabDir==="function")updateFabDir();   // 展開前先依 🎯 現位置重釘錨邊，避免 top錨+column-reverse 造成展開位移
+  lb.classList.toggle("open");}
 function closeLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.remove("open");}
 let logCount=0;
 function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<span class="'+cls+'">'+t+'</span>';else p.innerHTML=t;const l=document.getElementById("logList");l.prepend(p);logCount++;if(logCount>60&&l.lastChild)l.removeChild(l.lastChild);}
