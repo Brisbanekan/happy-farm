@@ -3145,11 +3145,12 @@ function openTopMenu(){
     '</div></div>');
 }
 /* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機；依所在位置自動決定展開方向 */
-function fabEnv(){   // 功能鈕座標一律用 #scene 內部座標（手機預覽的縮放/置中、桌機都正確）
+const FAB_MARGIN=4;   // 功能鈕邊界安全內縮
+function fabEnv(){   // 功能鈕座標用 #scene 內部座標；邊界以 scene 實際渲染尺寸為準（不用 VW/VH，避免 PWA/iOS screen 修正值過大讓按鈕拖出畫面）
   const sc=document.getElementById("scene");
-  const r=sc?sc.getBoundingClientRect():{left:0,top:0};
+  const r=sc?sc.getBoundingClientRect():{left:0,top:0,width:0,height:0};
   const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
-  return {sx:r.left,sy:r.top,k:k};
+  return {sx:r.left,sy:r.top,k:k, w:(r.width/k)||VW(), h:(r.height/k)||VH()};
 }
 function updateFabDir(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
@@ -3166,8 +3167,8 @@ function clampFab(){   // 把功能鈕拉回 scene 範圍內（全螢幕切換/�
   const e=fabEnv();
   const w=r.width/e.k, h=r.height/e.k;
   const lx=(r.left-e.sx)/e.k, ly=(r.top-e.sy)/e.k;
-  const nl=Math.max(0,Math.min(lx,VW()-w));
-  const nt=Math.max(0,Math.min(ly,VH()-h));
+  const nl=Math.max(FAB_MARGIN,Math.min(lx,e.w-w-FAB_MARGIN));   // 以 scene 實際寬高為界
+  const nt=Math.max(FAB_MARGIN,Math.min(ly,e.h-h-FAB_MARGIN));
   if(Math.abs(nl-lx)>1||Math.abs(nt-ly)>1){
     bar.style.left=nl+"px"; bar.style.top=nt+"px"; bar.style.bottom="auto"; updateFabDir();
     try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(nl),t:Math.round(nt)}));}catch(e2){}
@@ -3194,8 +3195,8 @@ function initFabDrag(){
       const dx=(q.clientX-sx)/env.k, dy=(q.clientY-sy)/env.k;
       if(!moved&&Math.abs(dx)+Math.abs(dy)>(ev.touches?12:8)){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合（觸控門檻放寬）
       if(moved){
-        const nl=Math.max(0,Math.min(bl+dx,VW()-w));
-        const nt=Math.max(0,Math.min(bt+dy,VH()-h));
+        const nl=Math.max(FAB_MARGIN,Math.min(bl+dx,env.w-w-FAB_MARGIN));   // 以 scene 實際寬高為界
+        const nt=Math.max(FAB_MARGIN,Math.min(bt+dy,env.h-h-FAB_MARGIN));
         bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
         if(ev.cancelable)ev.preventDefault();
       }
