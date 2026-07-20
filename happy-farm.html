@@ -2884,7 +2884,9 @@ function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
 function toggleLeftbar(){const lb=document.getElementById("leftbar");if(!lb)return;
-  if(!lb.classList.contains("open")&&typeof updateFabDir==="function")updateFabDir();   // 展開前先依 🎯 現位置重釘錨邊，避免 top錨+column-reverse 造成展開位移
+  if(!lb.classList.contains("open")){   // 展開前重釘錨邊：優先用快取(零漂移)，無快取才量一次
+    if(!(typeof applyFabAnchor==="function"&&applyFabAnchor())&&typeof updateFabDir==="function")updateFabDir();
+  }
   lb.classList.toggle("open");}
 function closeLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.remove("open");}
 let logCount=0;
@@ -3163,6 +3165,13 @@ function updateFabDir(){
   bar.classList.toggle("expand-down",down);
   if(down){ bar.style.top=top+"px"; bar.style.bottom="auto"; }
   else{ bar.style.bottom=(e.h-bot)+"px"; bar.style.top="auto"; }
+  bar._fab={down:down, top:bar.style.top, bottom:bar.style.bottom};   // 快取本次錨定，供展開/收合直接重用（避免每次重新量 rect 造成累積下移）
+}
+function applyFabAnchor(){   // 依快取重貼錨定，數值固定＝零漂移
+  const bar=document.getElementById("leftbar"); if(!bar||!bar._fab)return false;
+  bar.classList.toggle("expand-down",bar._fab.down);
+  bar.style.top=bar._fab.top; bar.style.bottom=bar._fab.bottom;
+  return true;
 }
 function clampFab(){   // 把功能鈕拉回 scene 範圍內（全螢幕切換/轉向/模式切換/異常存檔都靠這個救回）
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
