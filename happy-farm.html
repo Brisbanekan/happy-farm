@@ -3150,16 +3150,17 @@ function fabEnv(){   // 功能鈕座標用 #scene 內部座標；邊界以 scene
   const sc=document.getElementById("scene");
   const r=sc?sc.getBoundingClientRect():{left:0,top:0,width:0,height:0};
   const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
-  return {sx:r.left,sy:r.top,k:k, w:(r.width/k)||VW(), h:(r.height/k)||VH()};
+  const bl=sc?sc.clientLeft:0, bt=sc?sc.clientTop:0;   // 模擬器機身框(11px border)：rect 含框、但定位原點在框內 → 原點加框、尺寸用 clientWidth/Height(不含框)
+  return {sx:r.left+bl*k,sy:r.top+bt*k,k:k, w:(sc&&sc.clientWidth)||VW(), h:(sc&&sc.clientHeight)||VH()};
 }
 function updateFabDir(){
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
   const e=fabEnv(); const tr=tg.getBoundingClientRect();
   const top=(tr.top-e.sy)/e.k, bot=(tr.bottom-e.sy)/e.k;
-  const down=(top+bot)/2 < VH()/2;   // 上半部→往下展開；下半部→往上展開
+  const down=(top+bot)/2 < e.h/2;   // 上半部→往下展開；下半部→往上展開（用 scene 內部高度，SIM 含框會偏）
   bar.classList.toggle("expand-down",down);
   if(down){ bar.style.top=top+"px"; bar.style.bottom="auto"; }
-  else{ bar.style.bottom=(VH()-bot)+"px"; bar.style.top="auto"; }
+  else{ bar.style.bottom=(e.h-bot)+"px"; bar.style.top="auto"; }
 }
 function clampFab(){   // 把功能鈕拉回 scene 範圍內（全螢幕切換/轉向/模式切換/異常存檔都靠這個救回）
   const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
