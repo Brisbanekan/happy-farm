@@ -278,7 +278,7 @@
     background:#fffef6;border:2px solid #f0c544;color:#c9920f;font-size:20px;font-weight:900;
     display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
   .penadd:active{transform:translateY(2px);box-shadow:none;}
-  .animal{position:absolute;font-size:30px;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
+  .animal{position:absolute;font-size:30px;cursor:pointer;will-change:left,top;transform:translate(-50%,-100%);}   /* 錨點改底部中心 */
   .animal .body{display:inline-block;animation:hop 1.1s ease-in-out infinite;filter:drop-shadow(0 3px 1px #0004);transition:transform .3s;}
   .animal .bubble{position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-size:18px;opacity:0;
     transition:opacity .25s;pointer-events:none;}
@@ -518,7 +518,7 @@
   #ranchBg .ranchpen .pr{top:-30px;bottom:-30px;right:-30px;width:52px;background:url(building/fence2.png) repeat-y;background-size:100% auto;}
   #ranchBg .ranchpenfront{position:absolute;left:276px;top:756px;width:848px;height:92px;z-index:3;pointer-events:none;
     background:url(building/fence3.png) repeat-x;background-size:auto 100%;filter:drop-shadow(0 4px 3px #0003);}
-  .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-50%);}
+  .animal{position:absolute;cursor:pointer;will-change:left,top;transform:translate(-50%,-100%);}   /* 錨點改底部中心：座標＝腳底，動物站在該點上 */
   .animal img.abody{display:block;height:64px;width:auto;filter:drop-shadow(0 4px 2px #0004);pointer-events:none;}
   .animal .bubble{position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-size:22px;opacity:0;
     transition:opacity .25s;pointer-events:none;}
