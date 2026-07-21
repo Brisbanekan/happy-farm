@@ -2964,10 +2964,7 @@ function computeBaseScale(){
 function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
 function calcWorldScale(){
   const s=computeBaseScale()*userZoom;
-  if(!isNarrow()) return Math.max(s, coverScale());                                   // 桌機維持填滿
-  const sc=document.getElementById("scene");
-  if(sc&&sc.classList.contains("s-ranch")) return Math.max(s, coverScale());          // 牧場維持填滿
-  return Math.max(s, VW()/WORLD_W);   // 農場（手機）：全景，但至少填滿寬度——視窗比例>2.2（如橫置開啟時 Safari 工具列還在）會左右露出兩層背景錯位
+  return Math.max(s, coverScale());   // 桌機/農場/牧場統一 cover 填滿：兩場景同大小、不露綠邊（cover≥VW/W，已涵蓋原本農場填寬需求，>2.2 比例也不會左右露背景）
 }
 // 使用者放大/縮小畫面
 function setZoom(mult){
