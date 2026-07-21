@@ -2022,7 +2022,18 @@ function render(){renderHUD();renderTools();renderGrid();renderPen();}
 
 /* ============ 小牧場（圍欄＋會走動的動物） ============ */
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
-let penNodes=[], penTimers=[];
+let penNodes=[], penTimers=[], penMotion=[];
+function zFor(y){return Math.round(y*10);}   // 遮擋層級：×10 提高解析度，減少相近 y 的同層抖動
+let zRAF=0;
+function startZTick(){ if(!zRAF)zRAF=requestAnimationFrame(zTick); }
+function zTick(){   // 移動中依即時內插 y 更新 z-index（背景分頁 rAF 暫停也無妨：回前景時 f>=1 直接補上終點層級）
+  let active=false; const now=performance.now();
+  for(let i=0;i<penNodes.length;i++){ const m=penMotion[i], el=penNodes[i]; if(!m||!el)continue;
+    let f=(now-m.t0)/m.ms; if(f>=1){f=1; penMotion[i]=null;} else active=true;
+    el.style.zIndex=zFor(m.y0+(m.y1-m.y0)*f);
+  }
+  zRAF = active?requestAnimationFrame(zTick):0;
+}
 // 動物活動範圍：背景圖的草原地帶（世界 1400 寬；y 約 530~800px → 53%~80%）
 // 動物活動範圍＝background4 圍籬內側（梯形：後方窄、前方寬）
 const RANCH_Y0=60, RANCH_Y1=75;      // 上(後)、下(前)
@@ -2050,15 +2061,15 @@ function renderPen(){
       el.innerHTML=animalMarkup(a);
       if(s.x==null||s.y==null||!inRanch(s.x,s.y)){const p=penPos();s.x=p.x;s.y=p.y;}  // 圍籬外的動物重置到籬內
       el.style.transition="none";
-      el.style.left=s.x+"%";el.style.top=s.y+"%";el.style.zIndex=Math.round(s.y);
+      el.style.left=s.x+"%";el.style.top=s.y+"%";el.style.zIndex=zFor(s.y);
       el.addEventListener("click",(function(idx){return function(){tapAnimal(idx);};})(i));
       ground.appendChild(el);penNodes[i]=el;
       scheduleWalk(i, 400+Math.random()*1600);
     }
     penNodes[i].classList.toggle("ready",!!s.ready);
   }
-  for(let i=G.ranch.length;i<penNodes.length;i++){if(penNodes[i]){clearTimeout(penTimers[i]);penNodes[i].remove();penNodes[i]=null;}}
-  penNodes.length=G.ranch.length;
+  for(let i=G.ranch.length;i<penNodes.length;i++){if(penNodes[i]){clearTimeout(penTimers[i]);penNodes[i].remove();penNodes[i]=null;penMotion[i]=null;}}
+  penNodes.length=G.ranch.length; penMotion.length=G.ranch.length;
 }
 const ANIMAL_SPEED=42; // 固定步行速度（像素/秒），數字越小走越慢
 function scheduleWalk(i,delay){clearTimeout(penTimers[i]);penTimers[i]=setTimeout(function(){walkAnimal(i);},delay);}
@@ -2074,7 +2085,8 @@ function walkAnimal(i){
   const body=el.querySelector(".abody");
   if(body&&Math.abs(p.x-ox)>0.3)body.style.transform="scaleX("+(p.x<ox?-1:1)+")";
   el.style.transition="left "+dur.toFixed(2)+"s linear, top "+dur.toFixed(2)+"s linear";
-  s.x=p.x;s.y=p.y;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.zIndex=Math.round(p.y);
+  s.x=p.x;s.y=p.y;el.style.left=p.x+"%";el.style.top=p.y+"%";
+  penMotion[i]={y0:oy,y1:p.y,t0:performance.now(),ms:dur*1000}; startZTick();   // z-index 交給 zTick 依即時 y 內插，避免整段用終點 y 造成前後突然跳動
   scheduleWalk(i, dur*1000 + 700 + Math.random()*1800); // 抵達後停一下再走
 }
 function tapAnimal(i){
@@ -2088,7 +2100,8 @@ function tapAnimal(i){
 }
 function clearPen(){
   for(let i=0;i<penNodes.length;i++){clearTimeout(penTimers[i]);if(penNodes[i])penNodes[i].remove();}
-  penNodes=[];penTimers=[];
+  penNodes=[];penTimers=[];penMotion=[];
+  if(zRAF){cancelAnimationFrame(zRAF);zRAF=0;}
   const g=document.getElementById("penGround");if(g)g.innerHTML="";
 }
 function sellRefund(k){return Math.floor(ANIMALS[k].cost*0.5);}
