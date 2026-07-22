@@ -3127,6 +3127,9 @@ function panDown(e){
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
   if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,#slotScene,.visitbar'))return;
+  const _bld=e.target&&e.target.closest&&e.target.closest('#world .bld[data-act]');   // 在建築實體像素上按下→不平移，讓點擊生效（透明處/空地照舊可拖）
+  if(_bld){ const _img=_bld.querySelector('img'); const _p=e.touches?e.touches[0]:e;
+    if(_img&&imgOpaqueAt(_img,_p.clientX,_p.clientY)){ dragActive=false; return; } }
   if(userZoom<=1){ dragActive=false; return; }   // 方向2：未放大不啟動平移，點擊保持純點擊（放大後才能拖曳）
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
