@@ -124,7 +124,7 @@
   }
   /* 建築物（家 / 倉庫）素材圖 */
   .bld{position:absolute;z-index:1;pointer-events:none;filter:drop-shadow(0 10px 8px #00000033);transition:opacity .35s;}
-  .zoomfade{opacity:.22;}   /* 放大聚焦時淡化周邊素材 */
+  .zoomfade{opacity:0;}   /* 放大聚焦時周邊素材漸漸淡化消失（.bld/#dog 已有 .35s 過渡） */
   #dog{transition:opacity .35s;}
   .bld img{display:block;width:100%;height:auto;}
   .grid{
@@ -3022,14 +3022,18 @@ function updateFade(){
   const sr=sc.getBoundingClientRect();
   const k=(typeof SIM!=="undefined"&&SIM)?simScale:1;
   const cx=VW()/2, cy=VH()/2, m=30;   // 中心點正對素材（含30px邊緣）才保持清楚，其餘淡化
-  FADE_SEL.forEach(function(s){
-    const el=document.querySelector("#world "+s); if(!el)return;
-    if(!on){el.classList.remove("zoomfade");return;}
-    const r=el.getBoundingClientRect();
+  function boxInside(el){const r=el.getBoundingClientRect();
     const x1=(r.left-sr.left)/k, x2=(r.right-sr.left)/k, y1=(r.top-sr.top)/k, y2=(r.bottom-sr.top)/k;
-    const inside=cx>=x1-m&&cx<=x2+m&&cy>=y1-m&&cy<=y2+m;
-    el.classList.toggle("zoomfade",!inside);
-  });
+    return cx>=x1-m&&cx<=x2+m&&cy>=y1-m&&cy<=y2+m;}
+  function applyGroup(sels){   // 群組：任一素材在中心就整組保持清楚，否則整組一起淡化——狗與狗屋同步靠這個
+    const els=sels.map(function(s){return document.querySelector("#world "+s);}).filter(Boolean);
+    if(!els.length)return;
+    if(!on){els.forEach(function(e){e.classList.remove("zoomfade");});return;}
+    const inside=els.some(boxInside);
+    els.forEach(function(e){e.classList.toggle("zoomfade",!inside);});
+  }
+  applyGroup([".bld.storage"]); applyGroup([".bld.bhouse"]); applyGroup([".bld.factory"]);
+  applyGroup([".bld.doghouse","#dog"]);   // 🐕 狗＋狗屋編成群組，淡化消失效果一起同步
 }
 function centerField(){ const nar=isNarrow(); const fx=nar?FFX:FX, fy=nar?FFY:FY;
   panX=VW()/2 - fx*worldScale; panY=VH()/2 - fy*worldScale; clampPan(); applyWorld(); }
