@@ -34,7 +34,7 @@
   #world .fieldshadow{left:1155px;top:821px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
   #world .bld.storage{left:1px;top:241px;width:390px;pointer-events:auto;}   /* 點倉庫開倉庫面板（游標由 JS 依描圖動態設定） */
-  #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
+  #world .bld.storage img{}   /* 倉庫新素材已正向，取消水平翻轉（描圖會自動偵測無翻轉） */
   #world .bld.bhouse{left:606px;top:340px;width:382px;pointer-events:auto;}   /* 點房子開角色資料（游標由 JS 動態設定） */
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
