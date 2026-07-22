@@ -3449,9 +3449,33 @@ function imgOpaqueAt(img,cx,cy){
     return cvv.getContext("2d").getImageData(px,py,1,1).data[3]>128;   // alpha 門檻拉高：只有夠不透明才算命中，邊界更貼合圖形
   }catch(e){return true;}
 }
+/* 由圖片 alpha 逐列取左右緣→多邊形，套 clip-path 把元素裁成圖形輪廓：透明角落在瀏覽器層級就成為純背景（hover/拖曳/點擊都不再被矩形攔截） */
+function silhouettePolygon(img,flip){
+  const N=80, sc=N/img.naturalWidth, W=N, H=Math.max(1,Math.round(img.naturalHeight*sc));
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  const ctx=cv.getContext("2d");ctx.imageSmoothingEnabled=false;
+  try{ctx.drawImage(img,0,0,W,H);}catch(e){return null;}
+  let d; try{d=ctx.getImageData(0,0,W,H).data;}catch(e){return null;}   // 跨來源污染(本機 file://)→ 回退成矩形，不裁
+  const op=function(x,y){return d[(y*W+x)*4+3]>100;};
+  const rows=[]; for(let y=0;y<H;y++){let mn=-1,mx=-1;for(let x=0;x<W;x++){if(op(x,y)){if(mn<0)mn=x;mx=x;}}if(mn>=0)rows.push([y,mn,mx]);}
+  if(rows.length<2)return null;
+  const stepR=Math.max(1,Math.round(rows.length/24)), right=[], left=[];
+  for(let i=0;i<rows.length;i+=stepR){const r=rows[i];right.push([r[2]+1,r[0]]);left.push([r[1],r[0]]);}
+  const L=rows[rows.length-1];right.push([L[2]+1,L[0]+1]);left.push([L[1],L[0]+1]);
+  return right.concat(left.reverse()).map(function(p){let px=p[0]/W*100,py=p[1]/H*100;if(flip)px=100-px;return px.toFixed(1)+"% "+py.toFixed(1)+"%";}).join(",");
+}
+function applyBldClip(el){
+  const img=el&&el.querySelector("img"); if(!img)return;
+  if(!img.complete||!img.naturalWidth){ img.addEventListener("load",function(){applyBldClip(el);},{once:true}); return; }
+  const tf=getComputedStyle(img).transform; let flip=false;
+  if(tf&&tf!=="none"){try{flip=new DOMMatrixReadOnly(tf).a<0;}catch(e){}}
+  const poly=silhouettePolygon(img,flip);
+  if(poly)el.style.clipPath="polygon("+poly+")";
+}
 const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
 function initBldHit(){
   document.querySelectorAll('#world .bld[data-act]').forEach(function(el){
+    applyBldClip(el);   // 裁成輪廓形狀
     el.addEventListener('click',function(ev){
       if(typeof editOn!=="undefined"&&editOn)return;   // 佈局編輯模式不觸發面板（交給編輯器拖曳）
       const img=el.querySelector('img');
