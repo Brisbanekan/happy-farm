@@ -574,7 +574,9 @@
   .topmenu .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
   .topmenu .tmitems{display:none;flex-direction:column;gap:8px;}
   .topmenu.open .tmitems{display:flex;}
-  body.narrow .topmenu .lbtn{width:46px;height:46px;font-size:21px;}
+  body.narrow .topmenu{top:calc(6px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));}   /* 往右上角靠，拉開與右側工具列的距離、貼齊螢幕圓角 */
+  body.narrow .topmenu .lbtn{width:40px;height:40px;font-size:17px;border-radius:12px;}   /* 縮小到近工具鈕尺寸、圓角對齊螢幕 */
+  body.narrow .topmenu .lbtn small{font-size:8px;margin-top:0;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
   body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
   body.narrow .zoomctrl{right:min(calc(58px + env(safe-area-inset-right,0px)),61px);bottom:60px;}   /* 手機：縮放鈕移到工具列左側，跟隨工具列貼邊 */
@@ -3165,6 +3167,16 @@ function openTopMenu(){
 }
 /* 功能鈕（🎯）可拖曳：像 iPhone 小白點，位置存本機；依所在位置自動決定展開方向 */
 const FAB_MARGIN=4;   // 功能鈕邊界安全內縮
+const FAB_SNAP=12;    // 磁吸門檻（scene px）
+function snapFabY(nt,h,env){   // 拖曳磁吸：靠近好友/商店/倉庫那一排時，把功能鈕垂直中心吸附到它們的中線
+  const db=document.querySelector('.dock .dbtn'); if(!db)return nt;
+  const dr=db.getBoundingClientRect(); if(!dr.height)return nt;
+  const dockCy=((dr.top+dr.bottom)/2 - env.sy)/env.k;   // dock 按鈕中線（scene 座標）
+  if(Math.abs((nt+h/2)-dockCy)<=FAB_SNAP){
+    return Math.max(FAB_MARGIN,Math.min(dockCy-h/2, env.h-h-FAB_MARGIN));
+  }
+  return nt;
+}
 function fabEnv(){   // 功能鈕座標用 #scene 內部座標；邊界以 scene 實際渲染尺寸為準（不用 VW/VH，避免 PWA/iOS screen 修正值過大讓按鈕拖出畫面）
   const sc=document.getElementById("scene");
   const r=sc?sc.getBoundingClientRect():{left:0,top:0,width:0,height:0};
@@ -3223,7 +3235,8 @@ function initFabDrag(){
       if(!moved&&Math.abs(dx)+Math.abs(dy)>(ev.touches?12:8)){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合（觸控門檻放寬）
       if(moved){
         const nl=Math.max(FAB_MARGIN,Math.min(bl+dx,env.w-w-FAB_MARGIN));   // 以 scene 實際寬高為界
-        const nt=Math.max(FAB_MARGIN,Math.min(bt+dy,env.h-h-FAB_MARGIN));
+        let nt=Math.max(FAB_MARGIN,Math.min(bt+dy,env.h-h-FAB_MARGIN));
+        nt=snapFabY(nt,h,env);   // 靠近 dock 那排時磁吸對齊中線
         bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
         if(ev.cancelable)ev.preventDefault();
       }
