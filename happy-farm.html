@@ -32,12 +32,12 @@
   #world .field{left:1155px;top:736px;transform:translate(-50%,-50%) rotate(14deg) scaleY(.5) rotate(45deg);}   /* 外層 rotate(14deg)＝整塊田順時針轉14度（不影響等角貼圖） */
   #world .fieldshadow{left:1155px;top:821px;width:560px;transform:translate(-50%,-50%);}
   /* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
-  #world .bld.storage{left:1px;top:241px;width:390px;cursor:pointer;pointer-events:auto;}   /* 點倉庫開倉庫面板 */
+  #world .bld.storage{left:1px;top:241px;width:390px;pointer-events:auto;}   /* 點倉庫開倉庫面板（游標由 JS 依描圖動態設定） */
   #world .bld.storage img{transform:scaleX(-1);}   /* 倉庫水平翻轉 */
-  #world .bld.bhouse{left:606px;top:340px;width:382px;cursor:pointer;pointer-events:auto;}   /* 點房子開角色資料 */
+  #world .bld.bhouse{left:606px;top:340px;width:382px;pointer-events:auto;}   /* 點房子開角色資料（游標由 JS 動態設定） */
   #world .bld.doghouse{left:944px;top:494px;width:72px;}
   #world .bld.doghouse img{transform:scaleX(-1);}   /* 狗屋水平翻轉 */
-  #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);cursor:pointer;pointer-events:auto;}   /* 點工廠開加工面板 */
+  #world .bld.factory{left:47px;top:521px;width:442px;transform:rotate(1deg);pointer-events:auto;}   /* 點工廠開加工面板（游標由 JS 動態設定） */
   /* 熱氣球隨機事件 */
   #balloon{position:absolute;left:0;top:0;z-index:6;font-size:56px;cursor:pointer;display:none;
     filter:drop-shadow(0 6px 4px #0003);user-select:none;will-change:transform;transform:translate(-140px,0);}
@@ -3418,10 +3418,10 @@ function alphaCanvasFor(img){
   const src=img&&(img.currentSrc||img.src); if(!src)return null;
   if(_alphaCv[src]!==undefined)return _alphaCv[src];
   if(!img.complete||!img.naturalWidth)return null;   // 尚未載入，先不快取（下次再試）
-  const s=Math.min(1,160/img.naturalWidth);
+  const s=Math.min(1,256/img.naturalWidth);   // 解析度拉高，邊界更貼合
   const cv=document.createElement("canvas");
   cv.width=Math.max(1,Math.round(img.naturalWidth*s)); cv.height=Math.max(1,Math.round(img.naturalHeight*s));
-  try{const cx=cv.getContext("2d");cx.drawImage(img,0,0,cv.width,cv.height);cx.getImageData(0,0,1,1);}
+  try{const cx=cv.getContext("2d");cx.imageSmoothingEnabled=false;cx.drawImage(img,0,0,cv.width,cv.height);cx.getImageData(0,0,1,1);}   // 關平滑：避免縮圖在邊緣產生半透明暈邊
   catch(e){_alphaCv[src]=null;return null;}   // 跨網域污染等 → 記為不可用，保底回退成整塊可點
   _alphaCv[src]=cv; return cv;
 }
@@ -3435,7 +3435,7 @@ function imgOpaqueAt(img,cx,cy){
     const cvv=alphaCanvasFor(img); if(!cvv)return true;
     const px=Math.max(0,Math.min(cvv.width-1,Math.round(u*cvv.width)));
     const py=Math.max(0,Math.min(cvv.height-1,Math.round(v*cvv.height)));
-    return cvv.getContext("2d").getImageData(px,py,1,1).data[3]>16;   // alpha 門檻
+    return cvv.getContext("2d").getImageData(px,py,1,1).data[3]>128;   // alpha 門檻拉高：只有夠不透明才算命中，邊界更貼合圖形
   }catch(e){return true;}
 }
 const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
@@ -3452,6 +3452,12 @@ function initBldHit(){
       }
       const act=BLD_ACT[el.getAttribute('data-act')]; if(act)act();
     });
+    el.addEventListener('mousemove',function(ev){   // 游標也描圖：只有不透明處才顯示手指，空白處回預設
+      if(typeof editOn!=="undefined"&&editOn){el.style.cursor='';return;}   // 編輯模式交給 CSS 的 move
+      const img=el.querySelector('img');
+      el.style.cursor=(img&&imgOpaqueAt(img,ev.clientX,ev.clientY))?'pointer':'default';
+    });
+    el.addEventListener('mouseleave',function(){el.style.cursor='';});
   });
 }
 /* ============ start ============ */
