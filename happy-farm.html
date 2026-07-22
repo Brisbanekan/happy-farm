@@ -1317,7 +1317,7 @@ function dailyCheck(){
   if(G.lastMarketDate!==today){ updateMarket(); G.lastMarketDate=today; }
   if(G.lastClaim!==today){ toast("🎁 每日登入獎勵可領取！"); log("🎁 今日登入獎勵可領取（點底部 🎁 每日）","b"); }
 }
-function rewardText(r){let a=[];if(r.g)a.push("<span class=coinico></span>"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+CROPS[k].name+"×"+n));return a.join(" ");}
+function rewardText(r){let a=[];if(r.g)a.push("<span class=coinico></span>"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+seedName(k)+"×"+n));return a.join(" ");}
 function claimDaily(){
   const today=todayStr();
   if(G.lastClaim===today){toast("今天已經領過囉");return;}
@@ -1329,7 +1329,7 @@ function claimDaily(){
   if(r.g){G.gold+=r.g;parts.push("<span class=coinico></span>"+r.g);}
   if(r.c){G.credit+=r.c;parts.push("💎"+r.c);}
   if(r.h){G.charm+=r.h;parts.push("❤️"+r.h);}
-  if(r.s)Object.entries(r.s).forEach(([k,n])=>{G.seeds[k]=(G.seeds[k]||0)+n;parts.push(CROPS[k].emoji+CROPS[k].name+"×"+n);});
+  if(r.s)Object.entries(r.s).forEach(([k,n])=>{G.seeds[k]=(G.seeds[k]||0)+n;parts.push(CROPS[k].emoji+seedName(k)+"×"+n);});
   if(G.totalDays%30===0){G.credit+=10;parts.push("｜累積"+G.totalDays+"天額外 💎10");} // 累積里程碑
   log("🎁 連續第 "+G.streak+" 天登入，領取："+parts.join(" "),"g");
   toast("領取成功 "+parts.join(" "));
@@ -2201,7 +2201,7 @@ function plantOn(i){
 }
 function openSeedPick(i,avail){
   let h='<h2>🌱 選擇種子 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
-  avail.forEach(k=>{const c=CROPS[k];h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b> ×'+G.seeds[k]+'</div><button class="pbtn" onclick="doPlant('+i+",'"+k+"');closeM()\">種下</button></div>";});
+  avail.forEach(k=>{const c=CROPS[k];h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b> ×'+G.seeds[k]+'</div><button class="pbtn" onclick="doPlant('+i+",'"+k+"');closeM()\">種下</button></div>";});
   h+='</div>';showM(h);
 }
 function doPlant(i,key){
@@ -2344,6 +2344,7 @@ function buyLand(i){
 }
 
 /* ============ 商店 ============ */
+function seedName(k){return (CROPS[k]?CROPS[k].name:"")+"種子";}   // 種子情境顯示名（作物名＋種子）；收成/原料仍用 CROPS[k].name
 function openShop(tab){
   tab=tab||"crop";const keys=Object.keys(CROPS);
   let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="body"><div class="tabs">'+
@@ -2389,7 +2390,7 @@ function openShop(tab){
         '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
-      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
+      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
   }
   h+='<p class="hint"><span class=coinico></span>金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
 }
@@ -2422,7 +2423,7 @@ function openInv(tab){
   }else{
     const ks=Object.keys(G.seeds).filter(k=>G.seeds[k]>0);
     if(ks.length===0)h+='<p class="hint">沒有種子，到商店買。</p>';
-    ks.forEach(k=>{const c=CROPS[k];h+='<div class="invitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+c.name+'</b> ×'+G.seeds[k]+'</div><button class="pbtn" onclick="selectSeed(\''+k+'\')">選此播種</button></div>';});
+    ks.forEach(k=>{const c=CROPS[k];h+='<div class="invitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b> ×'+G.seeds[k]+'</div><button class="pbtn" onclick="selectSeed(\''+k+'\')">選此播種</button></div>';});
     h+='<p class="hint">選好種子後，工具切到 🌱 播種，點翻好的田即可種下。</p>';
   }
   h+='</div>';showM(h);
