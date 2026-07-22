@@ -710,10 +710,10 @@
   <div class="visitbar"><span id="visitName"></span><button onclick="leaveVisit()">🏡 離開</button></div>
 
   <!-- 建築物（家 / 倉庫） -->
-  <div class="bld storage" onclick="if(!(typeof editOn!=='undefined'&&editOn))openInv('harvest')"><img src="building/storage.png" alt="倉庫"></div>
-  <div class="bld bhouse" onclick="openProfile()" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
+  <div class="bld storage" data-act="inv"><img src="building/storage.png" alt="倉庫"></div>
+  <div class="bld bhouse" data-act="profile" title="角色資料與成就"><img src="building/house.png" alt="家"></div>
   <div class="bld doghouse"><img src="building/doghouse.png" alt="狗屋"></div>
-  <div class="bld factory" onclick="openFactory()"><img src="building/factory.png" alt="工廠"></div>
+  <div class="bld factory" data-act="factory"><img src="building/factory.png" alt="工廠"></div>
   <div id="balloon" onclick="popBalloon()">🎈</div>
 
   <!-- 田地 -->
@@ -3127,6 +3127,7 @@ function panDown(e){
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
   if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,#slotScene,.visitbar'))return;
+  if(userZoom<=1){ dragActive=false; return; }   // 方向2：未放大不啟動平移，點擊保持純點擊（放大後才能拖曳）
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
@@ -3411,6 +3412,48 @@ if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js")
   },{passive:true});
 })();
 
+/* ============ 描圖點擊：依圖片實際不透明像素判斷命中，透明處把點擊讓給底下物件 ============ */
+const _alphaCv={};
+function alphaCanvasFor(img){
+  const src=img&&(img.currentSrc||img.src); if(!src)return null;
+  if(_alphaCv[src]!==undefined)return _alphaCv[src];
+  if(!img.complete||!img.naturalWidth)return null;   // 尚未載入，先不快取（下次再試）
+  const s=Math.min(1,160/img.naturalWidth);
+  const cv=document.createElement("canvas");
+  cv.width=Math.max(1,Math.round(img.naturalWidth*s)); cv.height=Math.max(1,Math.round(img.naturalHeight*s));
+  try{const cx=cv.getContext("2d");cx.drawImage(img,0,0,cv.width,cv.height);cx.getImageData(0,0,1,1);}
+  catch(e){_alphaCv[src]=null;return null;}   // 跨網域污染等 → 記為不可用，保底回退成整塊可點
+  _alphaCv[src]=cv; return cv;
+}
+function imgOpaqueAt(img,cx,cy){
+  try{
+    const r=img.getBoundingClientRect(); if(r.width<1||r.height<1)return true;
+    let u=(cx-r.left)/r.width, v=(cy-r.top)/r.height;
+    if(u<0||u>1||v<0||v>1)return false;
+    const tf=getComputedStyle(img).transform;
+    if(tf&&tf!=="none"){try{const m=new DOMMatrixReadOnly(tf);if(m.a<0)u=1-u;}catch(e){}}   // 水平翻轉 scaleX(-1) 校正
+    const cvv=alphaCanvasFor(img); if(!cvv)return true;
+    const px=Math.max(0,Math.min(cvv.width-1,Math.round(u*cvv.width)));
+    const py=Math.max(0,Math.min(cvv.height-1,Math.round(v*cvv.height)));
+    return cvv.getContext("2d").getImageData(px,py,1,1).data[3]>16;   // alpha 門檻
+  }catch(e){return true;}
+}
+const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
+function initBldHit(){
+  document.querySelectorAll('#world .bld[data-act]').forEach(function(el){
+    el.addEventListener('click',function(ev){
+      if(typeof editOn!=="undefined"&&editOn)return;   // 佈局編輯模式不觸發面板（交給編輯器拖曳）
+      const img=el.querySelector('img');
+      if(img&&!imgOpaqueAt(img,ev.clientX,ev.clientY)){   // 透明處：把點擊讓給底下的物件
+        const prev=el.style.pointerEvents; el.style.pointerEvents='none';
+        const be=document.elementFromPoint(ev.clientX,ev.clientY); el.style.pointerEvents=prev;
+        if(be&&be!==el&&!el.contains(be))be.dispatchEvent(new MouseEvent('click',{clientX:ev.clientX,clientY:ev.clientY,bubbles:true}));
+        return;
+      }
+      const act=BLD_ACT[el.getAttribute('data-act')]; if(act)act();
+    });
+  });
+}
 /* ============ start ============ */
 buildWorld();
 init();
@@ -3419,6 +3462,7 @@ centerField();
 initPan();
 initEditor();
 initFabDrag();
+initBldHit();
 initAuth();
 setInterval(tick,1500);
 scheduleBalloon(true);   // 熱氣球隨機事件：首次 1~2 分鐘後出現
