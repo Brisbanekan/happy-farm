@@ -603,8 +603,8 @@
   body.narrow .modal .body{padding:11px 12px;}
   .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;flex:0 0 auto;}
   .modal .body{padding:14px 16px;overflow:auto;flex:1 1 auto;min-height:0;}
-  .modal .mhead{position:sticky;top:0;z-index:3;background:#fffdf5;margin:-14px -16px 8px;padding:14px 16px 8px;border-bottom:1px solid #efe6d3;}   /* 凍結表頭：分類＋說明固定，商品列在下方捲動 */
-  body.narrow .modal .mhead{margin:-11px -12px 8px;padding:11px 12px 8px;}
+  .modal .mhead{flex:0 0 auto;background:#fffdf5;padding:10px 16px;border-bottom:1px solid #efe6d3;}   /* 凍結表頭：分類＋說明固定在 h2 與捲動區之間，商品列在下方捲動 */
+  body.narrow .modal .mhead{padding:9px 12px;}
   .modal .mhead .tabs{margin-bottom:0;}
   .modal .mhead .hint{margin:6px 2px 0;}
   .x{cursor:pointer;font-size:22px;line-height:1;border:none;background:none;color:#8d7b6a;}
@@ -2365,7 +2365,7 @@ function openShop(tab){
   }else{
     desc='<p class="hint">🌱 買種子種到田裡，成長後收成可賣錢或加工。</p>';
   }
-  let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="body"><div class="mhead">'+tabsHtml+desc+'</div>';
+  let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="mhead">'+tabsHtml+desc+'</div><div class="body">';
   if(tab==="animal"){
     Object.entries(ANIMALS).forEach(([k,a])=>{
       const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
