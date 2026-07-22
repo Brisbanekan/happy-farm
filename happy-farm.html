@@ -182,14 +182,13 @@
 
   /* 左上 HUD */
   .hud{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px;z-index:20;}
-  .hud .avatar{cursor:pointer;}
-  .hud.fold .xpwrap{display:none;}   /* 點頭像收折等級/經驗/金幣/鑽石/魅力 */
+  .hud.fold .xpwrap{display:none;}   /* 收折：藏等級/經驗/金幣/鑽石/魅力，保留農場名稱當展開鈕 */
   .hudrow{display:flex;align-items:center;gap:6px;}
   .avatar{
     width:52px;height:52px;border-radius:50%;background:#ffe0b2;border:3px solid #fff;
     display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 2px 6px #0003;
   }
-  .namebox{background:#0006;color:#fff;font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px;text-align:center;margin-top:2px;}
+  .namebox{background:#0006;color:#fff;font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px;text-align:center;margin-top:2px;cursor:pointer;}   /* 點農場名稱收折/展開資料 */
   .xpwrap{display:flex;flex-direction:column;gap:3px;}
   .xpbar{width:150px;height:14px;background:#3e2c1e;border:2px solid #fff;border-radius:9px;overflow:hidden;position:relative;box-shadow:0 2px 4px #0003;}
   .xpbar>i{display:block;height:100%;background:linear-gradient(#aed581,#7cb342);width:0;transition:width .3s;}
@@ -597,13 +596,17 @@
   /* Modal / 通用 */
   .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
   .mask.on{display:flex;}
-  .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:auto;border:3px solid #d7ccc8;}
+  .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:hidden;border:3px solid #d7ccc8;display:flex;flex-direction:column;}   /* flex 直排：標題固定、body 自己捲動，供凍結表頭用 */
   /* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
   body.narrow .modal{max-width:480px;max-height:92%;}   /* 手機橫屏：限寬置中，不再滿版 */
   body.narrow .modal h2{font-size:15px;padding:11px 13px;}
   body.narrow .modal .body{padding:11px 12px;}
-  .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;}
-  .modal .body{padding:14px 16px;}
+  .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;flex:0 0 auto;}
+  .modal .body{padding:14px 16px;overflow:auto;flex:1 1 auto;min-height:0;}
+  .modal .mhead{position:sticky;top:0;z-index:3;background:#fffdf5;margin:-14px -16px 8px;padding:14px 16px 8px;border-bottom:1px solid #efe6d3;}   /* 凍結表頭：分類＋說明固定，商品列在下方捲動 */
+  body.narrow .modal .mhead{margin:-11px -12px 8px;padding:11px 12px 8px;}
+  .modal .mhead .tabs{margin-bottom:0;}
+  .modal .mhead .hint{margin:6px 2px 0;}
   .x{cursor:pointer;font-size:22px;line-height:1;border:none;background:none;color:#8d7b6a;}
   .shopitem,.invitem,.friend{display:flex;align-items:center;gap:10px;padding:8px;border:2px solid #e6dcc8;border-radius:12px;margin-bottom:8px;background:#fff;}
   .shopitem .e,.invitem .e,.friend .av{font-size:28px;}
@@ -683,8 +686,7 @@
   <div class="hud">
     <div class="hudrow">
       <div style="display:flex;flex-direction:column;align-items:center;">
-        <div class="avatar" onclick="toggleHud()" title="收折/展開資料">🧑‍🌾</div>
-        <div class="namebox">Small Farm</div>
+        <div class="namebox" onclick="toggleHud()" title="收折/展開資料">Small Farm</div>
       </div>
       <div class="xpwrap">
         <div class="hudrow">
@@ -2347,19 +2349,24 @@ function buyLand(i){
 function seedName(k){return (CROPS[k]?CROPS[k].name:"")+"種子";}   // 種子情境顯示名（作物名＋種子）；收成/原料仍用 CROPS[k].name
 function openShop(tab){
   tab=tab||"crop";const keys=Object.keys(CROPS);
-  let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="body"><div class="tabs">'+
+  const cap=ranchCap();
+  const tabsHtml='<div class="tabs">'+
     '<button class="'+(tab==='crop'?'on':'')+'" onclick="openShop(\'crop\')">🌾 農作物</button>'+
     '<button class="'+(tab==='flower'?'on':'')+'" onclick="openShop(\'flower\')">🌸 花卉</button>'+
     '<button class="'+(tab==='fert'?'on':'')+'" onclick="openShop(\'fert\')">🧴 道具/肥料</button>'+
     '<button class="'+(tab==='animal'?'on':'')+'" onclick="openShop(\'animal\')">🐮 動物</button></div>';
+  let desc;   // 各分類說明（隨分類凍結在表頭）
+  if(tab==="animal"){ const capLeft=Math.max(0,cap-G.ranch.length);
+    desc='<div style="font-size:13px;font-weight:800;background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:6px 10px;margin:6px 0 0">'+
+      '🐾 牧場容量 '+G.ranch.length+'/'+cap+'｜還可購買 <span style="color:#c9920f;font-size:15px">'+capLeft+'</span> 隻'+
+      (G.ranch.length>=cap?'　<span class="locktag">已滿，升級增容</span>':'')+'</div>';
+  }else if(tab==="fert"){
+    desc='<p class="hint"><span class=coinico></span>金幣買一般肥料；💎藍幣買高級肥料與大蟲殺蟲劑。</p>';
+  }else{
+    desc='<p class="hint">🌱 買種子種到田裡，成長後收成可賣錢或加工。</p>';
+  }
+  let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="body"><div class="mhead">'+tabsHtml+desc+'</div>';
   if(tab==="animal"){
-    const cap=ranchCap();
-    const capLeft=Math.max(0,cap-G.ranch.length);
-    h+='<div style="font-size:13px;font-weight:800;background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:6px 10px;margin:0 0 10px">'+
-      '🐾 牧場容量 '+G.ranch.length+'/'+cap+'｜目前最多還可購買 <span style="color:#c9920f;font-size:15px">'+capLeft+'</span> 隻動物</div>';
-    h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">購買動物</div>'+
-      '<p class="hint">買下的動物會在「🐮 牧場」分頁裡自由走動並定時生產，產物出現時點一下動物即可收成換 '+CO+'。售出可回收一半購買金。'+
-      (G.ranch.length>=cap?'<br><span class="locktag">牧場已滿，提升等級可增加容量。</span>':'')+'</p>';
     Object.entries(ANIMALS).forEach(([k,a])=>{
       const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
       h+='<div class="shopitem">'+animalIcon(k)+'<div class="meta"><b>'+a.name+'</b>'+
@@ -2392,7 +2399,7 @@ function openShop(tab){
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
       h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
   }
-  h+='<p class="hint"><span class=coinico></span>金幣買大部分東西；💎藍幣是課金幣，買高級肥料與大蟲殺蟲劑。</p></div>';showM(h);
+  h+='</div>';showM(h);
 }
 function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();saveGame();openShop(c.type);}
 function bqClamp(k){const el=document.getElementById("bq_"+k);if(!el)return;let n=parseInt(el.value)||1;if(n<1)n=1;el.value=n;}
