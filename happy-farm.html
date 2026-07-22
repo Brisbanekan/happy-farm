@@ -1079,7 +1079,7 @@ function loadUserCloud(uid){
     }
     cloudReady=true;
     dailyCheck(); setScene(G.scene||"farm"); render(); saveUserCloud();
-    ensureProfile(); loadFriends(); attachDevWatch(uid);
+    ensureProfile(); loadFriends(); loadAllPlayers(); attachDevWatch(uid);
   }).catch(function(e){ log("⚠️ 雲端讀取失敗："+(e&&e.message||e)+"（多半是資料庫規則未發布）","r"); cloudReady=true; render(); });
 }
 /* ---- 多裝置防互蓋：最後寫入者＝作用中裝置，其他裝置暫停雲端存檔並提示接手 ---- */
@@ -1103,7 +1103,7 @@ function resumeHere(){
     const d=snap.val();
     if(d&&Array.isArray(d.plots)){Object.assign(G,d);normalizeState();}
     cloudPaused=false; devSeenMine=false; if(m)m.style.display="none";
-    setScene(G.scene||"farm"); render(); loadFriends();
+    setScene(G.scene||"farm"); render(); loadFriends(); loadAllPlayers();
     saveGame();                                        // 以本裝置身分寫回 → 其他裝置換成暫停
     toast("已載入最新進度，這台裝置繼續 ☁️");
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
@@ -2496,6 +2496,19 @@ function loadFriends(){
     if(added>0){saveGame(); if(document.getElementById("palCode"))openFriends();}
   }).catch(function(){});
 }
+// 全服自動好友：讀公開名片名冊 profiles/，把每個真實玩家自動加進好友（免代碼）
+let allPlayersTs=0;
+function loadAllPlayers(){
+  if(!friendReady())return;
+  fbDB.ref("profiles").once("value").then(function(snap){
+    const d=snap.val()||{}; let added=0; if(!G.pals||typeof G.pals!=="object"||Array.isArray(G.pals))G.pals={};
+    Object.keys(d).forEach(function(uid){
+      if(!uid||uid===fbUser.uid||G.pals[uid])return;
+      const p=d[uid]||{}; G.pals[uid]={name:p.name||"農友",lv:p.level||1}; added++;
+    });
+    if(added>0){saveGame(); if(document.getElementById("palCode"))openFriends();}
+  }).catch(function(e){ log("⚠️ 讀取全服玩家名冊失敗（需 Firebase 規則允許讀取 profiles 節點）："+(e&&e.message||e),"r"); });
+}
 function addPalByCode(){
   const inp=document.getElementById("palCode");
   const code=(inp&&inp.value||"").trim().toUpperCase();
@@ -2528,7 +2541,7 @@ function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.p
 
 let palSyncTs=0;
 function openFriends(){
-  if(friendReady()&&Date.now()-palSyncTs>15000){palSyncTs=Date.now();loadFriends();}   // 開好友面板時重新同步雲端好友清單
+  if(friendReady()&&Date.now()-palSyncTs>15000){palSyncTs=Date.now();loadFriends();loadAllPlayers();}   // 開好友面板時重新同步雲端好友清單＋全服玩家名冊
   let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
   if(friendReady()){
     if(!G.myCode)ensureProfile();   // 代碼還沒產生（或之前失敗）就再試一次
