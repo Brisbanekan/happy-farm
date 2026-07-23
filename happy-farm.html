@@ -199,6 +199,12 @@
   .coin{display:flex;align-items:center;gap:4px;background:#fffbe6;border:2px solid #f0c544;border-radius:14px;padding:2px 9px;font-size:13px;font-weight:800;color:#7a5a10;box-shadow:0 2px 4px #0002;}
   .coin.blue{background:#e7f3ff;border-color:#7bb8ee;color:#1c5a96;}
   .coin.charm{background:#ffe9ef;border-color:#f3a3bb;color:#b03a5e;}
+  /* 窄版/預覽：HUD 壓縮＋左移，避免下排金幣把狀態列撐寬擋到農場/牧場切換鍵 */
+  body.narrow .hud{gap:4px;}
+  body.narrow .xpbar{width:116px;}
+  body.narrow .coins{gap:4px;}
+  body.narrow .coin{font-size:11px;padding:2px 6px;gap:3px;}
+  body.narrow .lvbadge{width:22px;height:22px;font-size:10px;}
   /* 跨平台一致的金幣圖示（iOS 的 <span class=coinico></span> 會變銀色，改用 CSS 畫） */
   .coinico{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-3px;
     background:radial-gradient(circle at 35% 30%,#fff0a8,#f5c026 62%,#d4920f);
@@ -255,6 +261,7 @@
   .sceneswitch{top:calc(8px + env(safe-area-inset-top));}
   .dock{padding-left:calc(10px + env(safe-area-inset-left));padding-right:calc(10px + env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom);}
   body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
+  body.sim .hud{left:34px;}   /* HUD 在假瀏海上方、不受其影響，往左移一點清出與切換鍵的空間 */
   body.sim .dock{padding-left:46px;}
   .dock .grp{display:flex;gap:7px;align-items:center;}
   .dock .sp{width:3px;height:42px;background:#ffffff77;border-radius:3px;margin:0 4px;}
