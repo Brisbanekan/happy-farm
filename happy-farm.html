@@ -564,6 +564,7 @@
   .leftbar.expand-down{flex-direction:column;}   /* 功能鈕在上半部時往下展開 */
   /* ===== 功能鈕固定在底部 dock（倉庫右邊），選單往右展開 ===== */
   .dock .leftbar{position:relative;left:auto;bottom:auto;z-index:auto;display:flex;flex-direction:row;align-items:center;gap:7px;pointer-events:auto;flex-shrink:0;}
+  body.sim .dock .leftbar{left:auto;}   /* 蓋掉 body.sim .leftbar{left:46px}（預覽假瀏海偏移）——功能鈕在 dock 內不需位移，否則會多 46px 間距 */
   .dock .leftbar .lbtoggle{display:flex;}
   .dock .lbitems{display:none;flex-direction:row;gap:8px;}
   .dock .leftbar.open .lbitems{display:flex;}
@@ -762,6 +763,7 @@
           <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
         </div>
       </div>
+    </div>
   </div>
 
   <!-- 農青哥拉霸場景 -->
