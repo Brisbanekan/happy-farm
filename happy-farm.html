@@ -338,25 +338,22 @@
   .slMid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px;}
   /* 盤面寬度由「可用高度」反推（高度 ≈ 寬度×0.656+38px），確保 4 列在任何螢幕都放得下 */
   .slGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
-    width:min(92vw,600px,max(220px,calc(152vh - 330px)));
-    width:min(92vw,600px,max(220px,calc(152dvh - 330px)));
+    width:min(600px,92%);   /* 後備；實際寬由 slLayout() 依 VW()/VH()(SIM-aware) 設定 inline */
     background:#fffdf2f2;border:3px solid #e6a817;border-radius:14px;padding:10px;box-shadow:0 6px 24px #00000030,inset 0 0 20px #ffe08266;}
   .slCell{position:relative;aspect-ratio:1/.82;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#ffffff,#f1e8ff);border:1px solid #d5c5ee;border-radius:9px;
-    font-size:clamp(15px,5.4vmin,40px);user-select:none;overflow:hidden;}
-  /* 矮螢幕（手機橫屏）：壓縮上下欄，把空間留給盤面 */
-  @media (max-height:520px){
-    .slTop{padding:4px 10px 4px calc(10px + env(safe-area-inset-left,0px));gap:8px;}
-    .slTop .ttl{font-size:14px;}
-    .slTop .slGold{font-size:12px;padding:3px 10px;}
-    .slInfoBtn{padding:4px 10px;font-size:12px;}
-    .slFsBanner{font-size:12px;padding:2px;}
-    .slBot{padding:4px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;}
-    .slRes{font-size:12px;min-height:16px;}
-    .slBet button{width:26px;height:26px;font-size:15px;}
-    .slBet .bv{font-size:13px;min-width:56px;}
-    .slSpinBtn{padding:8px 24px;font-size:15px;}
-  }
+    font-size:clamp(15px,calc(var(--slcw,44px)*0.5),40px);user-select:none;overflow:hidden;}   /* 字級跟隨 JS 算出的儲格寬 --slcw（SIM-aware），不用 vmin */
+  /* 矮螢幕壓縮：改由 slLayout() 依 VH()(SIM-aware) 加 .sl-compact，取代原 @media(max-height:520px)（預覽模式下 media 會誤用桌機視窗高） */
+  #slotScene.sl-compact .slTop{padding:4px 10px 4px calc(10px + env(safe-area-inset-left,0px));gap:8px;}
+  #slotScene.sl-compact .slTop .ttl{font-size:14px;}
+  #slotScene.sl-compact .slTop .slGold{font-size:12px;padding:3px 10px;}
+  #slotScene.sl-compact .slInfoBtn{padding:4px 10px;font-size:12px;}
+  #slotScene.sl-compact .slFsBanner{font-size:12px;padding:2px;}
+  #slotScene.sl-compact .slBot{padding:4px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;}
+  #slotScene.sl-compact .slRes{font-size:12px;min-height:16px;}
+  #slotScene.sl-compact .slBet button{width:26px;height:26px;font-size:15px;}
+  #slotScene.sl-compact .slBet .bv{font-size:13px;min-width:56px;}
+  #slotScene.sl-compact .slSpinBtn{padding:8px 24px;font-size:15px;}
   .suS{color:#3f51b5;font-weight:900;text-shadow:0 1px 0 #fff;}
   .suH{color:#e53935;font-weight:900;text-shadow:0 1px 0 #fff;}
   .suD{color:#fb8c00;font-weight:900;text-shadow:0 1px 0 #fff;}
@@ -556,7 +553,6 @@
     box-shadow:0 4px 0 #e6c486;transition:transform .08s;}
   .leftbar .lbtn small{font-size:9px;font-weight:800;color:#8a7350;margin-top:1px;}
   .leftbar .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
-  .leftbar .lbtoggle:active{transform:none;box-shadow:0 4px 0 #e6c486;}   /* 功能鍵取消按下下沉動畫（僅此鈕，其餘選單鈕保留） */
   /* 拉霸機 3×3 轉輪 */
   .slotgrid{display:grid;grid-template-columns:repeat(3,58px);grid-auto-rows:58px;gap:6px;justify-content:center;margin:14px auto;}
   .scell{width:58px;height:58px;border:3px solid #d9c9a6;border-radius:12px;background:#fffef6;
@@ -566,6 +562,15 @@
   .leftbar .lbtoggle{display:none;}
   .lbitems{display:flex;flex-direction:column;gap:8px;}
   .leftbar.expand-down{flex-direction:column;}   /* 功能鈕在上半部時往下展開 */
+  /* ===== 功能鈕固定在底部 dock（倉庫右邊），選單往右展開 ===== */
+  .dock .leftbar{position:relative;left:auto;bottom:auto;z-index:auto;display:flex;flex-direction:row;align-items:center;gap:7px;pointer-events:auto;flex-shrink:0;}
+  .dock .leftbar .lbtoggle{display:flex;}
+  .dock .lbitems{display:none;flex-direction:row;gap:8px;}
+  .dock .leftbar.open .lbitems{display:flex;}
+  .dock .leftbar .lbtn{width:62px;height:62px;font-size:27px;border-radius:18px;flex-shrink:0;}
+  .dock .leftbar .lbtn small{font-size:10px;margin-top:2px;}
+  body.narrow .dock .leftbar .lbtn{width:46px;height:46px;font-size:21px;border-radius:16px;}
+  body.narrow .dock .leftbar .lbtn small{font-size:9px;margin-top:1px;}
   /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
   .topmenu{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
   .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
@@ -590,7 +595,7 @@
   body.narrow .leftbar .lbtoggle{display:flex;}
   body.narrow .leftbar .lbtn{width:46px;height:46px;font-size:21px;}
   body.narrow .leftbar .lbitems{display:none;}
-  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:column;gap:6px;}
+  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:row;gap:7px;}
   /* 仍保留媒體查詢做為後備（真手機） */
   @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
@@ -728,16 +733,6 @@
   <div class="tools" id="tools"></div>
 
 
-  <!-- 左側功能（每日 / 拉霸 / 股市）；手機版摺疊成選單 -->
-  <div class="leftbar" id="leftbar">
-    <div class="lbtn lbtoggle" onclick="toggleLeftbar()">🎯<small>功能</small></div>
-    <div class="lbitems" id="lbItems">
-      <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
-      <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
-      <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
-    </div>
-  </div>
-
   <!-- 右上選單（點擊開視窗：同步/玩法/紀錄/佈局） -->
   <div class="topmenu" id="topmenu">
     <div class="lbtn" onclick="openTopMenu()">⚙️<small>選單</small></div>
@@ -758,7 +753,15 @@
     <div class="grp">
       <div class="dbtn" onclick="openShop()">🛒<small>商店</small></div>
       <div class="dbtn" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
-    </div>
+      <!-- 功能鈕（接在倉庫右邊、同組同間距，選單往右展開） -->
+      <div class="leftbar" id="leftbar">
+        <div class="lbtn lbtoggle" onclick="toggleLeftbar()">🎯<small>功能</small></div>
+        <div class="lbitems" id="lbItems">
+          <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
+          <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
+          <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
+        </div>
+      </div>
   </div>
 
   <!-- 農青哥拉霸場景 -->
@@ -1369,7 +1372,15 @@ function openSlot(){
   const bi=SL_BETS.indexOf(G.slotBet||50); slBetIdx=bi>=0?bi:0;
   document.getElementById("scene").classList.add("s-slot");
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";
-  slBuildGrid(); slRenderUI();
+  slBuildGrid(); slLayout(); slRenderUI();
+}
+function slLayout(){   // 依 VW()/VH()(SIM-aware) 算盤面寬與壓縮模式，取代 CSS vw/vh/@media（預覽會誤用桌機視窗）
+  const grid=document.getElementById("slGrid"); if(!grid)return;
+  const vw=VW(), vh=VH();
+  const gw=Math.round(Math.min(0.92*vw, 600, Math.max(220, 1.52*vh - 330)));
+  grid.style.width=gw+"px";
+  grid.style.setProperty("--slcw", ((gw-44)/5)+"px");   // padding10*2 + gap6*4 = 44
+  const ss=document.getElementById("slotScene"); if(ss)ss.classList.toggle("sl-compact", vh<=520);
 }
 function exitSlot(){
   if(slotSpinning)return;
@@ -2924,11 +2935,7 @@ function showM(h){document.getElementById("modal").innerHTML=h;document.getEleme
 function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
-function toggleLeftbar(){const lb=document.getElementById("leftbar");if(!lb)return;
-  if(!lb.classList.contains("open")){   // 展開前重釘錨邊：優先用快取(零漂移)，無快取才量一次
-    if(!(typeof applyFabAnchor==="function"&&applyFabAnchor())&&typeof updateFabDir==="function")updateFabDir();
-  }
-  lb.classList.toggle("open");}
+function toggleLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.toggle("open");}
 function closeLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.remove("open");}
 let logCount=0;
 function log(t,cls){const p=document.createElement("p");if(cls)p.innerHTML='<span class="'+cls+'">'+t+'</span>';else p.innerHTML=t;const l=document.getElementById("logList");l.prepend(p);logCount++;if(logCount>60&&l.lastChild)l.removeChild(l.lastChild);}
@@ -3054,10 +3061,7 @@ function layout(){
   if(sc){ if(SIM){ sc.style.width=""; sc.style.height=""; }               // 模擬器交給 CSS 固定尺寸
     else{ sc.style.width=VW()+"px"; sc.style.height=VH()+"px"; } }        // 實機：JS 直接定尺寸——iOS PWA 橫置啟動 100dvh 會卡舊值，導致世界被裁、底部露綠帶
   document.body.classList.toggle("narrow", isNarrow());   // 手機/模擬器：套用窄版樣式
-  if(!isNarrow()){   // 桌機/網頁：清掉手機拖曳留下的行內定位與展開狀態，讓功能列固定回 CSS 版面（每日/拉霸/股市不再位移）
-    const lb=document.getElementById("leftbar");
-    if(lb){ lb.style.left=""; lb.style.top=""; lb.style.bottom=""; lb.classList.remove("expand-down","open"); lb._fab=null; }
-  }
+  if(typeof slLayout==="function")slLayout();   // 拉霸盤面也依 VW()/VH() 重算（SIM 切換/轉向/縮放時同步）
   worldScale=calcWorldScale();
   clampPan(); applyWorld();
 }
@@ -3233,62 +3237,9 @@ function applyFabAnchor(){   // 依快取重貼錨定，數值固定＝零漂移
   bar.style.top=bar._fab.top; bar.style.bottom=bar._fab.bottom;
   return true;
 }
-function clampFab(){   // 把功能鈕拉回 scene 範圍內（全螢幕切換/轉向/模式切換/異常存檔都靠這個救回）
-  const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!bar||!tg)return;
-  const r=tg.getBoundingClientRect(); if(!r.width)return;
-  const e=fabEnv();
-  const w=r.width/e.k, h=r.height/e.k;
-  const lx=(r.left-e.sx)/e.k, ly=(r.top-e.sy)/e.k;
-  const nl=Math.max(FAB_MARGIN,Math.min(lx,e.w-w-FAB_MARGIN));   // 以 scene 實際寬高為界
-  const nt=Math.max(FAB_MARGIN,Math.min(ly,e.h-h-FAB_MARGIN));
-  if(Math.abs(nl-lx)>1||Math.abs(nt-ly)>1){
-    bar.style.left=nl+"px"; bar.style.top=nt+"px"; bar.style.bottom="auto"; updateFabDir();
-    try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round(nl),t:Math.round(nt)}));}catch(e2){}
-  }
-}
+function clampFab(){ /* 已停用：功能鈕改為 dock 固定位置，不需拉回 */ }
 window.addEventListener("resize",function(){setTimeout(clampFab,150);});
-function initFabDrag(){
-  const bar=document.getElementById("leftbar"); const tg=bar&&bar.querySelector(".lbtoggle"); if(!tg)return;
-  try{const p=JSON.parse(localStorage.getItem("hfFabPos")||"null");
-    if(p&&isNarrow()&&p.l>=0&&p.t>=0&&p.l<VW()-30&&p.t<VH()-30){bar.style.left=p.l+"px";bar.style.top=p.t+"px";bar.style.bottom="auto";updateFabDir();}   // 桌機非窄版不套用記憶位置
-    else if(p&&isNarrow()){localStorage.removeItem("hfFabPos");}   // 異常位置直接丟棄，回預設
-    setTimeout(clampFab,300);}catch(e){}
-  tg.removeAttribute("onclick");
-  function down(e){
-    e.stopPropagation();
-    const env=fabEnv();
-    const pt=e.touches?e.touches[0]:e;
-    const r=tg.getBoundingClientRect();
-    const w=r.width/env.k, h=r.height/env.k;
-    const bl=(r.left-env.sx)/env.k, bt=(r.top-env.sy)/env.k;   // scene 內部座標
-    const sx=pt.clientX, sy=pt.clientY; let moved=false;
-    function mv(ev){
-      const q=ev.touches?ev.touches[0]:ev;
-      const dx=(q.clientX-sx)/env.k, dy=(q.clientY-sy)/env.k;
-      if(!moved&&Math.abs(dx)+Math.abs(dy)>(ev.touches?12:8)){moved=true;bar.classList.remove("open");}   // 開始拖曳時先收合（觸控門檻放寬）
-      if(moved){
-        const nl=Math.max(FAB_MARGIN,Math.min(bl+dx,env.w-w-FAB_MARGIN));   // 以 scene 實際寬高為界
-        let nt=Math.max(FAB_MARGIN,Math.min(bt+dy,env.h-h-FAB_MARGIN));
-        nt=snapFabY(nt,h,env);   // 靠近 dock 那排時磁吸對齊中線
-        bar.style.left=nl+"px";bar.style.top=nt+"px";bar.style.bottom="auto";
-        if(ev.cancelable)ev.preventDefault();
-      }
-    }
-    function up(){
-      window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
-      window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
-      updateFabDir();   // 依落點決定展開方向與錨點
-      if(moved){const e2=fabEnv();const r2=tg.getBoundingClientRect();
-        try{localStorage.setItem("hfFabPos",JSON.stringify({l:Math.round((r2.left-e2.sx)/e2.k),t:Math.round((r2.top-e2.sy)/e2.k)}));}catch(e3){}}
-      else toggleLeftbar();   // 沒拖動＝點擊，照常開關選單
-    }
-    window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
-    window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
-  }
-  let lastTouch=0;   // 觸控後會補發合成 mouse 事件 → 擋掉避免 toggle 兩次
-  tg.addEventListener("touchstart",function(e){lastTouch=Date.now();down(e);},{passive:true});
-  tg.addEventListener("mousedown",function(e){if(Date.now()-lastTouch<800)return;down(e);});
-}
+function initFabDrag(){ /* 已停用拖曳：功能鈕固定在 dock，點擊由 HTML onclick=toggleLeftbar() 處理 */ }
 
 const EDIT_MODE=/[?&]edit=1/.test(location.search);
 let editOn=false, editInited=false;
