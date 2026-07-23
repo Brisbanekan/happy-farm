@@ -2970,15 +2970,20 @@ function isStandalone(){ try{return window.matchMedia&&matchMedia('(display-mode
 function isLandscapeNow(){ try{ if(screen.orientation&&screen.orientation.type)return /landscape/.test(screen.orientation.type);
   if(typeof window.orientation==="number")return Math.abs(window.orientation)===90; }catch(e){}
   return window.innerWidth>window.innerHeight; }
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
 function VW(){ if(SIM)return SIM_W;
-  let w=Math.max(window.innerWidth, window.visualViewport?window.visualViewport.width:0);
+  const vv=window.visualViewport;
+  if(!IS_IOS) return Math.round((vv&&vv.width)||window.innerWidth);   // Android/桌機：以可見視口(visualViewport)為準，避免 innerWidth 含系統列讓場景超出可見範圍
+  let w=Math.max(window.innerWidth, vv?vv.width:0);
   // iOS PWA 橫置啟動：inner/vv/dvh 全部回報舊值，只有 screen 尺寸可信 → 以螢幕實體尺寸為底線
   try{ if(isStandalone()&&screen.width&&screen.height){
     const sw=isLandscapeNow()?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height);
     if(sw>w)w=sw; } }catch(e){}
   return Math.round(w); }
 function VH(){ if(SIM)return SIM_H;
-  let h=Math.max(window.innerHeight, window.visualViewport?window.visualViewport.height:0);   // 用 max 也避免鍵盤彈出造成跳動
+  const vv=window.visualViewport;
+  if(!IS_IOS) return Math.round((vv&&vv.height)||window.innerHeight);   // Android/桌機：以可見視口高為準
+  let h=Math.max(window.innerHeight, vv?vv.height:0);   // 用 max 也避免鍵盤彈出造成跳動
   try{ if(isStandalone()&&screen.width&&screen.height){
     const sh=isLandscapeNow()?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
     if(sh>h)h=sh; } }catch(e){}
