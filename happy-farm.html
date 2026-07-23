@@ -152,6 +152,10 @@
   .plot.ripe{z-index:3;}
   .plot.ripe::before{animation:ripeglow 1.6s ease-in-out infinite;}
   @keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
+  .plot.actionable::before{animation:actionableplot 1.15s ease-in-out infinite;}
+  .plot.actionable{filter:brightness(1.08);z-index:4;}
+  @keyframes actionableplot{0%,100%{filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 8px #6ee65c);}50%{filter:drop-shadow(0 0 10px #fff9b0) drop-shadow(0 0 16px #39c95a);}}
+  .plot.actionable:hover{filter:brightness(1.2);}
   .crop{font-size:34px;line-height:1;transform:rotate(-45deg) scaleY(2) translateY(-5px) rotate(-14deg);filter:drop-shadow(0 3px 2px #0004);animation:cropsway 3s ease-in-out infinite;transform-origin:bottom center;}
   .plot.ripe .crop{animation:cropbounce 1.4s ease-in-out infinite;}
   @keyframes cropsway{0%,100%{rotate:-5deg;}50%{rotate:5deg;}}
@@ -176,13 +180,13 @@
   .progress{position:absolute;left:50%;top:56%;width:44px;height:7px;margin-left:-22px;background:#0005;border-radius:4px;overflow:hidden;transform:rotate(-45deg) scaleY(2) rotate(-14deg);}
   .progress>i{display:block;height:100%;background:linear-gradient(90deg,#ffe082,#ffb300);}
   .signpost{
-    position:absolute;left:50%;top:50%;font-size:8.5px;line-height:1.15;font-weight:800;color:#5a3a1a;background:#f3e2b8ee;
-    border:2px solid #b88a3e;border-radius:7px;padding:2px 5px;white-space:nowrap;
+    position:absolute;left:50%;top:50%;font-size:11px;line-height:1.25;font-weight:900;color:#5a3a1a;background:#fff0c9f2;
+    border:2px solid #b88a3e;border-radius:8px;padding:4px 8px;white-space:nowrap;text-align:center;
     transform-origin:center;transform:translate(-50%,-50%) rotate(-45deg) scaleY(2) rotate(-14deg) translateY(-16px);box-shadow:0 2px 0 #8a6020;z-index:5;pointer-events:none;
   }
 
   /* 左上 HUD */
-  .hud{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px;z-index:20;}
+  .hud{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;display:flex;flex-direction:column;gap:6px;z-index:20;}
   .hud.fold .xpwrap{display:none;}   /* 收折：藏等級/經驗/金幣/鑽石/魅力，保留農場名稱當展開鈕 */
   .hudrow{display:flex;align-items:center;gap:6px;}
   .avatar{
@@ -238,12 +242,15 @@
   .tool{
     width:48px;height:48px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;
     display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;
-    box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .08s;
+    box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .12s,filter .12s,box-shadow .12s;
   }
   .tool:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
-  .tool.sel{background:#fff2bf;border-color:#f5b733;box-shadow:0 0 0 3px #ffe06b,0 3px 0 #d9a300;transform:scale(1.06);}
+  .tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;}
+  .tool.sel::after{content:"✓";position:absolute;right:-5px;top:-7px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
+  @keyframes toolsel{0%,100%{box-shadow:0 0 0 4px #fff7a8,0 0 12px 4px #ffbd23aa,0 4px 0 #b87500;}50%{box-shadow:0 0 0 5px #fff370,0 0 20px 7px #ffbd23dd,0 4px 0 #b87500;}}
   .tool .lbl{position:absolute;right:50px;top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
-  .tool:hover .lbl{opacity:1;}
+  .tool:hover .lbl,.tool.sel .lbl{opacity:1;}
+  .tool.sel .lbl{background:#5b3a11e8;color:#fff8d6;border:1px solid #ffd45e;font-size:12px;padding:4px 8px;}
 
   /* 底部圖示列 */
   .dock{
@@ -254,14 +261,15 @@
   .dock{pointer-events:none;}          /* 容器可穿透：dock 橫跨整個畫面，透明區不攔田地觸控 */
   .dock .dbtn{pointer-events:auto;}    /* 只有按鈕本身接收點擊 */
   /* ===== 避開手機瀏海 / 圓角安全區（真機用 env()，模擬器左側假瀏海用 body.sim 位移） ===== */
-  .hud{left:calc(10px + env(safe-area-inset-left));}
-  .leftbar{left:calc(8px + env(safe-area-inset-left));}
-  .logbtn{left:calc(10px + env(safe-area-inset-left));}
-  .tools{right:min(calc(3px + env(safe-area-inset-right,0px)),6px);}   /* iOS 橫屏兩側 inset 會把工具列推離邊界，上限 6px 貼齊 */
-  .sceneswitch{top:calc(8px + env(safe-area-inset-top));}
-  .dock{padding-left:calc(10px + env(safe-area-inset-left));padding-right:calc(10px + env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom);}
+  .hud{left:calc(10px + env(safe-area-inset-left,0px));}
+  .leftbar{left:calc(8px + env(safe-area-inset-left,0px));}
+  .logbtn{left:calc(10px + env(safe-area-inset-left,0px));}
+  .tools{right:calc(8px + env(safe-area-inset-right,0px));}
+  .sceneswitch{top:calc(8px + env(safe-area-inset-top,0px));}
+  .visitbar{top:calc(8px + env(safe-area-inset-top,0px));}
+  .dock{padding-left:calc(10px + env(safe-area-inset-left,0px));padding-right:calc(10px + env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);}
   body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
-  body.sim .hud{left:34px;}   /* HUD 在假瀏海上方、不受其影響，往左移一點清出與切換鍵的空間 */
+  body.sim .hud{left:34px;top:12px;}   /* HUD 在假瀏海上方、不受其影響，往左移一點清出與切換鍵的空間 */
   body.sim .dock{padding-left:46px;}
   .dock .grp{display:flex;gap:7px;align-items:center;}
   .dock .sp{width:3px;height:42px;background:#ffffff77;border-radius:3px;margin:0 4px;}
@@ -325,6 +333,15 @@
   #editHud #editRot button:hover{background:#546e7a;}
   #editHud #edDeg{min-width:44px;text-align:center;color:#80deea;font-weight:800;}
   body.editmode .edsel{outline-color:#00e5ff!important;}
+  body:not(.editmode) .bld[data-act] .bldcue{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);z-index:3;
+    min-width:42px;padding:5px 8px;border-radius:15px;background:#fff8d9e8;border:2px solid #f2b329;color:#6b4312;
+    font-size:11px;font-weight:900;text-align:center;white-space:nowrap;pointer-events:none;box-shadow:0 3px 7px #0004;
+    animation:bldcue 1.5s ease-in-out infinite;}
+  body:not(.editmode) .bld[data-act]:hover .bldcue,body:not(.editmode) .bld[data-act]:focus-visible .bldcue{background:#fff1a8;transform:translate(-50%,-50%) scale(1.12);}
+  @keyframes bldcue{0%,100%{translate:0 0;}50%{translate:0 -5px;}}
+  .interacthint{position:fixed;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
+    background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
+  .interacthint.on{display:block;}
 
   /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
@@ -542,7 +559,7 @@
   .ranchui .radd{width:34px;height:34px;border-radius:50%;background:#fffef6;border:2px solid #f0c544;color:#c9920f;
     font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
   .ranchui .radd:active{transform:translateY(2px);box-shadow:none;}
-  @media(max-width:760px){ .sceneswitch{top:calc(6px + env(safe-area-inset-top));bottom:auto;left:auto;right:calc(70px + env(safe-area-inset-right));transform:none;} }   /* 小螢幕固定右上角，避免各機型位置不一 */
+  @media(max-width:760px){ .sceneswitch{top:calc(8px + env(safe-area-inset-top,0px));bottom:auto;left:auto;right:calc(70px + env(safe-area-inset-right,0px));transform:none;} }   /* 小螢幕固定右上角，並完整避開安全區 */
   /* 登入畫面 */
   .loginmask{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
     background:linear-gradient(#aee6ff,#bfe39a 55%,#8fce5a);}
@@ -554,7 +571,7 @@
     padding:11px 20px;font-size:15px;font-weight:800;color:#3e2723;cursor:pointer;box-shadow:0 3px 0 #d7ccc8;}
   .googlebtn:active{transform:translateY(2px);box-shadow:0 1px 0 #d7ccc8;}
   /* 左側功能按鈕（每日 / 拉霸 / 股市 / 紀錄）：移到左下（原紀錄按鈕位置），向上展開 */
-  .leftbar{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:94px;display:flex;flex-direction:column-reverse;gap:8px;z-index:30;}
+  .leftbar{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(94px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column-reverse;gap:8px;z-index:30;}
   .leftbar .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;
     display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:24px;line-height:1;
     box-shadow:0 4px 0 #e6c486;transition:transform .08s;}
@@ -580,19 +597,19 @@
   body.narrow .dock .leftbar .lbtn{width:46px;height:46px;font-size:21px;border-radius:16px;}
   body.narrow .dock .leftbar .lbtn small{font-size:9px;margin-top:1px;}
   /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
-  .topmenu{position:absolute;top:min(calc(70px + env(safe-area-inset-top,0px)),70px);right:min(calc(6px + env(safe-area-inset-right,0px)),8px);display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}   /* right/top 封頂：避免瀏海 inset 把選單鈕推離右上角；top 下移避開圓角被擋 */
+  .topmenu{position:absolute;top:calc(70px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
   .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;cursor:pointer;user-select:none;}
   .topmenu .lbtn small{font-size:9px;font-weight:800;color:#8a7350;margin-top:1px;}
   .topmenu .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
   .topmenu .tmitems{display:none;flex-direction:column;gap:8px;}
   .topmenu.open .tmitems{display:flex;}
-  body.narrow .topmenu{top:min(calc(6px + env(safe-area-inset-top,0px)),6px);right:min(calc(6px + env(safe-area-inset-right,0px)),8px);}   /* 往右上角靠、封頂貼邊 */
+  body.narrow .topmenu{top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));}
   body.narrow .topmenu .lbtn{width:40px;height:40px;font-size:17px;border-radius:12px;}   /* 縮小到近工具鈕尺寸、圓角對齊螢幕 */
   body.narrow .topmenu .lbtn small{font-size:8px;margin-top:0;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
   body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
-  body.narrow .zoomctrl{right:min(calc(58px + env(safe-area-inset-right,0px)),61px);bottom:60px;}   /* 手機：縮放鈕移到工具列左側，跟隨工具列貼邊 */
+  body.narrow .zoomctrl{right:calc(62px + env(safe-area-inset-right,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));}
   /* 底部選單：改成可左右滑動 */
   body.narrow .dock{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;scroll-snap-type:x proximity;}
@@ -608,7 +625,7 @@
   @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
   /* Modal / 通用 */
-  .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
+  .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:calc(14px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));}
   .mask.on{display:flex;}
   .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:hidden;border:3px solid #d7ccc8;display:flex;flex-direction:column;}   /* flex 直排：標題固定、body 自己捲動，供凍結表頭用 */
   /* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
@@ -632,6 +649,13 @@
   .pbtn.gold{border-color:#f0c544;background:#fff3c4;color:#7a5a10;}
   .pbtn.blue{border-color:#7bb8ee;background:#e7f3ff;color:#1c5a96;}
   .locktag{font-size:11px;color:#c62828;font-weight:700;}
+  .locked-fold{margin-top:10px;border:2px solid #dfd5c2;border-radius:12px;background:#f7f2e8;overflow:hidden;}
+  .locked-fold summary{cursor:pointer;list-style:none;padding:10px 12px;font-size:13px;font-weight:900;color:#7b6750;display:flex;align-items:center;justify-content:space-between;}
+  .locked-fold summary::-webkit-details-marker{display:none;}
+  .locked-fold summary::after{content:"展開查看 ＋";font-size:11px;color:#a06d24;}
+  .locked-fold[open] summary::after{content:"收起 −";}
+  .locked-fold .locked-list{padding:0 8px 2px;}
+  .locked-fold .shopitem{background:#fffdf8;filter:saturate(.7);}
   .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
   .tabs button{border:2px solid #e6dcc8;background:#fff;border-radius:20px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:13px;}
   .tabs button.on{background:#fff3c4;border-color:#f5b733;}
@@ -650,7 +674,7 @@
   .logpanel .r{color:#c62828;font-weight:700;}
   .logpanel .b{color:#1565c0;font-weight:700;}
 
-  .toast{position:fixed;left:50%;top:80px;transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
+  .toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(6px);}
 </style>
 </head>
@@ -2017,16 +2041,20 @@ function renderTools(){
   if(G.tool==="water"||G.tool==="weed"||G.tool==="bug")G.tool="care";   // 舊存檔工具轉換
   if(VISIT.on&&G.tool!=="hand"&&G.tool!=="care")G.tool="hand";          // 拜訪中只能用手/照顧
   const box=document.getElementById("tools");box.innerHTML="";
+  const scene=document.getElementById("scene");if(scene)scene.dataset.tool=G.tool||"none";
   (VISIT.on?TOOLS.filter(t=>t.k==="hand"||t.k==="care"):TOOLS).forEach(t=>{
     const d=document.createElement("div");
     d.className="tool"+(G.tool===t.k?" sel":"");
-    d.innerHTML=t.ic+'<span class="lbl">'+t.name+'</span>';
-    d.onclick=()=>{
-      if(G.tool===t.k){G.tool="";renderTools();return;}   // 再按一次同一鈕 → 取消該功能、回空狀態（點田地不觸發動作）
-      G.tool=t.k;renderTools();
+    d.setAttribute("role","button");d.setAttribute("tabindex","0");d.setAttribute("aria-label",t.name);d.setAttribute("aria-pressed",G.tool===t.k?"true":"false");d.title=t.name;
+    d.innerHTML=t.ic+'<span class="lbl">'+t.name+(G.tool===t.k?'（已選取）':'')+'</span>';
+    const choose=()=>{
+      if(G.tool===t.k){G.tool="";renderTools();renderGrid();return;}   // 再按一次同一鈕 → 取消該功能、回空狀態（點田地不觸發動作）
+      G.tool=t.k;renderTools();renderGrid();
       if(t.k==="plant")openInv("seeds");
       if(t.k==="care")toast("點需要照顧的田地，自動澆水/除草/除蟲");
       if(t.k==="fert")toast("選肥料後點要加速的作物");};
+    d.onclick=choose;
+    d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose();}};
     box.appendChild(d);
   });
   if(VISIT.on)return;   // 拜訪中不顯示一鍵收成
@@ -2170,7 +2198,7 @@ function renderGrid(){
       d.className="plot locked t-grass";   // 未開墾＝草地貼圖
       if(!VISIT.on){   // 拜訪好友時不顯示購地告示、也不能幫別人買地
         const firstLocked=G.plots.findIndex(x=>!x.unlocked);
-        if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 Buy Land<br>Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</div>';}
+        if(i===firstLocked){const L=LANDS[i];d.innerHTML='<div class="signpost">🪧 購買土地<br><small>需要 Lv.'+L.lvl+' · <span class=coinico></span>'+L.price+'</small></div>';}
         d.onclick=()=>buyLand(i);
       }
       grid.appendChild(d);return;
@@ -2182,11 +2210,19 @@ function renderGrid(){
       else{const idx=p.grow<total*0.45?0:1;const fs=idx===0?22:30;inner='<span class="crop" style="font-size:'+fs+'px">'+STAGE[idx]+'</span><div class="progress"><i style="width:'+Math.min(100,p.grow/total*100)+'%"></i></div>';}
     }
     if(p.dry)cls+=" dry";
+    let actionHint="";
+    if(G.tool==="plant"&&p.state!=="planted")actionHint="點擊播種";
+    else if(G.tool==="hand"&&p.state==="planted"&&p.ripe)actionHint=VISIT.on?"點擊偷取成熟作物":"點擊收成";
+    else if(G.tool==="hand"&&!VISIT.on&&p.state!=="planted")actionHint="點擊選擇種子";
+    else if(G.tool==="care"&&(p.dry||p.weed||p.bug))actionHint="點擊照顧這塊田";
+    else if(G.tool==="fert"&&p.state==="planted"&&!p.ripe)actionHint="點擊施肥加速";
+    if(actionHint){cls+=" actionable";d.title=actionHint;d.setAttribute("aria-label",actionHint);d.setAttribute("tabindex","0");}
     d.className=cls;
     let st=(p.dry?'💧':'')+(p.weed?'🌿':'')+(p.bug?(p.bugBig?('🐛<small>×'+p.bug+'</small>'):'🐜'):'');
     if(VISIT.on&&p.ripe){const left=Math.max(0,2-(p.stolen||0));st+=(left>0?'✋<small>×'+left+'</small>':'🚫');}   // 拜訪時顯示剩餘可偷次數
     d.innerHTML=inner+(st?'<div class="statbub"><span class="bin">'+st+'</span></div>':'');
     d.onclick=()=>tapPlot(i);
+    d.onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&actionHint){e.preventDefault();tapPlot(i);}};
     grid.appendChild(d);
   });
 }
@@ -2371,6 +2407,9 @@ function buyLand(i){
 
 /* ============ 商店 ============ */
 function seedName(k){return (CROPS[k]?CROPS[k].name:"")+"種子";}   // 種子情境顯示名（作物名＋種子）；收成/原料仍用 CROPS[k].name
+function lockedShopFold(label,count,cards){
+  return count?'<details class="locked-fold"><summary>🔒 '+label+'（'+count+'）</summary><div class="locked-list">'+cards+'</div></details>':'';
+}
 function openShop(tab){
   tab=tab||"crop";const keys=Object.keys(CROPS);
   const cap=ranchCap();
@@ -2391,12 +2430,15 @@ function openShop(tab){
   }
   let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="mhead">'+tabsHtml+desc+'</div><div class="body">';
   if(tab==="animal"){
+    let animalOpen="",animalLocked="",animalLockedCount=0;
     Object.entries(ANIMALS).forEach(([k,a])=>{
       const locked=G.level<a.lvl;const full=G.ranch.length>=cap;const can=!locked&&!full&&G.gold>=a.cost;
-      h+='<div class="shopitem">'+animalIcon(k)+'<div class="meta"><b>'+a.name+'</b>'+
+      const card='<div class="shopitem">'+animalIcon(k)+'<div class="meta"><b>'+a.name+'</b>'+
         '<div>每 '+a.time+'s 產 '+a.prod+' ＝ '+CO+a.yield+' ｜ 經驗 '+a.xp+(locked?' ｜ <span class="locktag">需 Lv.'+a.lvl+'</span>':'')+'</div></div>'+
         '<button class="pbtn gold" onclick="buyAnimal(\''+k+'\')" '+(can?'':'disabled')+'>'+CO+a.cost+'</button></div>';
+      if(locked){animalLocked+=card;animalLockedCount++;}else animalOpen+=card;
     });
+    h+=animalOpen+lockedShopFold("尚未解鎖的動物",animalLockedCount,animalLocked);
     if(G.ranch.length){
       h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
       h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">我的動物（'+G.ranch.length+'/'+cap+'）</div>';
@@ -2412,6 +2454,7 @@ function openShop(tab){
     Object.entries(FERTS).forEach(([k,f])=>{const cur=f.cur==="blue"?"💎":"<span class=coinico></span>";const can=f.cur==="blue"?G.credit>=f.cost:G.gold>=f.cost;
       h+='<div class="shopitem"><span class="e">'+f.emoji+'</span><div class="meta"><b>'+f.name+'</b><div>'+f.desc+'</div></div><button class="pbtn '+(f.cur==="blue"?"blue":"gold")+'" onclick="buyFert(\''+k+'\')" '+(can?'':'disabled')+'>'+cur+f.cost+'</button></div>';});
   }else{
+    let cropOpen="",cropLocked="",cropLockedCount=0;
     keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||G.charm<cr;
       let req=[];if(G.level<c.lvl)req.push("Lv."+c.lvl);if(G.charm<cr)req.push("❤️"+cr);
       let btn;
@@ -2421,7 +2464,10 @@ function openShop(tab){
         '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
-      h+='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';});
+      const card='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';
+      if(locked){cropLocked+=card;cropLockedCount++;}else cropOpen+=card;
+    });
+    h+=cropOpen+lockedShopFold("尚未解鎖的商品",cropLockedCount,cropLocked);
   }
   h+='</div>';showM(h);
 }
@@ -2733,7 +2779,7 @@ function upgradeDog(){if(!G.dog)return;const lv=G.dog.level||1;if(lv>=5)return;c
 /* ============ 玩法 ============ */
 function openHelp(){
   showM('<h2>❓ 玩法說明 <button class="x" onclick="closeM()">×</button></h2><div class="body" style="font-size:14px;line-height:1.7">'+
-  '<b>基本循環</b><br>🌱 播種（空地直接點即可，免翻土） → 💧 照顧 → 等成熟 → ✋ 收成 → 🏚️ 倉庫賣錢 → ⭐ 升級 → 🛒 買高級種子 / 🪧 Buy Land 買新農地。收成後土地會空出來，可以馬上再種。<br><br>'+
+  '<b>基本循環</b><br>🌱 播種（空地直接點即可，免翻土） → 💧 照顧 → 等成熟 → ✋ 收成 → 🏚️ 倉庫賣錢 → ⭐ 升級 → 🛒 買高級種子 / 🪧 購買土地。收成後土地會空出來，可以馬上再種。<br><br>'+
   '<b>作物三階段</b>：種子🌰（前 45%）→ 幼苗🌱（45～100%）→ 成熟結果（顯示作物本體，發光代表可收成）。<br><br>'+
   '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。選右側 🚿 照顧工具點田地，會自動一次澆水／除草／除蟲。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。成熟作物可用右側 🧺 一鍵收成全部收下。<br><br>'+
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
@@ -2955,7 +3001,10 @@ function toast(t){const el=document.getElementById("toast");el.innerHTML=t;el.cl
 
 /* ============ 場景切換（農場 / 牧場）＋ 響應式置中縮放 ============ */
 function setScene(s){
-  G.scene = (s==="ranch")?"ranch":"farm";
+  const nextScene=(s==="ranch")?"ranch":"farm";
+  const sceneChanged=G.scene!==nextScene;
+  G.scene=nextScene;
+  if(sceneChanged)userZoom=1;   // 農場／牧場切換時回到初始視角，避免沿用上一場景的放大倍率
   const sc=document.getElementById("scene");
   if(sc){sc.classList.toggle("s-farm",G.scene==="farm");sc.classList.toggle("s-ranch",G.scene==="ranch");}
   const tf=document.getElementById("tabFarm"), tr=document.getElementById("tabRanch");
@@ -3014,6 +3063,7 @@ function computeBaseScale(){
 function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
 function calcWorldScale(){
   const s=computeBaseScale()*userZoom;
+  if(isNarrow()&&userZoom<=1)return computeBaseScale();   // 手機初始視角完整顯示世界，不再用 cover 強制放大裁切
   return Math.max(s, coverScale());   // 桌機/農場/牧場統一 cover 填滿：兩場景同大小、不露綠邊（cover≥VW/W，已涵蓋原本農場填寬需求，>2.2 比例也不會左右露背景）
 }
 // 使用者放大/縮小畫面
@@ -3443,26 +3493,42 @@ function applyBldClip(el){
   if(poly)el.style.clipPath="polygon("+poly+")";
 }
 const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
+const BLD_HINT={inv:"開啟倉庫",profile:"查看農舍",factory:"開啟農產加工廠"};
+function showBldHint(el,x,y){
+  let hint=document.getElementById("interactHint");
+  if(!hint){hint=document.createElement("div");hint.id="interactHint";hint.className="interacthint";document.getElementById("scene").appendChild(hint);}
+  const label=BLD_HINT[el.getAttribute("data-act")]||"點擊互動";
+  hint.textContent="☝ "+label;hint.style.left=x+"px";hint.style.top=y+"px";hint.classList.add("on");
+}
+function hideBldHint(){const hint=document.getElementById("interactHint");if(hint)hint.classList.remove("on");}
 function initBldHit(){
   document.querySelectorAll('#world .bld[data-act]').forEach(function(el){
+    const label=BLD_HINT[el.getAttribute("data-act")]||"點擊互動";
+    el.setAttribute("tabindex","0");el.setAttribute("role","button");el.setAttribute("aria-label",label);el.title=label;
+    if(!el.querySelector(".bldcue")){const cue=document.createElement("span");cue.className="bldcue";cue.textContent="☝ 點我";el.appendChild(cue);}
     applyBldClip(el);   // 裁成輪廓形狀
-    el.addEventListener('click',function(ev){
+    const activate=function(ev){
       if(typeof editOn!=="undefined"&&editOn)return;   // 佈局編輯模式不觸發面板（交給編輯器拖曳）
       const img=el.querySelector('img');
-      if(img&&!imgOpaqueAt(img,ev.clientX,ev.clientY)){   // 透明處：把點擊讓給底下的物件
+      if(ev.clientX!=null&&img&&!imgOpaqueAt(img,ev.clientX,ev.clientY)){   // 透明處：把點擊讓給底下的物件
         const prev=el.style.pointerEvents; el.style.pointerEvents='none';
         const be=document.elementFromPoint(ev.clientX,ev.clientY); el.style.pointerEvents=prev;
         if(be&&be!==el&&!el.contains(be))be.dispatchEvent(new MouseEvent('click',{clientX:ev.clientX,clientY:ev.clientY,bubbles:true}));
         return;
       }
       const act=BLD_ACT[el.getAttribute('data-act')]; if(act)act();
-    });
+    };
+    el.addEventListener('click',activate);
+    el.addEventListener('keydown',function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();activate({});}});
     el.addEventListener('mousemove',function(ev){   // 游標也描圖：只有不透明處才顯示手指，空白處回預設
       if(typeof editOn!=="undefined"&&editOn){el.style.cursor='';return;}   // 編輯模式交給 CSS 的 move
       const img=el.querySelector('img');
-      el.style.cursor=(img&&imgOpaqueAt(img,ev.clientX,ev.clientY))?'pointer':'default';
+      const hit=img&&imgOpaqueAt(img,ev.clientX,ev.clientY);el.style.cursor=hit?'pointer':'default';
+      if(hit)showBldHint(el,ev.clientX,ev.clientY);else hideBldHint();
     });
-    el.addEventListener('mouseleave',function(){el.style.cursor='';});
+    el.addEventListener('focus',function(){const r=el.getBoundingClientRect();showBldHint(el,r.left+r.width/2,r.top+r.height*.4);});
+    el.addEventListener('mouseleave',function(){el.style.cursor='';hideBldHint();});
+    el.addEventListener('blur',hideBldHint);
   });
 }
 /* ============ start ============ */
@@ -3482,4 +3548,3 @@ scheduleBalloon(true);   // 熱氣球隨機事件：首次 1~2 分鐘後出現
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                        
