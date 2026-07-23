@@ -580,14 +580,14 @@
   body.narrow .dock .leftbar .lbtn{width:46px;height:46px;font-size:21px;border-radius:16px;}
   body.narrow .dock .leftbar .lbtn small{font-size:9px;margin-top:1px;}
   /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
-  .topmenu{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
+  .topmenu{position:absolute;top:min(calc(8px + env(safe-area-inset-top,0px)),8px);right:min(calc(6px + env(safe-area-inset-right,0px)),8px);display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}   /* right/top 封頂：避免瀏海 inset 把選單鈕推離右上角（與右側工具列對齊貼邊） */
   .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;cursor:pointer;user-select:none;}
   .topmenu .lbtn small{font-size:9px;font-weight:800;color:#8a7350;margin-top:1px;}
   .topmenu .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
   .topmenu .tmitems{display:none;flex-direction:column;gap:8px;}
   .topmenu.open .tmitems{display:flex;}
-  body.narrow .topmenu{top:calc(6px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));}   /* 往右上角靠，拉開與右側工具列的距離、貼齊螢幕圓角 */
+  body.narrow .topmenu{top:min(calc(6px + env(safe-area-inset-top,0px)),6px);right:min(calc(6px + env(safe-area-inset-right,0px)),8px);}   /* 往右上角靠、封頂貼邊 */
   body.narrow .topmenu .lbtn{width:40px;height:40px;font-size:17px;border-radius:12px;}   /* 縮小到近工具鈕尺寸、圓角對齊螢幕 */
   body.narrow .topmenu .lbtn small{font-size:8px;margin-top:0;}
   /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
@@ -2021,7 +2021,9 @@ function renderTools(){
     const d=document.createElement("div");
     d.className="tool"+(G.tool===t.k?" sel":"");
     d.innerHTML=t.ic+'<span class="lbl">'+t.name+'</span>';
-    d.onclick=()=>{G.tool=t.k;renderTools();
+    d.onclick=()=>{
+      if(G.tool===t.k){G.tool="";renderTools();return;}   // 再按一次同一鈕 → 取消該功能、回空狀態（點田地不觸發動作）
+      G.tool=t.k;renderTools();
       if(t.k==="plant")openInv("seeds");
       if(t.k==="care")toast("點需要照顧的田地，自動澆水/除草/除蟲");
       if(t.k==="fert")toast("選肥料後點要加速的作物");};
