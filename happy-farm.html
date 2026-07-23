@@ -687,7 +687,7 @@
   <div class="hud">
     <div class="hudrow">
       <div style="display:flex;flex-direction:column;align-items:center;">
-        <div class="namebox" onclick="toggleHud()" title="收折/展開資料">Small Farm</div>
+        <div class="namebox" id="farmName" onclick="toggleHud()" title="收折/展開資料">我的農場</div>
       </div>
       <div class="xpwrap">
         <div class="hudrow">
@@ -1550,7 +1550,7 @@ function openProfile(tab){
     const seeds=Object.values(G.seeds||{}).reduce((a,b)=>a+b,0);
     const need=XP_NEED(G.level);
     body=
-    '<div class="pcard"><div class="pav">🧑‍🌾</div><div><b>'+myName()+'</b><br><small>Lv.'+G.level+'（XP '+G.xp+'/'+need+'）</small></div></div>'+
+    '<div class="pcard"><div class="pav">🧑‍🌾</div><div style="flex:1"><b>'+farmLabel()+'</b><br><small>Lv.'+G.level+'（XP '+G.xp+'/'+need+'）</small></div><button class="pbtn" style="padding:5px 10px;flex-shrink:0" onclick="renameFarm()">✏️ 改名</button></div>'+
     '<div class="pgrid">'+
     '<div class="pbox"><small>💰 金幣</small><b>'+Math.floor(G.gold).toLocaleString()+'</b></div>'+
     '<div class="pbox"><small>💎 鑽石</small><b>'+G.credit+'</b></div>'+
@@ -2134,6 +2134,7 @@ function renderHUD(){
   const need=XP_NEED(G.level);
   document.getElementById("xpFill").style.width=Math.min(100,G.xp/need*100)+"%";
   document.getElementById("xpText").textContent=G.xp+"/"+need;
+  const fn=document.getElementById("farmName"); if(fn)fn.textContent=farmLabel();   // 農場名：自訂優先，否則名字+的農場
   checkAch();   // 順便檢查是否有新成就達成
 }
 function renderGrid(){
@@ -2458,6 +2459,8 @@ function useFert(i,k){if((G.ferts[k]||0)<=0)return;const p=G.plots[i];if(p.state
 /* ====== 真實好友（串接 Firebase users 資料庫） ====== */
 function friendReady(){return !!(fbDB&&fbUser);}
 function myName(){ return ((fbUser&&fbUser.displayName)||"神秘農友").slice(0,12); }
+function farmLabel(){ const n=(G.farmName&&G.farmName.trim())?G.farmName.trim():myName(); return n+"的農場"; }   // 農場顯示名＝名字＋「的農場」
+function renameFarm(){ const v=prompt("輸入名字（會自動加上「的農場」；留空恢復登入名字）", G.farmName||""); if(v===null)return; G.farmName=(v||"").trim().slice(0,16); saveGame(); renderHUD(); const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))openProfile(); }
 // 由 uid 產生固定的 6 碼好友代碼（同帳號在任何裝置都是同一組）
 function codeFromUid(uid,salt){
   let n=2166136261>>>0; const s=uid+"#"+(salt||0);
