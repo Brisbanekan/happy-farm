@@ -2328,7 +2328,7 @@ function openFactory(){
   const act=Object.keys(bn).filter(b=>buffOn(b));
   if(act.length)h+='<div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:8px">加乘中：'+act.map(b=>{const u=Math.max(G.buffs[b]||0,G.buffs.all||0);return bn[b]+"（剩"+Math.ceil((u-now)/60000)+"分）";}).join('、')+'</div>';
   f.q.forEach(x=>{const r=FGOODS[x.k];
-    h+='<div class="shopitem"><span class="e">'+r.emoji+'</span><div class="meta"><b>'+r.name+'</b><div>⏳ 加工中…剩 '+Math.max(0,Math.ceil((x.end-now)/1000))+'s</div></div></div>';});
+    h+='<div class="shopitem"><span class="e">'+r.emoji+'</span><div class="meta"><b>'+r.name+'</b><div data-factory-end="'+x.end+'">⏳ 加工中…剩 '+Math.max(0,Math.ceil((x.end-now)/1000))+'s</div></div></div>';});
   const gk=Object.keys(G.goods||{}).filter(k=>G.goods[k]>0);
   if(gk.length){h+='<div style="font-size:13px;font-weight:800;margin:8px 0 4px">加工品庫存</div>';
     gk.forEach(k=>{const r=FGOODS[k];if(!r)return;
@@ -2926,14 +2926,14 @@ function tick(){
     if(s&&!s.ready){s.prod+=(1+fAnimB())*(buffOn("animal")?1.2:1);if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}}
   });
   // 工廠加工完成
-  if(G.factory&&Array.isArray(G.factory.q)&&G.factory.q.length){
+  let factoryDone=false;  if(G.factory&&Array.isArray(G.factory.q)&&G.factory.q.length){
     const nowT=Date.now(); const done=G.factory.q.filter(x=>x.end<=nowT);
-    if(done.length){ G.factory.q=G.factory.q.filter(x=>x.end>nowT);
+    if(done.length){ factoryDone=true; G.factory.q=G.factory.q.filter(x=>x.end>nowT);
       done.forEach(x=>{const r=FGOODS[x.k]; if(!r)return;
         G.goods[x.k]=(G.goods[x.k]||0)+1;
         log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
   { const mk=document.getElementById("mask");   // 面板「真的開著」（遮罩顯示中）才刷新倒數，避免關閉後又自己跳出
-    if(document.getElementById("factPanel")&&mk&&mk.classList.contains("on"))openFactory(); }
+    const fp=document.getElementById("factPanel");    if(fp&&mk&&mk.classList.contains("on")){      if(factoryDone)openFactory();      else fp.querySelectorAll("[data-factory-end]").forEach(el=>{        const end=Number(el.getAttribute("data-factory-end"))||0;        el.textContent="⏳ 加工中…剩 "+Math.max(0,Math.ceil((end-Date.now())/1000))+"s";      });    } }
   // 熱氣球逾時保險：任何原因卡住（分頁休眠、動畫沒觸發）超過預定時間就強制回收並重新排程
   if(balloonActive&&balloonEnd&&Date.now()>balloonEnd+2000){ hideBalloon(); scheduleBalloon(); }
   stockTick();   // 股價波動＋限價單撮合
@@ -2942,7 +2942,7 @@ function tick(){
 }
 
 /* ============ UI helpers ============ */
-function showM(h){document.getElementById("modal").innerHTML=h;document.getElementById("mask").classList.add("on");}
+function showM(h){  const oldFact=document.getElementById("factPanel"), oldFactScroll=oldFact?oldFact.scrollTop:0;  document.getElementById("modal").innerHTML=h;document.getElementById("mask").classList.add("on");  const newFact=document.getElementById("factPanel");if(newFact)newFact.scrollTop=oldFactScroll;}
 function closeM(){document.getElementById("mask").classList.remove("on");}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
