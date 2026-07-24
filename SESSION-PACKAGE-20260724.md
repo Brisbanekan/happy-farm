@@ -5,8 +5,18 @@
 ---
 
 ## 0. 最新狀態
-- **最新 commit：`5d491ae`**。檔案約 235KB。唯一正式檔 `C:\Users\ccltcd\Desktop\0705\happy-farm.html`（host 端 Read/Edit/Grep）。`happy-farm-main\` 是舊副本勿用。
-- 素材：`building/storage.png`、`doghouse.png` 這次有更新並上傳到 git `building/`。
+- **最新 commit：`55851b6`**（GPT 接手後）。檔案約 235KB。唯一正式檔 `C:\Users\ccltcd\Desktop\0705\happy-farm.html`（host 端 Read/Edit/Grep）。`happy-farm-main\` 是舊副本勿用。
+- 素材：`building/storage.png`、`doghouse.png`、`factory.png`（GPT 換過工廠美術）。
+- ⚠️ **同步警告（2026-07-24）**：GPT 於 git 上直接改了 5 個 commit（見 §GPT），**本地 `happy-farm.html` 未同步、落後於 git**。git 為最新來源。**下次動手前務必先把 git 最新 html 拉回本地覆蓋**（否則會蓋掉 GPT 的改動）；由於安全過濾擋下線上原始碼內容，Claude 無法自行逐位元組還原大檔，請由使用者把最新 html 存回 `0705\`（或提供解壓檔用 bash cp）。
+
+## GPT 接手變更（2026-07-23，git commit）
+> 這幾個由 GPT 直接在 git 上修改，本地檔尚未同步。細節以 git 上的程式為準。
+- `8e53b82` 換工廠美術為「農場風格工作坊」（新 `factory.png`）。
+- `4265e18` 工廠美術水平翻轉（`.bld.factory img` 加 `scaleX(-1)`）。描圖 clip/翻轉偵測會自動吃到（`applyBldClip` 讀 computed transform）。
+- `db1ecc3` 修正工廠面板捲動位置重置（openFactory scroll reset）。
+- `acb49b5` 改善手機介面與**牧場初始視角**（可能動到 `centerField`/牧場焦點 FFX/FFY 或 ranch 分支）。
+- `55851b6` 修正**實機工具列**與**網頁初始置中**（可能動到 `.tools` 定位、`centerField`/`clampPan` 桌機分支）。
+- ⚠️ 這些可能與本檔 §H（Android `visualViewport`）、§F（選單鈕封頂）、HUD 壓縮等有交互作用；接手時先讀 git 現況再改，別用本地舊檔直接覆蓋。
 
 ## 1. 本段變更（依主題）
 
