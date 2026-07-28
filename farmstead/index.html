@@ -415,13 +415,13 @@ const World = {
 
   centerOnFarm(){
     const a = this.gridToWorld(GRID/2 - 0.5, GRID/2 - 0.5);
-    this.cam.x = a.x; this.cam.y = a.y;
+    this.cam.x = a.x; this.cam.y = a.y - 46;   // 略往上：讓農田在下方、建築在上方都入鏡
     this.cam.zoom = this.fitZoom() * 1.05;
     this.clampCam();
   },
   fitZoom(){
-    // 讓農田大致填滿視口的縮放
-    const spanX = (GRID + 5) * TILE_W/2, spanY = (GRID + 4) * TILE_H;
+    // 讓農田＋周邊建築大致入鏡的縮放
+    const spanX = (GRID + 6) * TILE_W/2, spanY = (GRID + 6) * TILE_H;
     return Math.min(this.w / spanX, this.h / spanY);
   },
   clampCam(){
@@ -497,14 +497,14 @@ const World = {
         if (p.crop){
           const gr = growth(p, now), st = stageOf(gr);
           const im = IMG["crop_"+p.crop+"_"+st];
-          this.blit(im, s.x, s.y + 6*zoom, 1);
+          this.blit(im, s.x, s.y + 8*zoom, 1.45);      // 作物放大，視覺份量足夠
           if (st === 2){
             // 成熟標記：跳動的產物圖示
             const bob = Math.sin(now/300 + (c+r)) * 3;
-            this.blit(IMG["icon_"+p.crop], s.x, s.y - 56*zoom + bob*zoom, 0.62);
+            this.blit(IMG["icon_"+p.crop], s.x, s.y - 74*zoom + bob*zoom, 0.8);
           } else {
             // 成長進度條
-            this.bar(s.x, s.y - 30*zoom, 34*zoom, 5*zoom, gr);
+            this.bar(s.x, s.y - 40*zoom, 44*zoom, 7*zoom, gr);
           }
         }
       });
@@ -529,10 +529,14 @@ const World = {
       push(d.c + d.r, () => this.blit(d.img, s.x, s.y, d.s));
     });
 
-    // 牧場圍籬（右側區域外框）
-    for (let i=0;i<5;i++){
-      const w1 = this.gridToWorld(6.4, i+0.2), s1 = this.worldToScreen(w1.x, w1.y);
-      push(6.4 + i + 0.2, () => this.blit(IMG.fence, s1.x, s1.y, 0.9));
+    // 牧場圍籬：左側界線 + 下側界線，圍出右方牧場區
+    for (let i=0;i<6;i++){
+      const w1 = this.gridToWorld(6.3, i*0.98 + 0.1), s1 = this.worldToScreen(w1.x, w1.y);
+      push(6.3 + i*0.98, () => this.blit(IMG.fence, s1.x, s1.y, 0.92));
+    }
+    for (let i=0;i<4;i++){
+      const w2 = this.gridToWorld(6.9 + i*0.98, 5.6), s2 = this.worldToScreen(w2.x, w2.y);
+      push(6.9 + i*0.98 + 5.6, () => this.blit(IMG.fence, s2.x, s2.y, 0.92, true));
     }
 
     // 動物
@@ -606,10 +610,12 @@ const World = {
   bar(sx, sy, w, h, t){
     const ctx = this.ctx;
     ctx.save();
-    ctx.fillStyle = "#00000066";
+    ctx.fillStyle = "#2e2418cc";
     ctx.beginPath(); ctx.roundRect(sx-w/2, sy, w, h, h/2); ctx.fill();
-    ctx.fillStyle = "#8fd14f";
-    ctx.beginPath(); ctx.roundRect(sx-w/2, sy, Math.max(2,w*t), h, h/2); ctx.fill();
+    ctx.fillStyle = t > 0.66 ? "#ffd54f" : "#8fd14f";
+    ctx.beginPath(); ctx.roundRect(sx-w/2+h*0.18, sy+h*0.18, Math.max(2,(w-h*0.36)*t), h*0.64, h*0.32); ctx.fill();
+    ctx.lineWidth = Math.max(1, h*0.18); ctx.strokeStyle = "#ffffffcc";
+    ctx.beginPath(); ctx.roundRect(sx-w/2, sy, w, h, h/2); ctx.stroke();
     ctx.restore();
   },
   text(t, x, y, size, color, stroke){
