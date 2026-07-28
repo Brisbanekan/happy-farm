@@ -1,0 +1,136 @@
+/* ============================================================
+   happy-farm v2 — UI 層
+   ------------------------------------------------------------
+   鐵律：這一層的所有尺寸都是 calc(var(--u) * n)，n = 設計稿 px。
+   --u 由 syncUIScale() 依「設計基準 800×360」推導。
+   世界層在 <canvas>，兩者不共用任何 transform——
+   所以「農場放大」永遠不會動到「按鈕大小」。
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:#7fb069;
+  font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  user-select:none;-webkit-user-select:none;}
+
+:root{
+  --u:1px;
+  --safeL:env(safe-area-inset-left,0px);  --safeR:env(safe-area-inset-right,0px);
+  --safeT:env(safe-area-inset-top,0px);   --safeB:env(safe-area-inset-bottom,0px);
+  --ink:#4a3b2a; --panel:#fffdf6; --line:#e4d7bd; --gold:#f0b429;
+}
+
+/* ---- 世界層：一張 canvas，佔滿視口 ---- */
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+
+/* ---- UI 層：疊在世界之上，只有實際控制項吃事件 ---- */
+.ui{position:absolute;z-index:10;}
+
+.btn{background:var(--panel);border:calc(var(--u)*2.5) solid #ffe2b0;
+  border-radius:calc(var(--u)*16);box-shadow:0 calc(var(--u)*4) 0 #e6c893;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--ink);transition:transform .07s,box-shadow .07s;}
+.btn:active{transform:translateY(calc(var(--u)*3));box-shadow:0 calc(var(--u)*1) 0 #e6c893;}
+.btn.on{background:#fff3cd;border-color:var(--gold);
+  box-shadow:0 0 0 calc(var(--u)*3) #ffe9a8,0 calc(var(--u)*4) 0 #d9a521;}
+
+/* 一級按鈕：48px 起跳，主要操作 56px */
+.fab{width:calc(var(--u)*56);height:calc(var(--u)*56);font-size:calc(var(--u)*24);}
+.fab small{font-size:calc(var(--u)*11);font-weight:800;margin-top:calc(var(--u)*1);color:#8a7350;}
+.mini{width:calc(var(--u)*48);height:calc(var(--u)*48);font-size:calc(var(--u)*20);}
+
+/* ---- 三個區域，就這樣，不再有第四組 ---- */
+
+/* 左上：狀態 */
+#hud{left:calc(var(--u)*12 + var(--safeL));top:calc(var(--u)*12 + var(--safeT));
+  display:flex;flex-direction:column;gap:calc(var(--u)*6);}
+.hudrow{display:flex;align-items:center;gap:calc(var(--u)*7);}
+.lv{width:calc(var(--u)*30);height:calc(var(--u)*30);border-radius:50%;
+  background:radial-gradient(#ffd95e,#f0a52a);border:calc(var(--u)*2.5) solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(var(--u)*13);font-weight:900;color:#7a4a00;flex:none;
+  box-shadow:0 calc(var(--u)*2) calc(var(--u)*5) #0003;}
+.xp{width:calc(var(--u)*118);height:calc(var(--u)*15);background:#4a3b2a;
+  border:calc(var(--u)*2.5) solid #fff;border-radius:calc(var(--u)*10);
+  overflow:hidden;position:relative;}
+.xp>i{display:block;height:100%;width:0;background:linear-gradient(#b9e08a,#7cb342);transition:width .35s;}
+.xp span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:calc(var(--u)*10);font-weight:800;color:#fff;text-shadow:0 1px 2px #0008;}
+.chips{display:flex;gap:calc(var(--u)*6);}
+.chip{display:flex;align-items:center;gap:calc(var(--u)*4);background:var(--panel);
+  border:calc(var(--u)*2.5) solid #ffe2b0;border-radius:calc(var(--u)*20);
+  padding:calc(var(--u)*3) calc(var(--u)*10);
+  font-size:calc(var(--u)*13);font-weight:800;color:#7a5a10;}
+#farmName{background:#00000055;color:#fff;border-radius:calc(var(--u)*9);align-self:flex-start;
+  padding:calc(var(--u)*3) calc(var(--u)*10);font-size:calc(var(--u)*12);font-weight:700;cursor:pointer;}
+
+/* 右側：工具（當前操作模式） */
+#tools{right:calc(var(--u)*10 + var(--safeR));top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:calc(var(--u)*8);}
+
+/* 底部：主選單 */
+#dock{left:50%;transform:translateX(-50%);bottom:calc(var(--u)*10 + var(--safeB));
+  display:flex;gap:calc(var(--u)*8);}
+
+/* 右上：縮放（只影響 camera，不影響 UI） */
+#zoom{right:calc(var(--u)*10 + var(--safeR));top:calc(var(--u)*12 + var(--safeT));
+  display:flex;flex-direction:column;gap:calc(var(--u)*6);}
+#zoom .btn{width:calc(var(--u)*40);height:calc(var(--u)*40);
+  font-size:calc(var(--u)*22);font-weight:900;border-radius:calc(var(--u)*12);}
+
+/* 種子快選 */
+#seedbar{left:50%;transform:translateX(-50%);bottom:calc(var(--u)*76 + var(--safeB));
+  display:none;gap:calc(var(--u)*6);background:#fffdf6ee;padding:calc(var(--u)*7);
+  border-radius:calc(var(--u)*16);border:calc(var(--u)*2.5) solid #ffe2b0;
+  max-width:92vw;overflow-x:auto;}
+#seedbar.on{display:flex;}
+.seed{width:calc(var(--u)*50);height:calc(var(--u)*54);border-radius:calc(var(--u)*12);
+  background:#fff;border:calc(var(--u)*2.5) solid #ecdfc4;flex:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;font-size:calc(var(--u)*22);}
+.seed.on{border-color:var(--gold);background:#fff8e0;}
+.seed b{font-size:calc(var(--u)*10);color:#7a5a10;font-weight:800;}
+.seed .n{position:absolute;top:calc(var(--u)*-6);right:calc(var(--u)*-6);
+  background:var(--gold);color:#fff;border-radius:calc(var(--u)*10);
+  font-size:calc(var(--u)*10);font-weight:900;padding:0 calc(var(--u)*5);
+  border:calc(var(--u)*2) solid #fff;}
+.seed.lock{opacity:.45;}
+
+/* 提示 */
+#toast{left:50%;top:calc(var(--u)*16 + var(--safeT));transform:translateX(-50%);
+  background:#3e3226ee;color:#fff;padding:calc(var(--u)*8) calc(var(--u)*16);
+  border-radius:calc(var(--u)*20);font-size:calc(var(--u)*14);font-weight:700;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:80vw;
+  overflow:hidden;text-overflow:ellipsis;z-index:60;}
+#toast.on{opacity:1;}
+
+/* 彈窗 */
+#mask{position:fixed;inset:0;background:#00000077;display:none;
+  align-items:center;justify-content:center;z-index:50;padding:calc(var(--u)*14);}
+#mask.on{display:flex;}
+.modal{background:var(--panel);border-radius:calc(var(--u)*20);
+  width:min(calc(var(--u)*460),100%);max-height:92%;display:flex;flex-direction:column;
+  overflow:hidden;border:calc(var(--u)*3) solid #e8dcc2;}
+.modal h2{padding:calc(var(--u)*12) calc(var(--u)*16);background:#fff7e6;
+  border-bottom:calc(var(--u)*2) solid var(--line);font-size:calc(var(--u)*17);
+  display:flex;justify-content:space-between;align-items:center;color:var(--ink);}
+.modal .x{background:none;border:none;font-size:calc(var(--u)*22);cursor:pointer;color:#a08e70;}
+.mhead{padding:calc(var(--u)*10) calc(var(--u)*16);border-bottom:calc(var(--u)*2) solid var(--line);
+  display:flex;gap:calc(var(--u)*6);flex-wrap:wrap;}
+.tab{border:calc(var(--u)*2) solid var(--line);background:#fff;border-radius:calc(var(--u)*20);
+  padding:calc(var(--u)*5) calc(var(--u)*13);font-size:calc(var(--u)*13);
+  font-weight:800;cursor:pointer;color:#8a7350;}
+.tab.on{background:#fff3cd;border-color:var(--gold);color:#7a5a10;}
+.mbody{padding:calc(var(--u)*12) calc(var(--u)*16);overflow:auto;flex:1;min-height:0;}
+.row{display:flex;align-items:center;gap:calc(var(--u)*11);padding:calc(var(--u)*9);
+  border-radius:calc(var(--u)*13);background:#fbf7ec;margin-bottom:calc(var(--u)*8);
+  border:calc(var(--u)*2) solid #f0e8d6;}
+.row .ic{width:calc(var(--u)*38);height:calc(var(--u)*38);flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*28);}
+.row .meta{flex:1;min-width:0;}
+.row .meta b{font-size:calc(var(--u)*14);color:var(--ink);display:block;}
+.row .meta small{font-size:calc(var(--u)*11.5);color:#8d7b6a;display:block;line-height:1.45;}
+.pill{background:linear-gradient(#ffd977,#f5b731);border:calc(var(--u)*2.5) solid #fff;
+  border-radius:calc(var(--u)*20);padding:calc(var(--u)*7) calc(var(--u)*14);
+  font-size:calc(var(--u)*13);font-weight:900;color:#7a4a00;cursor:pointer;
+  box-shadow:0 calc(var(--u)*3) 0 #d9a521;}
+.pill:disabled{filter:grayscale(1);opacity:.55;cursor:default;}
+.hint{font-size:calc(var(--u)*12.5);color:#8d7b6a;line-height:1.6;}

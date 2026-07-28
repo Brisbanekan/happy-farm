@@ -1,0 +1,433 @@
+/* ============================================================
+   由 happy-farm.html 沿用的樣式 —— 只保留玩法面板（彈窗/商店/拉霸/股市/
+   工廠/好友/紀錄），v1 的世界層與舊 HUD 已被 v2 取代，全部剔除。
+   ============================================================ */
+:root{
+    /* iOS 橫屏會把左右 safe-area 都回報得很大；右側直立按鈕只需避開圓角，不應整欄被推進畫面中央。 */
+    --ui-safe-right:clamp(0px,env(safe-area-inset-right,0px),12px);
+  }
+img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;user-drag:none;}
+/* 手機長按圖片不跳「儲存圖片」選單、不可拖出 */
+/* 可平移的「世界」：背景改用素材圖；田地與動物疊在上面 */
+/* 內容置中於寬背景的原始場景區 */
+/* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本的 emoji 場景裝飾避免重複 */
+/* 外層 rotate(14deg)＝整塊田順時針轉14度（不影響等角貼圖） */
+/* 建築物（家 / 倉庫）：素材圖，放在田地後方（bhouse 避免和舊 .house 動畫衝突） */
+/* 點倉庫開倉庫面板（游標由 JS 依描圖動態設定） */
+/* 倉庫水平翻轉 */
+/* 點房子開角色資料（游標由 JS 動態設定） */
+/* 狗屋水平翻轉 */
+/* 點工廠開加工面板（游標由 JS 動態設定） */
+/* 熱氣球隨機事件 */
+/* 建築物完全靜止 */
+/* 等角草地地面：往遠處延伸 + 淡淡菱形紋理 */
+/* 地面等角網格：與田地同一套座標（rotate45 + scaleY.5、相同格距），所以田地會貼齊格線 */
+.groundgrid{position:absolute;left:28%;top:56%;width:1600px;height:1600px;z-index:0;
+    transform:translate(-50%,-50%) scaleY(.5) rotate(45deg);
+    background-image:
+      linear-gradient(#ffffff20 0 2px, transparent 2px),
+      linear-gradient(90deg,#0000001c 0 2px, transparent 2px);
+    background-size:100px 100px;background-position:50px 50px;
+    -webkit-mask-image:radial-gradient(closest-side,#000 42%,transparent 78%);
+            mask-image:radial-gradient(closest-side,#000 42%,transparent 78%);
+  }
+/* 太陽 + 雲 */
+@keyframes sunpulse{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.06);}}
+@keyframes drift{from{transform:translateX(0);}to{transform:translateX(135vw);}}
+/* 站在地面上的直立裝飾（billboard） */
+/* 遠景（小、靠近地平線） */
+.house{top:25%;right:6%;font-size:80px;animation:bob 5s ease-in-out infinite;}
+/* 已停用跳動動畫，狗為固定擺設 */
+.barn{top:27%;left:6%;font-size:62px;}
+.tfar1{top:25.5%;left:24%;font-size:34px;animation:sway 5s ease-in-out infinite;}
+.tfar2{top:25.5%;left:33%;font-size:30px;animation:sway 6s ease-in-out infinite;}
+.tfar3{top:26%;right:38%;font-size:32px;animation:sway 5.5s ease-in-out infinite;}
+/* 中景（側邊） */
+.tree1{top:40%;left:1.5%;font-size:62px;animation:sway 5s ease-in-out infinite;}
+.tree2{top:33%;right:1.5%;font-size:58px;animation:sway 6s ease-in-out infinite;}
+.cow{top:33%;right:13%;font-size:34px;animation:bob 3.6s ease-in-out infinite;}
+.hen{top:62%;left:7%;font-size:26px;animation:bob 2.8s ease-in-out infinite;}
+/* 近景（大、靠下） */
+.flowerbush{bottom:23%;left:4%;font-size:34px;}
+.flowerbush2{bottom:22%;right:6%;font-size:34px;}
+.scarecrow{bottom:25%;right:20%;font-size:40px;}
+@keyframes bob{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,-4px);}}
+/* 保留泡泡水平置中，避免動畫時右移半寬 */
+@keyframes sway{0%,100%{transform:rotate(-3deg);}50%{transform:rotate(3deg);}}
+/* 池塘 */
+.pond{position:absolute;left:5%;bottom:26%;width:120px;height:54px;z-index:2;
+    background:radial-gradient(closest-side,#bfeaff,#7fc4ee 70%,#5aa6da);
+    border-radius:50%;box-shadow:inset 0 4px 8px #ffffff66, inset 0 -6px 10px #2f7fb055, 0 3px 6px #00000022;
+    transform:scaleY(.62);}
+/* 通往農場的泥土小徑 */
+.path{position:absolute;left:50%;bottom:18%;width:150px;height:120px;z-index:1;
+    background:linear-gradient(#caa867,#b8945200);border-radius:50% 50% 0 0/40% 40% 0 0;
+    transform:translateX(-50%) scaleY(.7);opacity:.8;}
+/* 白色柵欄 */
+/* 暫時移除底部白柵欄 */
+/* 田地網格（略帶透視） */
+/* 建築物（家 / 倉庫）素材圖 */
+.zoomfade{opacity:0;}
+/* 放大聚焦時周邊素材漸漸淡化消失（.bld/#dog 已有 .35s 過渡） */
+/* 世界層交給遊戲手勢處理，瀏覽器不接手（下拉刷新/滾動）；UI與彈窗不受影響 */
+/* 注意：手機不要改欄數，否則田會被轉置（方向顛倒）且與地面格線對不上 */
+/* 等角地磚：用反向變換抵銷 field 的 rotate/scale，讓菱形貼圖正立並無縫拼接 */
+/* 兩張地磚圖比例不同（grass 340×186 / lend 340×196），各自校正縮放與位移，讓菱形頂面完全對齊 */
+/* 乾旱只影響地磚，不影響作物與泡泡 */
+@keyframes ripeglow{0%,100%{filter:drop-shadow(0 0 6px #ffca28) drop-shadow(0 0 8px #ffe06b);}50%{filter:drop-shadow(0 0 11px #fff0a0) drop-shadow(0 0 16px #ffd54f);}}
+@keyframes actionableplot{0%,100%{filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 8px #6ee65c);}50%{filter:drop-shadow(0 0 10px #fff9b0) drop-shadow(0 0 16px #39c95a);}}
+@keyframes cropsway{0%,100%{rotate:-5deg;}50%{rotate:5deg;}}
+@keyframes cropbounce{0%,100%{scale:1;}50%{scale:1.14;}}
+@media(max-width:560px){.crop{font-size:34px;}}
+/* 田地狀態對話泡泡（💧🌿🐜 漂浮在田地上方） */
+@keyframes bubbob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+/* 左上 HUD */
+/* 收折：藏等級/經驗/金幣/鑽石/魅力，保留農場名稱當展開鈕 */
+.avatar{
+    width:52px;height:52px;border-radius:50%;background:#ffe0b2;border:3px solid #fff;
+    display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 2px 6px #0003;
+  }
+/* 點農場名稱收折/展開資料 */
+/* 窄版/預覽：HUD 壓縮＋左移，避免下排金幣把狀態列撐寬擋到農場/牧場切換鍵 */
+/* ★略放大 */
+/* ★字 11→13 */
+/* ★22→26 */
+/* 跨平台一致的金幣圖示（iOS 的 <span class=coinico></span> 會變銀色，改用 CSS 畫） */
+.coinico{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-3px;
+    background:radial-gradient(circle at 35% 30%,#fff0a8,#f5c026 62%,#d4920f);
+    border:1.5px solid #c9870c;box-shadow:inset 0 -1px 1px #00000026, inset 0 1px 1px #ffffff66;}
+/* ===== 手機畫面模擬器（開發預覽用） ===== */
+/* 模擬瀏海（橫向手機在左側） */
+/* 真手機直屏：提示轉為橫向（強制橫屏） */
+.rotertip{position:fixed;inset:-80px;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:linear-gradient(#2e4a2c,#24391f);color:#fff;text-align:center;padding:108px;gap:14px;}
+/* 四邊外擴：iOS 轉向瞬間視窗變大也蓋得住 */
+.rotertip .ic{font-size:64px;animation:rotsway 1.6s ease-in-out infinite;}
+.rotertip b{font-size:20px;}
+.rotertip span{font-size:14px;opacity:.85;}
+@keyframes rotsway{0%,100%{transform:rotate(-12deg);}50%{transform:rotate(78deg);}}
+@media(orientation:portrait) and (max-width:900px){
+    body:not(.sim) .rotertip{display:flex;}
+    html,body:not(.sim){background:#24391f;}   /* 直立時底色＝轉向提示漸層的底部色 rgb(36,57,31)：綠邊條都出現在底部，用底色才無色差 */
+  }
+/* 右側直立工具列 */
+/* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+.tool{
+    width:48px;height:48px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;
+    display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;
+    box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .12s,filter .12s,box-shadow .12s;
+  }
+.tool:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
+.tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;}
+.tool.sel::after{content:"✓";position:absolute;right:-5px;top:-7px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
+@keyframes toolsel{0%,100%{box-shadow:0 0 0 4px #fff7a8,0 0 12px 4px #ffbd23aa,0 4px 0 #b87500;}50%{box-shadow:0 0 0 5px #fff370,0 0 20px 7px #ffbd23dd,0 4px 0 #b87500;}}
+.tool .lbl{position:absolute;right:50px;top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
+.tool:hover .lbl,.tool.sel .lbl{opacity:1;}
+.tool.sel .lbl{background:#5b3a11e8;color:#fff8d6;border:1px solid #ffd45e;font-size:12px;padding:4px 8px;}
+/* 觸控裝置會把 tap 保留成 :hover，造成工具文字一直黏在畫面中央；實機保留光圈與勾選即可。 */
+@media(hover:none),(pointer:coarse){.tool .lbl{display:none!important;}}
+/* 底部圖示列 */
+/* 容器可穿透：dock 橫跨整個畫面，透明區不攔田地觸控 */
+/* 只有按鈕本身接收點擊 */
+/* ===== 避開手機瀏海 / 圓角安全區（真機用 env()，模擬器左側假瀏海用 body.sim 位移） ===== */
+.logbtn{left:calc(10px + env(safe-area-inset-left,0px));}
+/* HUD 在假瀏海上方、不受其影響，往左移一點清出與切換鍵的空間 */
+/* 小牧場：直接圈在草地上的柵欄，動物自由走動 */
+.pen{position:absolute;left:64%;top:41%;transform:translate(-50%,-50%);width:610px;height:340px;z-index:4;}
+.penfence{position:absolute;inset:0;pointer-events:none;z-index:1;}
+.penfence svg{width:100%;height:100%;overflow:visible;display:block;}
+.penground{position:absolute;inset:0;z-index:2;}
+.penlabel{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:800;color:#6b4a1f;
+    background:#ffffffd8;padding:2px 10px;border-radius:9px;z-index:3;box-shadow:0 1px 2px #0002;white-space:nowrap;}
+.penadd{position:absolute;top:2px;right:16%;z-index:3;width:30px;height:30px;border-radius:50%;
+    background:#fffef6;border:2px solid #f0c544;color:#c9920f;font-size:20px;font-weight:900;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
+.penadd:active{transform:translateY(2px);box-shadow:none;}
+/* 錨點改底部中心 */
+@keyframes hop{0%,100%{transform:translateY(0) scaleX(var(--fx,1));}50%{transform:translateY(-4px) scaleX(var(--fx,1));}}
+/* 帶入翻面方向，跳動不再蓋掉 scaleX */
+@media(max-width:980px){.pen{width:470px;height:262px;left:60%;}.animal{font-size:26px;}}
+/* 手機：隱藏多餘裝飾、避免擁擠（田與牧場改由 layout() 上下排列） */
+@media(max-width:900px){
+    .barn,.cow,.hen,.tfar1,.tfar2,.tfar3,.scarecrow,.flowerbush,.flowerbush2{display:none;}
+    .tree1{top:24%;left:1%;font-size:40px;} .tree2{top:20%;right:1%;font-size:38px;}
+    .house{top:13%;right:3%;font-size:60px;} .penlabel{font-size:11px;}
+  }
+/* 場景切換（農場 / 牧場） */
+/* 拜訪好友農場（同一個遊戲場景）：頂部顯示好友名稱＋離開按鈕，隱藏場景切換 */
+/* ===== 佈局編輯模式（?edit=1） ===== */
+#editHud{position:fixed;left:10px;top:10px;z-index:99999;background:#000d;color:#fff;font-size:12px;padding:8px 12px;border-radius:10px;max-width:420px;line-height:1.7;}
+#editHud #editInfo{color:#ffd54f;font-weight:700;user-select:all;font-family:monospace;word-break:break-all;}
+#editHud #editRot{display:flex;align-items:center;gap:6px;margin:4px 0;}
+#editHud #editRot button{border:none;background:#37474f;color:#fff;border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;cursor:pointer;}
+#editHud #editRot button:hover{background:#546e7a;}
+#editHud #edDeg{min-width:44px;text-align:center;color:#80deea;font-weight:800;}
+@keyframes bldcue{0%,100%{translate:0 0;}50%{translate:0 -5px;}}
+.interacthint{position:fixed;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
+    background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
+.interacthint.on{display:block;}
+/* ===== 股市交易場景（深色 UI） ===== */
+#stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
+/* ===== 農青哥拉霸場景（明亮版） ===== */
+#slotScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;color:#4e342e;
+    background:linear-gradient(180deg,#bfe9ff 0%,#dff6e3 45%,#b5e3a0 100%);}
+.slTop{display:flex;align-items:center;gap:12px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#ffffffd9;border-bottom:2px solid #ffcc66;}
+.slTop .ttl{font-size:17px;font-weight:900;color:#e65100;text-shadow:0 1px 0 #fff;}
+.slTop .slGold{margin-left:auto;font-size:14px;font-weight:800;color:#a05a00;background:#fff;border:1px solid #e6a817;border-radius:20px;padding:4px 14px;}
+.slFsBanner{display:none;text-align:center;font-size:14px;font-weight:900;color:#8e24aa;padding:4px;background:#f3e5f5ee;letter-spacing:1px;}
+.slFsBanner.on{display:block;animation:fsGlow 1.2s ease-in-out infinite alternate;}
+@keyframes fsGlow{from{box-shadow:inset 0 0 12px #ce93d866;}to{box-shadow:inset 0 0 30px #ce93d8cc;}}
+.slMid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px;}
+/* 盤面寬度由「可用高度」反推（高度 ≈ 寬度×0.656+38px），確保 4 列在任何螢幕都放得下 */
+.slGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
+    width:min(600px,92%);   /* 後備；實際寬由 slLayout() 依 VW()/VH()(SIM-aware) 設定 inline */
+    background:#fffdf2f2;border:3px solid #e6a817;border-radius:14px;padding:10px;box-shadow:0 6px 24px #00000030,inset 0 0 20px #ffe08266;}
+.slCell{position:relative;aspect-ratio:1/.82;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#ffffff,#f1e8ff);border:1px solid #d5c5ee;border-radius:9px;
+    font-size:clamp(15px,calc(var(--slcw,44px)*0.5),40px);user-select:none;overflow:hidden;}
+/* 字級跟隨 JS 算出的儲格寬 --slcw（SIM-aware），不用 vmin */
+/* 矮螢幕壓縮：改由 slLayout() 依 VH()(SIM-aware) 加 .sl-compact，取代原 @media(max-height:520px)（預覽模式下 media 會誤用桌機視窗高） */
+#slotScene.sl-compact .slTop{padding:4px 10px 4px calc(10px + env(safe-area-inset-left,0px));gap:8px;}
+#slotScene.sl-compact .slTop .ttl{font-size:14px;}
+#slotScene.sl-compact .slTop .slGold{font-size:12px;padding:3px 10px;}
+#slotScene.sl-compact .slInfoBtn{padding:4px 10px;font-size:12px;}
+#slotScene.sl-compact .slFsBanner{font-size:12px;padding:2px;}
+#slotScene.sl-compact .slBot{padding:4px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;}
+#slotScene.sl-compact .slRes{font-size:12px;min-height:16px;}
+#slotScene.sl-compact .slBet button{width:26px;height:26px;font-size:15px;}
+#slotScene.sl-compact .slBet .bv{font-size:13px;min-width:56px;}
+#slotScene.sl-compact .slSpinBtn{padding:8px 24px;font-size:15px;}
+.suS{color:#3f51b5;font-weight:900;text-shadow:0 1px 0 #fff;}
+.suH{color:#e53935;font-weight:900;text-shadow:0 1px 0 #fff;}
+.suD{color:#fb8c00;font-weight:900;text-shadow:0 1px 0 #fff;}
+.suC{color:#43a047;font-weight:900;text-shadow:0 1px 0 #fff;}
+.slCell.win{border-color:#ffd54f;box-shadow:0 0 12px #ffd54f,inset 0 0 14px #ffd54f66;animation:slPop .45s ease;}
+@keyframes slPop{0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);}}
+.slCell.spin span{animation:slBlur .1s linear infinite;}
+@keyframes slBlur{from{filter:blur(1.5px);transform:translateY(-2px);}to{filter:blur(1.5px);transform:translateY(2px);}}
+.slCell .mult{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:900;color:#e53935;text-shadow:0 1px 0 #fff,0 0 3px #fff;}
+.slCell.wildDrop{animation:wildIn .4s ease;}
+@keyframes wildIn{from{transform:scale(0) rotate(-180deg);}to{transform:scale(1) rotate(0);}}
+.fRed{filter:hue-rotate(225deg) saturate(1.7) brightness(1.05);}
+.fYel{filter:hue-rotate(-68deg) saturate(1.5) brightness(1.15);}
+.fBlu{filter:hue-rotate(115deg) saturate(1.4);}
+.fWild{filter:drop-shadow(0 0 5px #69f0ae);}
+.fScat{filter:drop-shadow(0 0 3px #ff6f00) drop-shadow(0 0 8px #ff8f00);}
+.slBot{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));background:#ffffffd9;border-top:2px solid #ffcc66;}
+.slBet{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e6a817;border-radius:22px;padding:4px 8px;}
+.slBet button{width:30px;height:30px;border-radius:50%;border:none;background:#f0b429;color:#5d4037;font-size:18px;font-weight:900;cursor:pointer;}
+.slBet button:disabled{opacity:.35;cursor:default;}
+.slBet .bv{min-width:64px;text-align:center;font-size:15px;font-weight:900;color:#a05a00;}
+.slSpinBtn{border:none;border-radius:26px;padding:12px 34px;font-size:17px;font-weight:900;cursor:pointer;color:#241640;
+    background:linear-gradient(180deg,#ffe082,#e6a817);box-shadow:0 4px 14px #0008,inset 0 1px 0 #fff8;letter-spacing:1px;}
+.slSpinBtn:active{transform:translateY(1px);}
+.slSpinBtn:disabled{filter:grayscale(.7);opacity:.7;cursor:default;}
+.slSpinBtn.fs{background:linear-gradient(180deg,#ea80fc,#8e24aa);color:#fff;}
+.slRes{width:100%;text-align:center;font-size:14px;font-weight:800;min-height:20px;color:#7e6a95;}
+.slRes.w{color:#e65100;text-shadow:0 1px 0 #fff,0 0 8px #ffd54f;}
+.slInfoBtn{border:1px solid #e6a817;background:#fff;color:#a05a00;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+.slPayTbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.slPayTbl td,.slPayTbl th{border-bottom:1px solid #0002;padding:4px 6px;text-align:center;}
+.slPayTbl td:first-child{font-size:18px;}
+/* ===== 角色資料 / 成就 ===== */
+.ptabs{display:flex;gap:8px;margin-bottom:10px;}
+.ptabs button{flex:1;border:1px solid #d7ccc8;background:#f5efe3;border-radius:10px;padding:7px;font-size:14px;font-weight:800;cursor:pointer;color:#8a7350;}
+.ptabs button.on{background:#7cb342;border-color:#7cb342;color:#fff;}
+.pcard{display:flex;align-items:center;gap:10px;background:#f5efe3;border-radius:12px;padding:10px;margin-bottom:10px;}
+.pav{font-size:34px;}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pbox{background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:8px;text-align:center;}
+.pbox small{display:block;color:#8a7350;font-size:11px;margin-bottom:2px;}
+.pbox b{font-size:14px;}
+.achlist{display:flex;flex-direction:column;gap:6px;}
+.achrow{display:flex;align-items:center;gap:10px;background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:8px 10px;opacity:.62;}
+.achrow.ok{opacity:1;background:#f1f8e9;border-color:#c5e1a5;}
+.achrow .aico{font-size:22px;}
+.achrow .atx{flex:1;min-width:0;}
+.achrow .atx b{font-size:13.5px;display:block;}
+.achrow .atx small{color:#8a7350;font-size:11px;}
+.achrow .apg{font-size:11px;color:#8a7350;font-weight:700;white-space:nowrap;}
+.achrow .ast{font-size:15px;}
+.stkTop{display:flex;align-items:center;gap:14px;padding:8px 14px 8px calc(14px + env(safe-area-inset-left,0px));background:#161a1e;border-bottom:1px solid #2b3139;position:relative;flex-wrap:wrap;}
+.stkBack{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+.stkStar{cursor:pointer;font-size:18px;filter:grayscale(1);opacity:.55;}
+.stkStar.on{filter:none;opacity:1;}
+.stkSym{cursor:pointer;font-size:17px;font-weight:800;display:flex;align-items:center;gap:6px;user-select:none;}
+.stkSym span{font-size:11px;color:#848e9c;font-weight:400;}
+.stkPrice{font-size:22px;font-weight:800;}
+.stkPrice.up{color:#0ecb81;}
+.stkPrice.dn{color:#f6465d;}
+.stkStat{font-size:11px;color:#848e9c;display:flex;flex-direction:column;line-height:1.4;}
+.stkStat b{font-size:13px;color:#eaecef;}
+.stkDrop{position:absolute;left:70px;top:100%;width:300px;max-height:330px;overflow:auto;background:#1e2329;border:1px solid #2b3139;
+    border-radius:8px;box-shadow:0 8px 24px #000a;z-index:5;display:none;}
+.stkDrop.on{display:block;}
+.stkDrop .row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;}
+.stkDrop .row:hover{background:#2b3139;}
+.stkDrop .row b{flex:1;}
+.stkDrop .row .tk{color:#848e9c;font-size:11px;}
+/* --- 股市首頁（清單） --- */
+#stockHome{display:none;flex-direction:column;flex:1;min-height:0;background:#eef0f5;color:#16181d;}
+#stockScene.home #stockHome{display:flex;}
+#stockScene.home .stkTop,#stockScene.home .stkMain,#stockScene.home .stkBottom{display:none;}
+.shTop{display:flex;align-items:center;gap:12px;padding:10px 14px 10px calc(14px + env(safe-area-inset-left,0px));}
+.shTop .ttl{font-size:17px;font-weight:800;}
+.shTop .shCashBox{margin-left:auto;font-size:12px;color:#5b6472;}
+.shTop .shCashBox b{color:#16181d;}
+.shMain{flex:1;display:flex;gap:12px;min-height:0;margin:0 12px 12px;padding-left:env(safe-area-inset-left,0px);}
+.shList{flex:1;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 2px 10px #0000000d;}
+.shNews{width:400px;flex-shrink:0;background:#fff;border-radius:16px;box-shadow:0 2px 10px #0000000d;display:flex;flex-direction:column;min-height:0;}
+.shNews .nTtl{font-size:14px;font-weight:800;padding:10px 14px 6px;flex-shrink:0;}
+.shNews .nList{flex:1;overflow:auto;padding:0 8px 8px;}
+.shNews .nItem{display:block;padding:8px;border-radius:8px;text-decoration:none;color:#16181d;font-size:12.5px;line-height:1.45;}
+.shNews .nItem:hover{background:#f4f6fa;}
+.shNews .nt{color:#8a93a3;font-size:10.5px;margin-top:2px;}
+.shHead{display:flex;align-items:center;gap:12px;padding:9px 16px 6px;position:sticky;top:0;background:#fff;z-index:1;
+    font-size:11px;color:#8a93a3;border-bottom:1px solid #eceef3;}
+.shHead .hIcon{width:42px;flex-shrink:0;}
+.shRow{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-top:1px solid #f0f1f5;}
+.shRow:first-of-type{border-top:none;}
+.shRow:hover{background:#f7f8fb;}
+.shIcon{width:42px;height:42px;border-radius:11px;color:#fff;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.shName{display:flex;flex-direction:column;min-width:0;width:104px;flex-shrink:0;}
+.shName b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.shName span{font-size:11px;color:#8a93a3;}
+.shSpark{flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden;}
+.shPx{display:flex;flex-direction:column;align-items:flex-end;width:96px;flex-shrink:0;}
+.shPx b{font-size:15px;}
+.shPx .up{color:#16a34a;font-weight:700;font-size:12px;}
+.shPx .dn{color:#dc2626;font-weight:700;font-size:12px;}
+.stkMain{flex:1;display:flex;min-height:0;}
+/* --- Lightweight Charts 圖表區 --- */
+.stkChart{flex:1;min-width:0;position:relative;background:#0b0e11;display:flex;flex-direction:column;padding-left:env(safe-area-inset-left,0px);}
+/* 圖表區避開瀏海安全區 */
+#stkRanges{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid #1c2126;border-left:1px solid #2b3139;flex-shrink:0;}
+#stkRanges button{border:none;background:none;color:#848e9c;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;}
+#stkRanges button.on{background:#2b3139;color:#f0b90b;}
+#lwChart{flex:1;position:relative;min-height:0;border-left:1px solid #2b3139;}
+/* 圖表左側邊框，沿安全區固定排版 */
+#lwLegend{position:absolute;left:calc(14px + env(safe-area-inset-left,0px));top:40px;z-index:3;pointer-events:none;line-height:1.35;}
+#lwLegend .l1{font-size:14px;font-weight:800;color:#eaecef;}
+#lwLegend .l1 span{color:#848e9c;font-weight:400;font-size:11px;}
+#lwLegend .l2{font-size:20px;font-weight:800;color:#eaecef;}
+#lwLegend .l3{font-size:11px;color:#848e9c;}
+.stkOrder{width:252px;flex-shrink:0;background:#161a1e;border-left:1px solid #2b3139;padding:12px;display:flex;flex-direction:column;gap:9px;overflow:auto;}
+.stkOrder .otabs{display:flex;gap:6px;}
+.stkOrder .otabs button{flex:1;border:none;background:#2b3139;color:#848e9c;border-radius:6px;padding:6px 0;font-weight:800;font-size:13px;cursor:pointer;}
+.stkOrder .otabs button.on{background:#474d57;color:#f0b90b;}
+.stkOrder label{font-size:11px;color:#848e9c;}
+.stkOrder .inrow{display:flex;align-items:center;background:#2b3139;border-radius:8px;padding:6px 10px;gap:6px;}
+.stkOrder input{flex:1;min-width:0;border:none;background:none;color:#eaecef;font-size:14px;font-weight:700;outline:none;text-align:right;}
+.stkOrder input:disabled{color:#5a6570;}
+.stkOrder .inrow span{font-size:11px;color:#848e9c;flex-shrink:0;}
+.stkOrder .inrow button{border:none;background:#474d57;color:#eaecef;font-size:10px;border-radius:5px;padding:2px 7px;cursor:pointer;flex-shrink:0;}
+.stkOrder .pct{display:flex;gap:5px;}
+.stkOrder .pct button{flex:1;border:none;background:#2b3139;color:#848e9c;border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;}
+.stkOrder .pct button:hover{color:#eaecef;background:#474d57;}
+.stkOrder .pct button.on{background:#474d57;color:#f0b90b;}
+.stkBuy{border:none;border-radius:8px;padding:11px 0;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:#0ecb81;}
+.stkSell{border:none;border-radius:8px;padding:11px 0;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:#f6465d;}
+.stkBuy:active,.stkSell:active{opacity:.82;}
+.stkOrder .info{font-size:11px;color:#848e9c;line-height:1.7;}
+.stkBottom{height:200px;flex-shrink:0;background:#161a1e;border-top:1px solid #2b3139;display:flex;flex-direction:column;}
+.stkBottom .btabs{display:flex;gap:16px;padding:7px 14px 5px calc(14px + env(safe-area-inset-left,0px));border-bottom:1px solid #2b3139;}
+.stkBottom .btabs button{border:none;background:none;color:#848e9c;font-size:13px;font-weight:800;cursor:pointer;padding:2px 0;}
+.stkBottom .btabs button.on{color:#f0b90b;border-bottom:2px solid #f0b90b;}
+.stkBottom .bbody{flex:1;overflow:auto;padding:4px 14px 4px calc(14px + env(safe-area-inset-left,0px));}
+/* 起始欄位與「← 返回」按鈕 X 軸對齊 */
+.stkBottom table{width:100%;border-collapse:collapse;font-size:12px;}
+.stkBottom th{color:#848e9c;font-weight:400;text-align:left;padding:4px 6px 4px 0;font-size:11px;}
+.stkBottom td{padding:5px 6px 5px 0;border-top:1px solid #23282e;}
+.stkBottom .up{color:#0ecb81;}
+.stkBottom .dn{color:#f6465d;}
+.stkBottom .cbtn{border:1px solid #474d57;background:#2b3139;color:#eaecef;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;}
+/* ===== 牧場場景：與農場同尺寸(1400×1000)，背景改用素材圖 ===== */
+/* 背景圖已含天空/太陽/雲/樹/山丘，隱藏原本 CSS 場景裝飾避免重複 */
+/* 動物：用圖像取代 emoji，在整個牧場世界內走動 */
+/* 牧場圍籬（400×800），動物都在裡面走動 */
+/* 用木格柵素材拼成 800×400 圍欄 */
+/* 錨點改底部中心：座標＝腳底，動物站在該點上 */
+/* 牧場頂部資訊列（固定，不隨世界平移）＋ 加動物按鈕 */
+.ranchui{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:24;display:none;align-items:center;gap:8px;}
+/* 手機：牧場數量提示移到背景上方 */
+/* 放大/縮小按鈕 */
+.zbtn{width:42px;height:42px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;color:#7a5a10;
+    font-size:22px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;box-shadow:0 3px 0 #e0c389;user-select:none;}
+.zbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
+.ranchui .rlabel{font-size:13px;font-weight:800;color:#5b3f17;background:#ffffffe0;padding:4px 12px;border-radius:12px;box-shadow:0 2px 5px #0002;white-space:nowrap;}
+.ranchui .radd{width:34px;height:34px;border-radius:50%;background:#fffef6;border:2px solid #f0c544;color:#c9920f;
+    font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 0 #e0b048;}
+.ranchui .radd:active{transform:translateY(2px);box-shadow:none;}
+@media(max-width:760px){ .sceneswitch{top:calc(8px + env(safe-area-inset-top,0px));bottom:auto;left:auto;right:calc(70px + var(--ui-safe-right));transform:none;} }
+/* 登入畫面 */
+.loginmask{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(#aee6ff,#bfe39a 55%,#8fce5a);}
+.loginmask.on{display:flex;}
+.loginbox{background:#fffdf5;border:3px solid #d7ccc8;border-radius:22px;padding:28px 26px;max-width:340px;width:88%;
+    text-align:center;box-shadow:0 12px 30px #0004;}
+.loginbox h2{color:#3e2723;}
+.googlebtn{display:inline-flex;align-items:center;gap:8px;border:2px solid #cdbb95;background:#fff;border-radius:14px;
+    padding:11px 20px;font-size:15px;font-weight:800;color:#3e2723;cursor:pointer;box-shadow:0 3px 0 #d7ccc8;}
+.googlebtn:active{transform:translateY(2px);box-shadow:0 1px 0 #d7ccc8;}
+/* 左側功能按鈕（每日 / 拉霸 / 股市 / 紀錄）：移到左下（原紀錄按鈕位置），向上展開 */
+/* 拉霸機 3×3 轉輪 */
+.slotgrid{display:grid;grid-template-columns:repeat(3,58px);grid-auto-rows:58px;gap:6px;justify-content:center;margin:14px auto;}
+.scell{width:58px;height:58px;border:3px solid #d9c9a6;border-radius:12px;background:#fffef6;
+    display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:inset 0 2px 5px #0001;transition:.2s;}
+.scell.win{border-color:#ffca28;background:#fff7d6;box-shadow:0 0 12px #ffca28;transform:scale(1.06);}
+/* 左側功能：桌機常駐展開、隱藏摺疊鈕 */
+/* 功能鈕在上半部時往下展開 */
+/* ===== 功能鈕固定在底部 dock（倉庫右邊），選單往右展開 ===== */
+/* 蓋掉 body.sim .leftbar{left:46px}（預覽假瀏海偏移）——功能鈕在 dock 內不需位移，否則會多 46px 間距 */
+/* ★與 dock 同步放大 */
+/* 右上摺疊選單（同步/玩法/紀錄/佈局） */
+/* ★放大：40→48（原低於 44 觸控下限） */
+/* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
+/* ★放大：46→54 */
+/* 底部選單：改成可左右滑動 */
+/* ★放大：46→54（觸控舒適） */
+/* ★標籤 9→11px */
+/* 左側功能：摺疊成選單，點「功能」展開 */
+/* 仍保留媒體查詢做為後備（真手機） */
+@media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
+/* Modal / 通用 */
+/* flex 直排：標題固定、body 自己捲動，供凍結表頭用 */
+/* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
+/* 手機橫屏：限寬置中，不再滿版 */
+/* 凍結表頭：分類＋說明固定在 h2 與捲動區之間，商品列在下方捲動 */
+.x{cursor:pointer;font-size:22px;line-height:1;border:none;background:none;color:#8d7b6a;}
+.shopitem,.invitem,.friend{display:flex;align-items:center;gap:10px;padding:8px;border:2px solid #e6dcc8;border-radius:12px;margin-bottom:8px;background:#fff;}
+.shopitem .e,.invitem .e,.friend .av{font-size:28px;}
+.shopitem .meta,.invitem .meta,.friend .meta{flex:1;}
+.shopitem .meta b{font-size:15px;}
+.shopitem .meta div,.friend .meta div{font-size:12px;color:#8d7b6a;}
+.pbtn{border:2px solid #7cb342;background:#aed581;border-radius:10px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:13px;}
+.pbtn:disabled{opacity:.45;cursor:not-allowed;border-color:#bbb;background:#eee;}
+.pbtn.gold{border-color:#f0c544;background:#fff3c4;color:#7a5a10;}
+.pbtn.blue{border-color:#7bb8ee;background:#e7f3ff;color:#1c5a96;}
+.locktag{font-size:11px;color:#c62828;font-weight:700;}
+.locked-fold{margin-top:10px;border:2px solid #dfd5c2;border-radius:12px;background:#f7f2e8;overflow:hidden;}
+.locked-fold summary{cursor:pointer;list-style:none;padding:10px 12px;font-size:13px;font-weight:900;color:#7b6750;display:flex;align-items:center;justify-content:space-between;}
+.locked-fold summary::-webkit-details-marker{display:none;}
+.locked-fold summary::after{content:"展開查看 ＋";font-size:11px;color:#a06d24;}
+.locked-fold[open] summary::after{content:"收起 −";}
+.locked-fold .locked-list{padding:0 8px 2px;}
+.locked-fold .shopitem{background:#fffdf8;filter:saturate(.7);}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.tabs button{border:2px solid #e6dcc8;background:#fff;border-radius:20px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:13px;}
+.tabs button.on{background:#fff3c4;border-color:#f5b733;}
+.bigbtn{border:2px solid #7cb342;background:#aed581;border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14px;font-weight:700;width:100%;}
+/* log（面板開在功能選單右側，避免蓋住按鈕） */
+.logpanel{position:absolute;left:72px;bottom:94px;width:300px;max-width:62vw;background:#fffdf5f5;border:3px solid #e7c9a8;border-radius:16px;box-shadow:0 6px 18px #0003;z-index:31;display:none;overflow:hidden;}
+.logpanel.on{display:block;}
+.loghd{display:flex;justify-content:space-between;align-items:center;background:#ffe6c2;padding:6px 12px;font-size:13px;font-weight:800;color:#9a6a2e;}
+.logx{cursor:pointer;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #e7b27a;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;color:#b5763a;}
+.logx:active{transform:scale(.9);}
+.loglist{height:150px;overflow:auto;padding:6px 12px;font-size:12px;line-height:1.55;}
+.logpanel p{padding:2px 0;border-bottom:1px dashed #efe7da;}
+.logpanel .g{color:#2e7d32;font-weight:700;}
+.logpanel .r{color:#c62828;font-weight:700;}
+.logpanel .b{color:#1565c0;font-weight:700;}
+.toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(6px);}
