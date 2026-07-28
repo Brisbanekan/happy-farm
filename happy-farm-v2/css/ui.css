@@ -71,8 +71,9 @@ html,body{height:100%;overflow:hidden;background:#7fb069;
   display:flex;gap:calc(var(--u)*8);}
 
 /* 右上：縮放（只影響 camera，不影響 UI） */
+/* 縮放鈕排成一列，避免和垂直置中的工具列在右側撞在一起 */
 #zoom{right:calc(var(--u)*10 + var(--safeR));top:calc(var(--u)*12 + var(--safeT));
-  display:flex;flex-direction:column;gap:calc(var(--u)*6);}
+  display:flex;flex-direction:row;gap:calc(var(--u)*6);}
 #zoom .btn{width:calc(var(--u)*40);height:calc(var(--u)*40);
   font-size:calc(var(--u)*22);font-weight:900;border-radius:calc(var(--u)*12);}
 
@@ -134,3 +135,10 @@ html,body{height:100%;overflow:hidden;background:#7fb069;
   box-shadow:0 calc(var(--u)*3) 0 #d9a521;}
 .pill:disabled{filter:grayscale(1);opacity:.55;cursor:default;}
 .hint{font-size:calc(var(--u)*12.5);color:#8d7b6a;line-height:1.6;}
+
+
+/* ---- 全螢幕場景（拉霸 / 股市）開啟時，蓋掉世界層與 UI 層 ----
+   沿用 happy-farm.html 的 #scene.s-slot / .s-stock 機制 */
+#scene{position:fixed;inset:0;}
+#scene.s-slot #world, #scene.s-slot .ui,
+#scene.s-stock #world, #scene.s-stock .ui{display:none!important;}
