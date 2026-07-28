@@ -123,7 +123,11 @@ function plotGrid(i){
            row: FIELD_ORIGIN.row + Math.floor(i / FIELD_COLS) };
 }
 function gridToPlotIndex(col, row){
-  const c = Math.floor(col - FIELD_ORIGIN.col), r = Math.floor(row - FIELD_ORIGIN.row);
+  // 必須用 round 不能用 floor：地磚是「以錨點為中心」畫的菱形，
+  // 在格座標上覆蓋 [c-0.5, c+0.5]，而 floor 對應的是 [c, c+1)——
+  // 用 floor 會讓可點區域和畫出來的地磚整整錯開半格。
+  // 順便也解掉浮點邊界問題（round(-6.7e-16) = 0，floor 會變 -1）。
+  const c = Math.round(col - FIELD_ORIGIN.col), r = Math.round(row - FIELD_ORIGIN.row);
   if (c < 0 || r < 0 || c >= FIELD_COLS || r >= FIELD_ROWS) return -1;
   return r * FIELD_COLS + c;
 }
