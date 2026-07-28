@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#8fbf6a">
+<title>開心農場 v2</title>
+<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/systems.css">
+</head>
+<body>
+
+<!-- ============================================================
+     世界層：一張 canvas。camera 只作用在這裡。
+     ============================================================ -->
+<canvas id="world"></canvas>
+
+<!-- ============================================================
+     UI 層：DOM，尺寸一律 --u。三個區域，不再有第四組。
+     ============================================================ -->
+
+<!-- 左上：狀態 -->
+<div id="hud" class="ui">
+  <div class="hudrow">
+    <div class="lv" id="lvBadge">1</div>
+    <div class="xp"><i id="xpFill"></i><span id="xpText">0/50</span></div>
+  </div>
+  <div class="chips">
+    <div class="chip" id="goldChip">$ 200</div>
+    <div class="chip" id="creditChip">💎 5</div>
+    <div class="chip" id="charmChip">❤️ 0</div>
+  </div>
+  <div id="farmName">我的農場</div>
+</div>
+
+<!-- 右上：縮放（只動 camera） -->
+<div id="zoom" class="ui">
+  <div class="btn" onclick="zoomBy(1.18)">＋</div>
+  <div class="btn" onclick="zoomBy(0.85)">－</div>
+</div>
+
+<!-- 右側：工具 -->
+<div id="tools" class="ui"></div>
+
+<!-- 種子快選 -->
+<div id="seedbar" class="ui"></div>
+
+<!-- 底部：主選單 -->
+<div id="dock" class="ui">
+  <div class="btn fab" onclick="openShop()">🛒<small>商店</small></div>
+  <div class="btn fab" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
+  <div class="btn fab" onclick="openFriends()">👑<small>好友</small></div>
+  <div class="btn fab" onclick="openMore()">⚙️<small>更多</small></div>
+</div>
+
+<div id="toast" class="ui"></div>
+
+<!-- 彈窗外殼：玩法系統一律透過 showM() 塞內容 -->
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<!-- ============================================================
+     以下面板由 happy-farm.html 原樣沿用（拉霸 / 股市 / 紀錄 /
+     多裝置遮罩 / 登入）——玩法零改動。
+     ============================================================ -->
+  <div class="logpanel" id="logPanel">
+    <div class="loghd">📜 農場紀錄 <span class="logx" onclick="toggleLog()">×</span></div>
+    <div class="loglist" id="logList"></div>
+  </div>
+
+  <!-- 農青哥拉霸場景 -->
+  <div id="slotScene">
+    <div class="slTop">
+      <button class="stkBack" onclick="exitSlot()">← 農場</button>
+      <span class="ttl">🐸 農青哥</span>
+      <button class="slInfoBtn" onclick="openSlotPay()">📖 賠率說明</button>
+      <span class="slGold">💰 <b id="slGold">--</b></span>
+    </div>
+    <div class="slFsBanner" id="slFsBanner">✨ FREE GAME ✨ 剩餘 <span id="slFsN">0</span> 局</div>
+    <div class="slMid"><div class="slGrid" id="slGrid"></div></div>
+    <div class="slBot">
+      <div class="slRes" id="slRes">祝你好運!螢火蟲 ✨ ×3 觸發 FREE GAME</div>
+      <div class="slBet">
+        <button id="slBetDn" onclick="slBetAdj(-1)">−</button>
+        <span class="bv">押注 <span id="slBetV">50</span></span>
+        <button id="slBetUp" onclick="slBetAdj(1)">＋</button>
+      </div>
+      <button class="slSpinBtn" id="slSpinBtn" onclick="slSpin()">SPIN</button>
+    </div>
+  </div>
+
+  <!-- 股市交易場景 -->
+  <div id="stockScene">
+    <div id="stockHome">
+      <div class="shTop">
+        <button class="stkBack" onclick="exitStock()">← 農場</button>
+        <span class="ttl">📈 股市</span>
+        <span class="shCashBox">可用金幣 <b id="shCash">--</b></span>
+      </div>
+      <div class="shMain">
+        <div class="shList" id="shList"></div>
+        <div class="shNews"><div class="nTtl">📰 財經新聞</div><div class="nList" id="shNewsList"><div class="nt" style="padding:10px">載入中…</div></div></div>
+      </div>
+    </div>
+    <div class="stkTop">
+      <button class="stkBack" onclick="backStockHome()">← 返回</button>
+      <span class="stkStar" id="stkStar" onclick="toggleFav()">⭐</span>
+      <div class="stkSym" onclick="toggleStockDrop()"><b id="stkName">--</b><span id="stkTick"></span> ▾</div>
+      <div class="stkPrice" id="stkPrice">--</div>
+      <div class="stkStat">今日漲跌<b id="stkChg">--</b></div>
+      <div class="stkStat">交易時段<b id="stkSess">--</b></div>
+      <div class="stkStat">持倉<b id="stkPos">--</b></div>
+      <div class="stkStat">可用金幣<b id="stkCash">--</b></div>
+      <div class="stkDrop" id="stkDrop"></div>
+    </div>
+    <div class="stkMain">
+      <div class="stkChart">
+        <div id="stkRanges">
+          <button data-r="24H" class="on" onclick="setChartRange('24H')">24小時</button>
+          <button data-r="2D" onclick="setChartRange('2D')">2日</button>
+          <button data-r="3D" onclick="setChartRange('3D')">3日</button>
+          <button data-r="5D" onclick="setChartRange('5D')">5日</button>
+        </div>
+        <div id="lwChart"></div>
+        <div id="lwLegend"></div>
+      </div>
+      <div class="stkOrder">
+        <div class="otabs"><button id="otLimit" class="on" onclick="setOrderType('limit')">限價</button><button id="otMarket" onclick="setOrderType('market')">市價</button></div>
+        <label>委託價格</label>
+        <div class="inrow"><input id="odPrice" type="number" step="0.01" oninput="updOdCost()"><span>金幣</span><button onclick="odUseCur()">現價</button></div>
+        <label>數量</label>
+        <div class="inrow"><input id="odQty" type="number" step="1" min="0" oninput="updOdCost()"><button id="odUnit" onclick="toggleOdUnit()">張 ▾</button></div>
+        <div class="pct" style="align-items:center;gap:8px">
+          <input type="range" id="odPct" min="0" max="100" step="5" value="0" style="flex:1;accent-color:#f0b90b" oninput="odQtySlide(this.value)">
+          <span id="odPctLbl" style="font-size:11px;color:#848e9c;width:34px;text-align:right;flex-shrink:0">0%</span>
+        </div>
+        <label>交易方式（融資自備4成，維持率130%斷頭）</label>
+        <div class="pct" id="levRow"><button class="on" onclick="setLev(0)">現股</button><button onclick="setLev(0.6)">融資</button></div>
+        <button class="stkBuy" onclick="placeOrder(1)">買入 / 做多</button>
+        <button class="stkSell" onclick="placeOrder(-1)">賣出 / 做空</button>
+        <div class="info" id="odCost"></div>
+      </div>
+    </div>
+    <div class="stkBottom">
+      <div class="btabs"><button id="btPos" class="on" onclick="setStkTab('pos')">倉位(<span id="posN">0</span>)</button><button id="btOrd" onclick="setStkTab('ord')">當前委託(<span id="ordN">0</span>)</button></div>
+      <div class="bbody" id="stkBody"></div>
+    </div>
+  </div>
+
+
+<div class="rotertip">
+  <div class="ic">📱</div>
+  <b>請將手機轉為橫向</b>
+  <span>開心農場以橫屏遊玩體驗最佳</span>
+</div>
+
+<!-- 多裝置接手提示：另一台裝置寫入雲端時，這台暫停並顯示 -->
+<div id="devMask" style="position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:#000000cc;color:#fff;text-align:center">
+  <div style="background:#1e2329;border-radius:18px;padding:24px 28px;max-width:340px;width:86%">
+    <div style="font-size:38px">📱↔️💻</div>
+    <b style="font-size:16px;display:block;margin:10px 0 6px">另一台裝置已接手</b>
+    <p style="font-size:13px;color:#aab4c0;line-height:1.7;margin:0 0 16px">偵測到你的帳號正在其他裝置遊玩。<br>此視窗已暫停存檔，避免進度互相覆蓋。</p>
+    <button onclick="resumeHere()" style="border:none;background:#f0b90b;color:#222;font-weight:800;border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer">載入最新進度，在這裡繼續</button>
+  </div>
+</div>
+
+<!-- 登入畫面（啟用帳號登入時才顯示） -->
+<div class="loginmask" id="loginMask">
+  <div class="loginbox">
+    <div style="font-size:48px">🌻</div>
+    <h2 style="margin:6px 0">開心農場</h2>
+    <p style="font-size:13px;color:#6b5a44;margin:0 0 16px;line-height:1.6">登入後你的農場進度會綁定帳號，<br>換手機或電腦登同一個帳號就能接續。</p>
+    <button class="googlebtn" onclick="googleLogin()">
+      <span style="font-size:18px">🔵</span> 使用 Google 登入
+    </button>
+    <div id="loginMsg" style="font-size:12px;color:#c62828;margin-top:10px;min-height:16px"></div>
+    <div style="margin-top:6px"><a href="#" onclick="hideLogin();return false" style="font-size:12px;color:#8d7b6a">先本機試玩，之後再登入 →</a></div>
+  </div>
+</div>
+
+
+<!-- Firebase SDK（帳號登入與雲端同步；未設定時不影響遊戲） -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/farm.js"></script>
+<script src="js/systems.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>
