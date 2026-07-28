@@ -277,7 +277,7 @@ const World = {
     const pz = 1 + (z - 1) * BG_ZOOM_FOLLOW;
     const ox = -Camera.x * PARALLAX_X * z;
     const oy = -Camera.y * PARALLAX_Y * z;
-    const horizon = view.h * 0.36 + oy;
+    const horizon = view.h * 0.30 + oy;
 
     // 天空
     const sky = c.createLinearGradient(0, 0, 0, horizon + 40 * pz);

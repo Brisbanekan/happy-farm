@@ -41,9 +41,11 @@
   // 6) 時間循環（沿用舊系統的 tick，內含成長/蟲害/偷菜/工廠/股價）
   if (typeof tick === "function") setInterval(tick, 1000);
 
-  // 開場把鏡頭對準島中央，讓遠景幕布在四周露出來
+  // 開場構圖：整座島入鏡，並讓島略高於畫面中心——
+  // 下方要留給 dock，上方要讓遠景幕布露出來。
   Camera.centerOn(ISLAND.cx - 0.5, ISLAND.cy);
-  Camera.zoom = 0.78; Camera.clamp();
+  Camera.y += 60;
+  Camera.zoom = 0.62; Camera.clamp();
 })();
 
 /* 「更多」面板：把不常用的入口收進來，維持一級按鈕不超過 6 個 */
