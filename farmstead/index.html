@@ -36,6 +36,8 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;}
 /* 主要圓鈕 */
 .fab{width:calc(var(--u)*56);height:calc(var(--u)*56);font-size:calc(var(--u)*26);}
 .fab small{font-size:calc(var(--u)*11);font-weight:800;margin-top:calc(var(--u)*1);color:#8a7350;}
+.ico{display:block;overflow:visible;}
+h2 .ico,.tab .ico,.seed .ico,.pill .ico,.meta .ico{display:inline-block;vertical-align:-15%;}
 
 /* 左上：狀態 */
 #hud{left:calc(var(--u)*12 + var(--safeL));top:calc(var(--u)*12 + var(--safeT));
@@ -151,24 +153,24 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;}
   </div>
 
   <div id="tools" class="ui">
-    <div class="btn fab" id="toolPlant" onclick="Game.setTool('plant')">🌱<small>播種</small></div>
-    <div class="btn fab" id="toolWater" onclick="Game.setTool('water')">💧<small>澆水</small></div>
-    <div class="btn fab" id="toolHarvest" onclick="Game.harvestAll()">🧺<small>全收</small></div>
+    <div class="btn fab" id="toolPlant" onclick="Game.setTool('plant')"><span data-ic="sprout"></span><small>播種</small></div>
+    <div class="btn fab" id="toolWater" onclick="Game.setTool('water')"><span data-ic="drop"></span><small>澆水</small></div>
+    <div class="btn fab" id="toolHarvest" onclick="Game.harvestAll()"><span data-ic="basket"></span><small>全收</small></div>
   </div>
 
   <div id="seedbar" class="ui"></div>
 
   <div id="dock" class="ui">
-    <div class="btn fab" onclick="UI.openShop()">🛒<small>商店</small></div>
-    <div class="btn fab" onclick="UI.openBarn()">🎒<small>倉庫</small></div>
-    <div class="btn fab" onclick="UI.openAnimals()">🐮<small>牧場</small></div>
+    <div class="btn fab" onclick="UI.openShop()"><span data-ic="cart"></span><small>商店</small></div>
+    <div class="btn fab" onclick="UI.openBarn()"><span data-ic="bag"></span><small>倉庫</small></div>
+    <div class="btn fab" onclick="UI.openAnimals()"><span data-ic="cow"></span><small>牧場</small></div>
   </div>
 
   <div id="toast" class="ui"></div>
 </div>
 
 <div id="mask" onclick="if(event.target===this)UI.close()"><div class="modal" id="modal"></div></div>
-<div id="loading">🌾 Farmstead<div style="font-size:calc(var(--u)*13);font-weight:600">載入中…</div></div>
+<div id="loading"><span data-ic="wheat"></span> Farmstead<div style="font-size:calc(var(--u)*13);font-weight:600">載入中…</div></div>
 
 <script>
 "use strict";
@@ -210,13 +212,48 @@ for (const k of Object.keys(CROPS)) {
   ASSETS["icon_"+k] = "icon_"+k+".png";
   for (let s=0;s<3;s++) ASSETS["crop_"+k+"_"+s] = "crop_"+k+"_"+s+".png";
 }
+/* ---------------- 介面圖示（內嵌 SVG，不使用 emoji） ----------------
+   emoji 在不同裝置字體不同、風格與遊戲美術不搭，改用向量圖示統一外觀。 */
+const SVG = {
+  sprout:'<path d="M12 21V11" /><path d="M12 12c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6z" fill="#7cc24a" stroke="none"/><path d="M12 13c0-3.9 3.1-7 7-7 0 3.9-3.1 7-7 7z" fill="#5da832" stroke="none"/>',
+  drop:'<path d="M12 3c3.6 4.3 6 7.4 6 10a6 6 0 1 1-12 0c0-2.6 2.4-5.7 6-10z" fill="#4bb4e6" stroke="none"/><path d="M9.6 13.4a3.2 3.2 0 0 0 2.2 4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+  basket:'<path d="M4 10h16l-1.6 8.4a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6z" fill="#d9a05b" stroke="none"/><path d="M8 10l2.4-5M16 10l-2.4-5" stroke="#8a5a2b" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M3.4 9h17.2a.9.9 0 0 1 0 1.8H3.4a.9.9 0 0 1 0-1.8z" fill="#8a5a2b" stroke="none"/>',
+  cart:'<circle cx="10" cy="19.5" r="1.6" fill="#6b5030" stroke="none"/><circle cx="17" cy="19.5" r="1.6" fill="#6b5030" stroke="none"/><path d="M2.6 4h2.6l2.6 10.4h10l2.2-7.4H6.4" fill="none" stroke="#6b5030" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  bag:'<path d="M5 8h14l-1 12H6z" fill="#e0705f" stroke="none"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="#a8423a" stroke-width="2"/><rect x="9.5" y="12" width="5" height="3.4" rx="1" fill="#fff2ee" stroke="none"/>',
+  cow:'<path d="M4.5 9.5C4.5 6.5 7.8 5 12 5s7.5 1.5 7.5 4.5c0 4-2.6 8-7.5 8s-7.5-4-7.5-8z" fill="#fff" stroke="#5a4632" stroke-width="1.6"/><path d="M6.6 7.2c-1.6-.6-2.9-.3-3.4.8 1 .8 2.3 1 3.4.4zM17.4 7.2c1.6-.6 2.9-.3 3.4.8-1 .8-2.3 1-3.4.4z" fill="#5a4632" stroke="none"/><ellipse cx="12" cy="14" rx="3.4" ry="2.6" fill="#f4b9c0" stroke="none"/><circle cx="10.6" cy="13.8" r=".6" fill="#5a4632" stroke="none"/><circle cx="13.4" cy="13.8" r=".6" fill="#5a4632" stroke="none"/><circle cx="9.4" cy="9.6" r="1" fill="#3d3227" stroke="none"/><circle cx="14.6" cy="9.6" r="1" fill="#3d3227" stroke="none"/>',
+  wheat:'<path d="M12 21V9" stroke="#b98b2e" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M12 9c0-2.2 1.4-4 3-4 0 2.2-1.4 4-3 4zM12 9c0-2.2-1.4-4-3-4 0 2.2 1.4 4 3 4zM12 13.5c0-2.2 1.4-4 3-4 0 2.2-1.4 4-3 4zM12 13.5c0-2.2-1.4-4-3-4 0 2.2 1.4 4 3 4z" fill="#e5b93e" stroke="none"/>',
+  coin:'<circle cx="12" cy="12" r="8.4" fill="#f2c33d" stroke="#c99a17" stroke-width="1.6"/><circle cx="12" cy="12" r="5.4" fill="none" stroke="#c99a17" stroke-width="1.2"/><path d="M12 8.6v6.8M10.2 10.2h3.2a1.5 1.5 0 0 1 0 3h-2.8a1.5 1.5 0 0 0 0 3h3.2" fill="none" stroke="#8a6a0c" stroke-width="1.4" stroke-linecap="round"/>',
+  lock:'<rect x="5.5" y="10.5" width="13" height="9.5" rx="2" fill="#f0d089" stroke="#a8813a" stroke-width="1.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="#a8813a" stroke-width="2"/><circle cx="12" cy="15" r="1.5" fill="#a8813a" stroke="none"/>',
+  check:'<circle cx="12" cy="12" r="8.6" fill="#5cb85c" stroke="none"/><path d="M8 12.4l2.8 2.8L16 9.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  star:'<path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" fill="#f2c33d" stroke="#d09f1c" stroke-width="1.2" stroke-linejoin="round"/>',
+  egg:'<ellipse cx="12" cy="13.4" rx="5.6" ry="7.2" fill="#fdf1dc" stroke="#d9bd8e" stroke-width="1.5"/>',
+};
+/** 產生一個內嵌 SVG 圖示；size 以 --u 為單位縮放 */
+function ic(name, u){
+  u = u || 24;
+  return '<svg class="ico" viewBox="0 0 24 24" style="width:calc(var(--u)*'+u+');height:calc(var(--u)*'+u+')" '
+       + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+       + SVG[name] + '</svg>';
+}
+
+/** 把 HTML 裡的 <span data-ic="名稱"> 換成實際 SVG */
+function hydrateIcons(root){
+  (root || document).querySelectorAll("[data-ic]").forEach(el => {
+    if (el.dataset.icDone) return;
+    el.innerHTML = ic(el.dataset.ic, +(el.dataset.icu || 24));
+    el.dataset.icDone = "1";
+  });
+}
+hydrateIcons();
+
+const ASSET_VER = "ai2";      // 素材版本：換圖後改這裡，避免瀏覽器沿用舊快取
 function loadAssets(){
   const keys = Object.keys(ASSETS);
   return Promise.all(keys.map(k => new Promise(res => {
     const im = new Image();
     im.onload = () => { IMG[k] = im; res(); };
     im.onerror = () => { IMG[k] = null; res(); };
-    im.src = "assets/" + ASSETS[k];
+    im.src = "assets/" + ASSETS[k] + "?v=" + ASSET_VER;
   })));
 }
 
@@ -290,7 +327,7 @@ const Act = {
   addCoins(n){ G().coins = Math.max(0, Math.round(G().coins + n)); UI.syncHUD(); },
   addXP(n){
     G().xp += n;
-    while (G().xp >= XP_NEED(G().level)) { G().xp -= XP_NEED(G().level); G().level++; UI.toast("🎉 升級！Lv." + G().level); }
+    while (G().xp >= XP_NEED(G().level)) { G().xp -= XP_NEED(G().level); G().level++; UI.toast("升級！Lv." + G().level); }
     UI.syncHUD();
   },
   plant(p, kind){
@@ -300,14 +337,14 @@ const Act = {
     if (G().level < CROPS[kind].lv) return UI.toast("需要 Lv." + CROPS[kind].lv);
     G().seeds[kind]--; if (G().seeds[kind] <= 0) delete G().seeds[kind];
     p.crop = kind; p.plantedAt = Date.now(); p.watered = false;
-    World.pop(p, "🌱"); UI.syncSeedbar(); State.save();
+    World.pop(p, "＋種子"); UI.syncSeedbar(); State.save();
   },
   water(p){
     if (!p.crop || p.watered) return false;
     if (growth(p, Date.now()) >= 1) return false;
     p.watered = true;
     // 保持已完成比例：縮短總時長時往前推 plantedAt
-    World.pop(p, "💧"); Act.addXP(1); State.save(); return true;
+    World.pop(p, "＋水"); Act.addXP(1); State.save(); return true;
   },
   harvest(p){
     if (!p.crop || growth(p, Date.now()) < 1) return false;
@@ -441,6 +478,35 @@ const World = {
     this.cam.y += before.y - after.y;
     this.clampCam();
   },
+  /** 在 canvas 上畫一個鎖（取代 emoji，跨平台外觀一致） */
+  drawLock(x, y, size){
+    const ctx = this.ctx, w = size, h = size * 0.78, r = w * 0.18;
+    ctx.save();
+    ctx.translate(x, y);
+    // 鎖環
+    ctx.beginPath();
+    ctx.lineWidth = Math.max(1, w * 0.16);
+    ctx.strokeStyle = "#f7e7bb";
+    ctx.arc(0, -h * 0.42, w * 0.28, Math.PI, 0);
+    ctx.stroke();
+    // 鎖身
+    ctx.beginPath();
+    const x0 = -w/2, y0 = -h*0.12;
+    ctx.moveTo(x0 + r, y0);
+    ctx.arcTo(x0 + w, y0,     x0 + w, y0 + h, r);
+    ctx.arcTo(x0 + w, y0 + h, x0,     y0 + h, r);
+    ctx.arcTo(x0,     y0 + h, x0,     y0,     r);
+    ctx.arcTo(x0,     y0,     x0 + w, y0,     r);
+    ctx.closePath();
+    ctx.fillStyle = "#f2d489"; ctx.fill();
+    ctx.lineWidth = Math.max(1, w * 0.1); ctx.strokeStyle = "#a8813a"; ctx.stroke();
+    // 鑰匙孔
+    ctx.beginPath();
+    ctx.fillStyle = "#a8813a";
+    ctx.arc(0, y0 + h * 0.45, w * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  },
   pop(p, text){
     const w = this.gridToWorld(p.c !== undefined ? p.c : p.ax, p.r !== undefined ? p.r : p.ay);
     this.pops.push({x:w.x, y:w.y - 30, text, t:0});
@@ -485,7 +551,7 @@ const World = {
           this.ctx.globalAlpha = 0.34; this.ctx.fillStyle = "#2b3a20";
           this.diamondPath(s.x, s.y, zoom); this.ctx.fill();
           this.ctx.restore();
-          this.text("🔒", s.x, s.y + 6*zoom, 20*zoom, "#fff");
+          this.drawLock(s.x, s.y + 4*zoom, 16*zoom);
           return;
         }
         const img = p.watered && p.crop ? IMG.wet : (p.crop ? IMG.soil : IMG.soil);
@@ -749,19 +815,19 @@ const Game = {
     const now = Date.now();
     let n = 0;
     G().plots.forEach(p => { if (p.crop && growth(p, now) >= 1 && Act.harvest(p)) n++; });
-    UI.toast(n ? ("🧺 收成了 " + n + " 塊田") : "目前沒有成熟的作物");
+    UI.toast(n ? ("收成了 " + n + " 塊田") : "目前沒有成熟的作物");
   },
   plantAll(){
     let n = 0;
     G().plots.forEach(p => {
       if (p.unlocked && !p.crop && (G().seeds[this.seed]||0) > 0){ Act.plant(p, this.seed); n++; }
     });
-    UI.toast(n ? ("🌱 播種了 " + n + " 塊田") : "沒有空地或種子不足");
+    UI.toast(n ? ("播種了 " + n + " 塊田") : "沒有空地或種子不足");
   },
   waterAll(){
     let n = 0;
     G().plots.forEach(p => { if (Act.water(p)) n++; });
-    UI.toast(n ? ("💧 澆了 " + n + " 塊田") : "沒有需要澆水的田");
+    UI.toast(n ? ("澆了 " + n + " 塊田") : "沒有需要澆水的田");
   },
 };
 function fmtTime(sec){
@@ -818,12 +884,12 @@ const UI = {
     // 批次播種
     const all = document.createElement("div");
     all.className = "seed";
-    all.innerHTML = '<b style="font-size:calc(var(--u)*11)">🌱全種</b>';
+    all.innerHTML = '<b style="font-size:calc(var(--u)*11)">'+ic("sprout",14)+'全種</b>';
     all.onclick = () => Game.plantAll();
     bar.appendChild(all);
     const wat = document.createElement("div");
     wat.className = "seed";
-    wat.innerHTML = '<b style="font-size:calc(var(--u)*11)">💧全澆</b>';
+    wat.innerHTML = '<b style="font-size:calc(var(--u)*11)">'+ic("drop",14)+'全澆</b>';
     wat.onclick = () => Game.waterAll();
     bar.appendChild(wat);
   },
@@ -856,9 +922,9 @@ const UI = {
       });
       body += '<p class="hint">動物會在右側牧場自由走動，產物出現時點一下即可收成。</p>';
     }
-    this.show('<h2>🛒 商店<button class="x" onclick="UI.close()">×</button></h2>'
-      + '<div class="mhead"><button class="tab '+(tab==="seed"?"on":"")+'" onclick="UI.openShop(\'seed\')">🌱 種子</button>'
-      + '<button class="tab '+(tab==="animal"?"on":"")+'" onclick="UI.openShop(\'animal\')">🐮 動物</button></div>'
+    this.show('<h2>'+ic("cart",20)+' 商店<button class="x" onclick="UI.close()">×</button></h2>'
+      + '<div class="mhead"><button class="tab '+(tab==="seed"?"on":"")+'" onclick="UI.openShop(\'seed\')">'+ic("sprout",16)+' 種子</button>'
+      + '<button class="tab '+(tab==="animal"?"on":"")+'" onclick="UI.openShop(\'animal\')">'+ic("cow",16)+' 動物</button></div>'
       + '<div class="mbody">'+body+'</div>');
   },
 
@@ -877,8 +943,8 @@ const UI = {
         + '<button class="pill" onclick="Act.sell(\''+k+'\',1);UI.openBarn()">賣 1</button>'
         + '<button class="pill" onclick="Act.sell(\''+k+'\','+n+');UI.openBarn()">全賣</button></div>';
     });
-    if (keys.length) body += '<button class="pill" style="width:100%;margin-top:calc(var(--u)*6)" onclick="UI.sellAll()">💰 全部賣掉（＄'+total+'）</button>';
-    this.show('<h2>🎒 倉庫<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+body+'</div>');
+    if (keys.length) body += '<button class="pill" style="width:100%;margin-top:calc(var(--u)*6)" onclick="UI.sellAll()">'+ic("coin",16)+' 全部賣掉（＄'+total+'）</button>';
+    this.show('<h2>'+ic("bag",20)+' 倉庫<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+body+'</div>');
   },
   sellAll(){
     Object.keys(G().store).forEach(k => Act.sell(k, G().store[k]));
@@ -886,21 +952,21 @@ const UI = {
   },
   openAnimals(){
     let body = "";
-    if (!G().animals.length) body = '<p class="hint">還沒有動物，到 🛒 商店 → 🐮 動物 購買。</p>';
+    if (!G().animals.length) body = '<p class="hint">還沒有動物，到「商店 → 動物」購買。</p>';
     G().animals.forEach((a,i) => {
       const d = ANIMALS[a.kind];
       const left = Math.max(0, Math.ceil((a.readyAt - Date.now())/1000));
       body += '<div class="row"><img class="ic" src="assets/'+a.kind+'.png" alt="">'
         + '<div class="meta"><b>'+d.name+'</b><small>'
-        + (a.stock ? ('✅ 可收成 '+d.pname+' ×'+a.stock) : ('生產中… 還要 '+fmtTime(left)))
+        + (a.stock ? (ic("check",14)+' 可收成 '+d.pname+' ×'+a.stock) : ('生產中… 還要 '+fmtTime(left)))
         + '</small></div>'
         + (a.stock ? '<button class="pill" onclick="Act.collectAnimal(G().animals['+i+']);UI.openAnimals()">收成</button>' : '')
         + '</div>';
     });
     if (G().animals.length){
-      body += '<button class="pill" style="width:100%" onclick="UI.collectAll()">🧺 全部收成</button>';
+      body += '<button class="pill" style="width:100%" onclick="UI.collectAll()">'+ic("basket",16)+' 全部收成</button>';
     }
-    this.show('<h2>🐮 牧場<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+body+'</div>');
+    this.show('<h2>'+ic("cow",20)+' 牧場<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+body+'</div>');
   },
   collectAll(){
     let n = 0;
@@ -909,7 +975,7 @@ const UI = {
     this.openAnimals();
   },
   confirmUnlock(p, cost){
-    this.show('<h2>🔒 開通田地<button class="x" onclick="UI.close()">×</button></h2>'
+    this.show('<h2>'+ic("lock",20)+' 開通田地<button class="x" onclick="UI.close()">×</button></h2>'
       + '<div class="mbody"><p class="hint">花費 ＄'+cost+' 開通這塊田地，可以種更多作物。</p>'
       + '<button class="pill" style="width:100%" onclick="Act.unlockPlot(G().plots['+(p.r*GRID+p.c)+']);UI.close()">＄'+cost+' 開通</button></div>');
   },
@@ -917,10 +983,10 @@ const UI = {
     if (info.away < 60000 && !info.ripe && !info.items) return;
     let s = "";
     if (info.away >= 60000) s += '<p class="hint">你離開了 '+fmtTime(info.away/1000)+'。</p>';
-    if (info.ripe) s += '<div class="row"><div class="meta"><b>🌾 '+info.ripe+' 塊田已成熟</b><small>點田地或按「全收」收成</small></div></div>';
-    if (info.items) s += '<div class="row"><div class="meta"><b>🥚 動物產出 '+info.items+' 個</b><small>到牧場點動物收成</small></div></div>';
+    if (info.ripe) s += '<div class="row"><div class="meta"><b>'+ic("wheat",16)+' '+info.ripe+' 塊田已成熟</b><small>點田地或按「全收」收成</small></div></div>';
+    if (info.items) s += '<div class="row"><div class="meta"><b>'+ic("egg",16)+' 動物產出 '+info.items+' 個</b><small>到牧場點動物收成</small></div></div>';
     if (!s) return;
-    this.show('<h2>👋 歡迎回來<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+s
+    this.show('<h2>歡迎回來<button class="x" onclick="UI.close()">×</button></h2><div class="mbody">'+s
       + '<button class="pill" style="width:100%" onclick="Game.harvestAll();UI.collectAll();UI.close()">一鍵全部收成</button></div>');
   },
 };
