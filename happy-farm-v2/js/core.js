@@ -496,6 +496,13 @@ function centerField(){
 /** 存檔沿用舊系統的 saveGame（含雲端推送），此處只做名稱對接 */
 function save(){ if (typeof saveGame === "function") saveGame(); }
 
+/* v1 有「手機預覽模擬器」，會用假的邏輯視口覆寫 VW()/VH()。
+   v2 不需要模擬器——UI 以 --u 等比推導，桌機視窗直接就是真機的等比放大，
+   所以這裡回傳真實視口即可。拉霸盤面的 slLayout() 仍靠這兩個函式算寬高。 */
+function VW(){ return window.innerWidth; }
+function VH(){ return window.innerHeight; }
+const SIM = false;
+
 window.Iso = Iso; window.Camera = Camera; window.World = World;
 window.Input = Input; window.Store = Store;
 window.syncUIScale = syncUIScale;
