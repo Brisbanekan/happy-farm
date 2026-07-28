@@ -128,6 +128,25 @@ function gridToPlotIndex(col, row){
   return r * FIELD_COLS + c;
 }
 
+/* 牧場：一塊格線區域。動物的活動範圍是格座標，不再是 % 定位的梯形 */
+const PEN = {
+  c0: FIELD_COLS + 0.6, c1: FIELD_COLS + 3.4,
+  r0: 0.2,              r1: 3.0,
+  /** 開場位置：沿區域均勻散開，避免全部疊在一起 */
+  spawn(i){
+    const cols = 3;
+    return { col: this.c0 + 0.4 + (i % cols) * ((this.c1 - this.c0 - 0.8) / (cols - 1)),
+             row: this.r0 + 0.3 + Math.floor(i / cols) * 0.95 };
+  },
+  clamp(c, r){
+    return { col: Math.max(this.c0, Math.min(this.c1, c)),
+             row: Math.max(this.r0, Math.min(this.r1, r)) };
+  },
+};
+
+/* 各動物在世界中的顯示高度（世界像素；一格地磚寬 128） */
+const AN_H = { chick:34, cow:56, sheep:50, pig:46, bee:22 };
+
 /* 世界上的固定物件：佔哪一格是「資料」，不是靠圖片對齊 */
 const PROPS = [
   { key:"house",    img:"../building/house.png",    col:-2.4, row:-1.2, h:210, act:"profile" },
@@ -264,14 +283,17 @@ const World = {
     // 牧場動物：同一套座標系，不再是另一個 DOM 世界
     (G.ranch || []).forEach((a, i) => {
       if (!a) return;
-      if (a.gc == null){ a.gc = FIELD_COLS + 1.2 + (i % 3) * 0.9; a.gr = 0.4 + Math.floor(i / 3) * 1.1; }
+      if (a.gc == null){
+        const p = PEN.spawn(i);
+        a.gc = p.col; a.gr = p.row;
+      }
       this.stepAnimal(a, now);
       const w = Iso.toWorld(a.gc, a.gr), s = Camera.toScreen(w.x, w.y, view);
       const def = (typeof ANIMALS !== "undefined") ? ANIMALS[a.a] : null;
       add(Iso.depth(a.gc, a.gr) + 0.2, () => {
         const im = this.img["an_" + a.a];
-        if (im) this.sprite(im, s.x, s.y, 62, a.dir < 0);
-        else if (def) this.glyph(def.emoji, s.x, s.y, 40 * z);
+        if (im) this.sprite(im, s.x, s.y, AN_H[a.a] || 52, a.dir < 0);
+        else if (def) this.glyph(def.emoji, s.x, s.y, 34 * z);
         if (a.ready && def){
           const bob = Math.sin(now / 320 + i) * 3;
           this.glyph(def.prod, s.x, s.y - 58 * z + bob * z, 22 * z);
@@ -309,11 +331,17 @@ const World = {
       }
       return;
     }
-    // 土地
+    // 土地：畫出清楚的格線，讓玩家看得出一格一格（v1 這是靠 CSS 邊框硬湊）
     this.diamond(s.x, s.y, z);
     c.fillStyle = p.dry ? "#a8875c" : (p.state === "planted" ? "#8a6a45" : "#9a7852");
     c.fill();
-    c.strokeStyle = "#00000018"; c.lineWidth = 1; c.stroke();
+    c.strokeStyle = "#6b4f33"; c.lineWidth = Math.max(1, 1.6 * z); c.stroke();
+    // 上緣打亮，強化立體感
+    c.beginPath();
+    c.moveTo(s.x - TILE_W/2*z, s.y);
+    c.lineTo(s.x, s.y - TILE_H/2*z);
+    c.lineTo(s.x + TILE_W/2*z, s.y);
+    c.strokeStyle = "#ffffff30"; c.lineWidth = Math.max(1, 1.4 * z); c.stroke();
 
     if (this.hover === i){
       this.diamond(s.x, s.y, z);
@@ -358,18 +386,21 @@ const World = {
     c.restore();
   },
 
-  /** 動物在牧場區域內慢慢走動（格座標，不是像素） */
+  /** 動物在牧場區域內慢慢走動（格座標，不是像素）
+      v1 用 % 定位 + 手動維護 z-index，這裡走到哪深度就自動正確 */
   stepAnimal(a, now){
+    const p = PEN.clamp(a.gc, a.gr);
+    a.gc = p.col; a.gr = p.row;
     if (!a.nt || now > a.nt){
-      a.nt = now + 1800 + Math.random()*2600;
-      a.tc = FIELD_COLS + 0.8 + Math.random()*2.6;
-      a.tr = 0.2 + Math.random()*2.4;
+      a.nt = now + 2200 + Math.random()*3000;
+      const t = PEN.clamp(PEN.c0 + Math.random()*(PEN.c1 - PEN.c0),
+                          PEN.r0 + Math.random()*(PEN.r1 - PEN.r0));
+      a.tc = t.col; a.tr = t.row;
     }
-    const dc = (a.tc - a.gc), dr = (a.tr - a.gr);
-    const d = Math.hypot(dc, dr);
+    const dc = (a.tc - a.gc), dr = (a.tr - a.gr), d = Math.hypot(dc, dr);
     if (d > 0.02){
-      const sp = 0.0009;
-      a.gc += dc/d * sp * 16; a.gr += dr/d * sp * 16;
+      const sp = 0.011;                       // 格/幀
+      a.gc += dc/d * sp; a.gr += dr/d * sp;
       a.dir = dc >= 0 ? 1 : -1;
     }
   },
