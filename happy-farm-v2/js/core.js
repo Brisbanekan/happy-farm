@@ -238,15 +238,66 @@ const World = {
     c.restore();
   },
 
+  /* ---- 遠景幕布（視差圖層） ----
+     規則：
+     1. 畫在所有地磚之前，永遠不參與深度排序——它是「無限遠」。
+     2. 位移只取 camera 的一小部分（PARALLAX），移動時才有遠近差。
+     3. 縮放跟得比世界慢（BG_ZOOM_FOLLOW），否則放大時遠山會跟著衝過來、穿幫。
+     4. 圖裡不能有地面透視，否則會跟等角格線打架。
+     有 assets/bg_far.png 就用圖，沒有就用程式畫的替代版。 */
+  drawBackdrop(view){
+    const c = this.ctx, z = Camera.zoom;
+    const PARALLAX_X = 0.16, PARALLAX_Y = 0.10, BG_ZOOM_FOLLOW = 0.35;
+    const pz = 1 + (z - 1) * BG_ZOOM_FOLLOW;
+    const ox = -Camera.x * PARALLAX_X * z;
+    const oy = -Camera.y * PARALLAX_Y * z;
+    const horizon = view.h * 0.36 + oy;
+
+    // 天空
+    const sky = c.createLinearGradient(0, 0, 0, horizon + 40 * pz);
+    sky.addColorStop(0, "#8fcdf0"); sky.addColorStop(1, "#d8eef7");
+    c.fillStyle = sky; c.fillRect(0, 0, view.w, view.h);
+
+    const bg = this.img.bg;
+    if (bg){
+      // AI 幕布：等比鋪滿寬度，底邊對齊地平線下方一點
+      const w = view.w * 1.35 * pz, h = bg.height / bg.width * w;
+      c.drawImage(bg, view.w/2 - w/2 + ox, horizon - h * 0.72, w, h);
+    } else {
+      // 替代版：兩層丘陵 + 樹線剪影
+      const hill = (yOff, amp, color, phase) => {
+        c.beginPath();
+        c.moveTo(-50, view.h);
+        for (let x = -50; x <= view.w + 50; x += 24){
+          const y = horizon + yOff - Math.sin((x + ox * 1.6 + phase) / 260) * amp * pz;
+          c.lineTo(x, y);
+        }
+        c.lineTo(view.w + 50, view.h); c.closePath();
+        c.fillStyle = color; c.fill();
+      };
+      hill(-14 * pz, 26 * pz, "#8fbf7a", 0);          // 遠丘
+      // 樹線：一排圓形樹冠，坐在遠丘上
+      c.fillStyle = "#5f9c55";
+      for (let x = -40; x < view.w + 40; x += 34 * pz){
+        const base = horizon - 14 * pz - Math.sin((x + ox * 1.6) / 260) * 26 * pz;
+        const r = (9 + ((x * 7) % 5)) * pz;
+        c.beginPath(); c.arc(x + (ox * 0.4) % (34 * pz), base - r * 0.5, r, 0, Math.PI * 2); c.fill();
+      }
+      hill(16 * pz, 18 * pz, "#7fb56a", 900);         // 近丘
+    }
+
+    // 幕布與遊玩區之間的過渡，避免出現硬邊
+    const fade = c.createLinearGradient(0, horizon + 10, 0, view.h);
+    fade.addColorStop(0, "#8ec46a00"); fade.addColorStop(0.5, "#8ec46a");
+    c.fillStyle = fade; c.fillRect(0, horizon + 10, view.w, view.h - horizon - 10);
+  },
+
   /* ---- 主繪製 ---- */
   draw(now){
     const c = this.ctx, view = this.view, z = Camera.zoom;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    // 天空 → 草地漸層（純色底，不需要素材）
-    const g = c.createLinearGradient(0, 0, 0, view.h);
-    g.addColorStop(0, "#a9d6f0"); g.addColorStop(0.42, "#bfe3a8"); g.addColorStop(1, "#8ec46a");
-    c.fillStyle = g; c.fillRect(0, 0, view.w, view.h);
+    this.drawBackdrop(view);
 
     const items = [];                       // 收集 → 依 depth 排序 → 一次畫完
     const add = (depth, fn) => items.push({ depth, fn });

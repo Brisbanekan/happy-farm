@@ -23,6 +23,9 @@
   const cv = document.getElementById("world");
   World.init(cv);
 
+  // 遠景幕布：放了圖就用圖，沒放就用 drawBackdrop() 的程式版本，不會壞
+  World.load("bg", "assets/bg_far.png");
+
   // 素材：建築與動物沿用既有圖檔（世界層改成 canvas 後仍是同一批 PNG）
   PROPS.forEach(p => World.load(p.key, p.img));
   if (typeof ANIMAL_IMG !== "undefined"){
