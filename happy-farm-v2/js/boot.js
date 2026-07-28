@@ -41,8 +41,9 @@
   // 6) 時間循環（沿用舊系統的 tick，內含成長/蟲害/偷菜/工廠/股價）
   if (typeof tick === "function") setInterval(tick, 1000);
 
-  // 開場把鏡頭對準田地中央
-  Camera.centerOn(FIELD_COLS / 2 - 0.5, FIELD_ROWS / 2 - 0.5);
+  // 開場把鏡頭對準島中央，讓遠景幕布在四周露出來
+  Camera.centerOn(ISLAND.cx - 0.5, ISLAND.cy);
+  Camera.zoom = 0.78; Camera.clamp();
 })();
 
 /* 「更多」面板：把不常用的入口收進來，維持一級按鈕不超過 6 個 */

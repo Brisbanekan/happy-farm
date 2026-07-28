@@ -147,6 +147,28 @@ const PEN = {
 /* 各動物在世界中的顯示高度（世界像素；一格地磚寬 128） */
 const AN_H = { chick:34, cow:56, sheep:50, pig:46, bee:22 };
 
+/* 農場島：草地不是無限平面，而是一塊有邊界的島。
+   在格座標上用橢圓判定，投影到等角後是有機的圓潤形狀，不會是生硬的矩形。
+   有了邊界，遠景幕布才有意義——否則草地會把背景整片蓋掉。 */
+const ISLAND = {
+  cx: 3.75, cy: 1.5, rx: 8, ry: 5,
+  THICK: 26,                       // 島緣厚度（世界像素），讓島看起來有體積
+  has(c, r){
+    const dx = (c - this.cx) / this.rx, dy = (r - this.cy) / this.ry;
+    return dx*dx + dy*dy <= 1;
+  },
+  /** 島的輪廓（格座標），用來畫接地陰影 */
+  outline(steps){
+    const pts = [];
+    for (let i = 0; i < steps; i++){
+      const t = i / steps * Math.PI * 2;
+      pts.push({ col: this.cx + this.rx * Math.cos(t),
+                 row: this.cy + this.ry * Math.sin(t) });
+    }
+    return pts;
+  },
+};
+
 /* 世界上的固定物件：佔哪一格是「資料」，不是靠圖片對齊 */
 const PROPS = [
   { key:"house",    img:"../building/house.png",    col:-2.4, row:-1.2, h:210, act:"profile" },
@@ -171,9 +193,13 @@ const World = {
   init(canvas){
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
+    // 鏡頭範圍依島的大小推導：島有邊界之後，不限制就會平移到空幕布上
+    const ctr = Iso.toWorld(ISLAND.cx, ISLAND.cy);
+    this.bounds = { x0: ctr.x - 430, x1: ctr.x + 430,
+                    y0: ctr.y - 260, y1: ctr.y + 300 };
     this.resize();
     window.addEventListener("resize", () => { this.resize(); syncUIScale(); });
-    Camera.centerOn(FIELD_ORIGIN.col + FIELD_COLS/2 - 0.5, FIELD_ORIGIN.row + FIELD_ROWS/2 - 0.5);
+    Camera.centerOn(ISLAND.cx - 0.5, ISLAND.cy);
     this.loop();
   },
 
@@ -286,10 +312,35 @@ const World = {
       hill(16 * pz, 18 * pz, "#7fb56a", 900);         // 近丘
     }
 
-    // 幕布與遊玩區之間的過渡，避免出現硬邊
-    const fade = c.createLinearGradient(0, horizon + 10, 0, view.h);
-    fade.addColorStop(0, "#8ec46a00"); fade.addColorStop(0.5, "#8ec46a");
-    c.fillStyle = fade; c.fillRect(0, horizon + 10, view.w, view.h - horizon - 10);
+    // 地平線以下＝遠方的大地。刻意比島上的草更淡、更冷，
+    // 島才會從背景中「浮」出來；顏色一樣的話兩者會糊成一片。
+    const far = c.createLinearGradient(0, horizon, 0, view.h);
+    far.addColorStop(0, "#a8cf93");
+    far.addColorStop(1, "#93c47d");
+    c.fillStyle = far; c.fillRect(0, horizon, view.w, view.h - horizon);
+
+    // 大氣透視：越靠地平線越淡
+    const haze = c.createLinearGradient(0, horizon - 30 * pz, 0, horizon + 90 * pz);
+    haze.addColorStop(0, "#dceef7cc"); haze.addColorStop(1, "#dceef700");
+    c.fillStyle = haze; c.fillRect(0, horizon - 30 * pz, view.w, 120 * pz);
+  },
+
+  /** 島的接地陰影：畫在地磚之前，讓島「坐」在遠方大地上而不是浮著 */
+  drawIslandShadow(view){
+    const c = this.ctx, z = Camera.zoom;
+    const pts = ISLAND.outline(48);
+    c.save();
+    c.beginPath();
+    pts.forEach((p, i) => {
+      const w = Iso.toWorld(p.col, p.row);
+      const s = Camera.toScreen(w.x, w.y + ISLAND.THICK * 1.15, view);
+      i ? c.lineTo(s.x, s.y) : c.moveTo(s.x, s.y);
+    });
+    c.closePath();
+    c.filter = "blur(" + (10 * z) + "px)";
+    c.fillStyle = "rgba(40,70,30,0.28)";
+    c.fill();
+    c.restore();
   },
 
   /* ---- 主繪製 ---- */
@@ -299,16 +350,25 @@ const World = {
 
     this.drawBackdrop(view);
 
+    this.drawIslandShadow(view);
+
     const items = [];                       // 收集 → 依 depth 排序 → 一次畫完
     const add = (depth, fn) => items.push({ depth, fn });
 
-    // 草地：田地外圍多鋪幾圈，讓邊界不突兀
-    for (let r = -4; r < FIELD_ROWS + 5; r++){
-      for (let col = -5; col < FIELD_COLS + 6; col++){
-        if (col >= 0 && col < FIELD_COLS && r >= 0 && r < FIELD_ROWS) continue;
+    // 草地：只鋪在島的範圍內，島外留給遠景幕布
+    const c0 = Math.floor(ISLAND.cx - ISLAND.rx), c1 = Math.ceil(ISLAND.cx + ISLAND.rx);
+    const r0 = Math.floor(ISLAND.cy - ISLAND.ry), r1 = Math.ceil(ISLAND.cy + ISLAND.ry);
+    for (let r = r0; r <= r1; r++){
+      for (let col = c0; col <= c1; col++){
+        if (!ISLAND.has(col, r)) continue;
+        if (col >= 0 && col < FIELD_COLS && r >= 0 && r < FIELD_ROWS) continue;   // 田地另外畫
         const w = Iso.toWorld(col, r), s = Camera.toScreen(w.x, w.y, view);
-        if (s.x < -TILE_W*z || s.x > view.w + TILE_W*z || s.y < -TILE_H*z || s.y > view.h + TILE_H*2*z) continue;
+        if (s.x < -TILE_W*z || s.x > view.w + TILE_W*z || s.y < -TILE_H*z || s.y > view.h + TILE_H*4*z) continue;
+        // 沒有前方鄰居的格子＝島緣，要補側面才有厚度
+        const edgeR = !ISLAND.has(col + 1, r);
+        const edgeL = !ISLAND.has(col, r + 1);
         add(Iso.depth(col, r) - 0.5, () => {
+          if (edgeR || edgeL) this.drawIslandEdge(s, z, edgeR, edgeL);
           this.diamond(s.x, s.y, z);
           c.fillStyle = ((col + r) & 1) ? "#8fc766" : "#86bf5e"; c.fill();
           c.strokeStyle = "#00000010"; c.lineWidth = 1; c.stroke();
@@ -419,6 +479,34 @@ const World = {
     // 狀態圖示（缺水/雜草/蟲）
     let st = (p.dry ? "💧" : "") + (p.weed ? "🌿" : "") + (p.bug ? (p.bugBig ? "🐛" : "🐜") : "");
     if (st) this.glyph(st, s.x, s.y - 30*z, 15*z);
+  },
+
+  /** 島緣側面：從地磚的前兩條邊往下拉出土壁，島才有體積 */
+  drawIslandEdge(s, z, edgeR, edgeL){
+    const c = this.ctx, hw = TILE_W/2*z, hh = TILE_H/2*z, d = ISLAND.THICK * z;
+    const bottom = { x: s.x, y: s.y + hh };
+    if (edgeR){                                  // 右前面（受光較多）
+      const p = { x: s.x + hw, y: s.y };
+      c.beginPath();
+      c.moveTo(p.x, p.y); c.lineTo(bottom.x, bottom.y);
+      c.lineTo(bottom.x, bottom.y + d); c.lineTo(p.x, p.y + d);
+      c.closePath();
+      c.fillStyle = "#8a6a45"; c.fill();
+      c.fillStyle = "#00000018"; c.fill();
+    }
+    if (edgeL){                                  // 左前面（背光，壓暗）
+      const p = { x: s.x - hw, y: s.y };
+      c.beginPath();
+      c.moveTo(p.x, p.y); c.lineTo(bottom.x, bottom.y);
+      c.lineTo(bottom.x, bottom.y + d); c.lineTo(p.x, p.y + d);
+      c.closePath();
+      c.fillStyle = "#6f5436"; c.fill();
+    }
+    // 土壁上緣的草皮厚度
+    c.beginPath();
+    if (edgeR){ c.moveTo(s.x + hw, s.y); c.lineTo(bottom.x, bottom.y); }
+    if (edgeL){ c.moveTo(s.x - hw, s.y); c.lineTo(bottom.x, bottom.y); }
+    c.lineWidth = Math.max(1.5, 5 * z); c.strokeStyle = "#6ba354"; c.stroke();
   },
 
   drawLock(x, y, size){
