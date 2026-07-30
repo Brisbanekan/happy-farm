@@ -290,9 +290,11 @@ const World = {
 
     const bg = this.img.bg;
     if (bg){
-      // AI 幕布：等比鋪滿寬度，底邊對齊地平線下方一點
-      const w = view.w * 1.35 * pz, h = bg.height / bg.width * w;
-      c.drawImage(bg, view.w/2 - w/2 + ox, horizon - h * 0.72, w, h);
+      // AI 幕布：鋪滿寬度（多 30% 給視差位移），把圖上的丘陵底線對齊地平線。
+      // BG_GROUND 由 tools/make_backdrop.py 量出來，換圖要一起改。
+      const BG_GROUND = 0.953;
+      const w = view.w * 1.3 * pz, h = bg.height / bg.width * w;
+      c.drawImage(bg, view.w/2 - w/2 + ox, horizon - h * BG_GROUND, w, h);
     } else {
       // 替代版：兩層丘陵 + 樹線剪影
       const hill = (yOff, amp, color, phase) => {
@@ -316,11 +318,11 @@ const World = {
       hill(16 * pz, 18 * pz, "#7fb56a", 900);         // 近丘
     }
 
-    // 地平線以下＝遠方的大地。刻意比島上的草更淡、更冷，
-    // 島才會從背景中「浮」出來；顏色一樣的話兩者會糊成一片。
+    // 地平線以下＝遠方的大地。起始色取自幕布底部的平綠（110,173,59），
+    // 兩者才不會有接縫；往下略微加深，島（較淺的草）就會浮出來。
     const far = c.createLinearGradient(0, horizon, 0, view.h);
-    far.addColorStop(0, "#a8cf93");
-    far.addColorStop(1, "#93c47d");
+    far.addColorStop(0, bg ? "#6ead3b" : "#a8cf93");
+    far.addColorStop(1, bg ? "#5d9a32" : "#93c47d");
     c.fillStyle = far; c.fillRect(0, horizon, view.w, view.h - horizon);
 
     // 大氣透視：越靠地平線越淡
