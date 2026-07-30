@@ -290,11 +290,28 @@ const World = {
 
     const bg = this.img.bg;
     if (bg){
-      // AI 幕布：鋪滿寬度（多 30% 給視差位移），把圖上的丘陵底線對齊地平線。
-      // BG_GROUND 由 tools/make_backdrop.py 量出來，換圖要一起改。
+      /* AI 幕布：水平鏡射平鋪。
+         為什麼不是單張鋪滿寬度——圖是 4.35:1 的長條，
+         但地平線以上的天空帶是 7.5:1；單張鋪滿寬度會把天空整片頂出畫面。
+         切成窄片平鋪，高度就降下來；相鄰片左右鏡射，接縫自然對得上，
+         而且視差可以無限捲動，永遠不會露出幕布邊緣。
+         BG_GROUND＝圖上丘陵底線的位置，由 tools/make_backdrop.py 量出。 */
       const BG_GROUND = 0.953;
-      const w = view.w * 1.3 * pz, h = bg.height / bg.width * w;
-      c.drawImage(bg, view.w/2 - w/2 + ox, horizon - h * BG_GROUND, w, h);
+      const tw = view.w * 0.6 * pz;
+      const th = bg.height / bg.width * tw;
+      const top = horizon - th * BG_GROUND;
+      const period = tw * 2;                       // 兩片為一個循環（正、鏡）
+      let x0 = ox % period; if (x0 > 0) x0 -= period;
+      let i = 0;
+      for (let x = x0 - tw; x < view.w + tw; x += tw, i++){
+        if (i % 2 === 0){
+          c.drawImage(bg, x, top, tw, th);
+        } else {
+          c.save(); c.translate(x + tw, top); c.scale(-1, 1);
+          c.drawImage(bg, 0, 0, tw, th);
+          c.restore();
+        }
+      }
     } else {
       // 替代版：兩層丘陵 + 樹線剪影
       const hill = (yOff, amp, color, phase) => {
