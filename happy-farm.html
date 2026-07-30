@@ -16,6 +16,13 @@
   :root{
     /* iOS 橫屏會把左右 safe-area 都回報得很大；右側直立按鈕只需避開圓角，不應整欄被推進畫面中央。 */
     --ui-safe-right:clamp(0px,env(safe-area-inset-right,0px),12px);
+    /* ============================================================
+       --u ＝ UI 尺度單位，由 syncUIScale() 依「設計基準 844×390」推導。
+       UI 的所有尺寸一律寫成 calc(var(--u) * n)，n 就是設計稿上的 px。
+       這樣桌機／手機／預覽模式走同一條路徑，不再需要 body.narrow 覆寫尺寸。
+       世界層（#world）有自己的 worldScale，兩者互不影響。
+       ============================================================ */
+    --u:1px;
   }
   img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;user-drag:none;}   /* 手機長按圖片不跳「儲存圖片」選單、不可拖出 */
   html,body{height:100%;}
@@ -190,31 +197,26 @@
   }
 
   /* 左上 HUD */
-  .hud{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;display:flex;flex-direction:column;gap:6px;z-index:20;}
+  .hud{position:absolute;top:calc(var(--u)*10 + env(safe-area-inset-top,0px));left:calc(var(--u)*10);display:flex;flex-direction:column;gap:calc(var(--u)*5);z-index:20;}
   .hud.fold .xpwrap{display:none;}   /* 收折：藏等級/經驗/金幣/鑽石/魅力，保留農場名稱當展開鈕 */
-  .hudrow{display:flex;align-items:center;gap:6px;}
+  .hudrow{display:flex;align-items:center;gap:calc(var(--u)*6);}
   .avatar{
-    width:52px;height:52px;border-radius:50%;background:#ffe0b2;border:3px solid #fff;
-    display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 2px 6px #0003;
+    width:calc(var(--u)*52);height:calc(var(--u)*52);border-radius:50%;background:#ffe0b2;border:calc(var(--u)*3) solid #fff;
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*30);box-shadow:0 2px 6px #0003;
   }
-  .namebox{background:#0006;color:#fff;font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px;text-align:center;margin-top:2px;cursor:pointer;}   /* 點農場名稱收折/展開資料 */
-  .xpwrap{display:flex;flex-direction:column;gap:3px;}
-  .xpbar{width:150px;height:14px;background:#3e2c1e;border:2px solid #fff;border-radius:9px;overflow:hidden;position:relative;box-shadow:0 2px 4px #0003;}
+  .namebox{background:#0006;color:#fff;font-size:calc(var(--u)*11);font-weight:700;border-radius:calc(var(--u)*8);padding:calc(var(--u)*2) calc(var(--u)*8);text-align:center;margin-top:calc(var(--u)*2);cursor:pointer;}   /* 點農場名稱收折/展開資料 */
+  .xpwrap{display:flex;flex-direction:column;gap:calc(var(--u)*3);}
+  .xpbar{width:calc(var(--u)*138);height:calc(var(--u)*16);background:#3e2c1e;border:calc(var(--u)*2) solid #fff;border-radius:calc(var(--u)*9);overflow:hidden;position:relative;box-shadow:0 2px 4px #0003;}
   .xpbar>i{display:block;height:100%;background:linear-gradient(#aed581,#7cb342);width:0;transition:width .3s;}
-  .xpbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 1px #0008;}
-  .lvbadge{width:26px;height:26px;border-radius:50%;background:radial-gradient(#ffd95e,#f5a623);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#7a4a00;box-shadow:0 2px 4px #0003;}
-  .coins{display:flex;gap:6px;}
-  .coin{display:flex;align-items:center;gap:4px;background:#fffbe6;border:2px solid #f0c544;border-radius:14px;padding:2px 9px;font-size:13px;font-weight:800;color:#7a5a10;box-shadow:0 2px 4px #0002;}
+  .xpbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*10);font-weight:800;color:#fff;text-shadow:0 1px 1px #0008;}
+  .lvbadge{width:calc(var(--u)*26);height:calc(var(--u)*26);border-radius:50%;background:radial-gradient(#ffd95e,#f5a623);border:calc(var(--u)*2) solid #fff;display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*12);font-weight:800;color:#7a4a00;box-shadow:0 2px 4px #0003;}
+  .coins{display:flex;gap:calc(var(--u)*5);}
+  .coin{display:flex;align-items:center;gap:calc(var(--u)*4);background:#fffbe6;border:calc(var(--u)*2) solid #f0c544;border-radius:calc(var(--u)*14);padding:calc(var(--u)*3) calc(var(--u)*9);font-size:calc(var(--u)*13);font-weight:800;color:#7a5a10;box-shadow:0 2px 4px #0002;}
   .coin.blue{background:#e7f3ff;border-color:#7bb8ee;color:#1c5a96;}
   .coin.charm{background:#ffe9ef;border-color:#f3a3bb;color:#b03a5e;}
-  /* 窄版/預覽：HUD 壓縮＋左移，避免下排金幣把狀態列撐寬擋到農場/牧場切換鍵 */
-  body.narrow .hud{gap:4px;}
-  body.narrow .xpbar{width:116px;}
-  body.narrow .coins{gap:4px;}
-  body.narrow .coin{font-size:11px;padding:2px 6px;gap:3px;}
-  body.narrow .lvbadge{width:22px;height:22px;font-size:10px;}
+  /* HUD 的窄版覆寫已移除：尺度改由 --u 連續變化，不再需要兩檔切換 */
   /* 跨平台一致的金幣圖示（iOS 的 <span class=coinico></span> 會變銀色，改用 CSS 畫） */
-  .coinico{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-3px;
+  .coinico{display:inline-block;width:calc(var(--u)*15);height:calc(var(--u)*15);border-radius:50%;vertical-align:-3px;
     background:radial-gradient(circle at 35% 30%,#fff0a8,#f5c026 62%,#d4920f);
     border:1.5px solid #c9870c;box-shadow:inset 0 -1px 1px #00000026, inset 0 1px 1px #ffffff66;}
 
@@ -242,17 +244,17 @@
   }
 
   /* 右側直立工具列 */
-  .tools{position:absolute;top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+  .tools{position:absolute;top:50%;right:calc(var(--u)*8 + var(--ui-safe-right));transform:translateY(-50%);display:flex;flex-direction:column;gap:calc(var(--u)*7);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
   .tool{
-    width:48px;height:48px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;
-    display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;
+    width:calc(var(--u)*54);height:calc(var(--u)*54);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*25);cursor:pointer;
     box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .12s,filter .12s,box-shadow .12s;
   }
   .tool:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
   .tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;}
-  .tool.sel::after{content:"✓";position:absolute;right:-5px;top:-7px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
+  .tool.sel::after{content:"✓";position:absolute;right:calc(var(--u)*-5);top:calc(var(--u)*-7);width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
   @keyframes toolsel{0%,100%{box-shadow:0 0 0 4px #fff7a8,0 0 12px 4px #ffbd23aa,0 4px 0 #b87500;}50%{box-shadow:0 0 0 5px #fff370,0 0 20px 7px #ffbd23dd,0 4px 0 #b87500;}}
-  .tool .lbl{position:absolute;right:50px;top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
+  .tool .lbl{position:absolute;right:calc(var(--u)*56);top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:calc(var(--u)*11);font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
   .tool:hover .lbl,.tool.sel .lbl{opacity:1;}
   .tool.sel .lbl{background:#5b3a11e8;color:#fff8d6;border:1px solid #ffd45e;font-size:12px;padding:4px 8px;}
   /* 觸控裝置會把 tap 保留成 :hover，造成工具文字一直黏在畫面中央；實機保留光圈與勾選即可。 */
@@ -260,7 +262,7 @@
 
   /* 底部圖示列 */
   .dock{
-    position:absolute;left:0;right:0;bottom:0;height:84px;display:flex;align-items:center;justify-content:center;gap:8px;
+    position:absolute;left:0;right:0;bottom:0;height:calc(var(--u)*80);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*8);
     background:none;z-index:20;padding:0 10px;   /* 取消綠色底條，只留按鈕 */
   }
   .dock .sp{display:none;}
@@ -271,22 +273,22 @@
   .leftbar{left:calc(8px + env(safe-area-inset-left,0px));}
   .logbtn{left:calc(10px + env(safe-area-inset-left,0px));}
   .tools{right:calc(8px + var(--ui-safe-right));}
-  .sceneswitch{top:calc(8px + env(safe-area-inset-top,0px));}
-  .visitbar{top:calc(8px + env(safe-area-inset-top,0px));}
-  .dock{padding-left:calc(10px + env(safe-area-inset-left,0px));padding-right:calc(10px + env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);}
+  .sceneswitch{top:calc(var(--u)*8 + env(safe-area-inset-top,0px));}
+  .visitbar{top:calc(var(--u)*8 + env(safe-area-inset-top,0px));}
+  .dock{padding-left:calc(var(--u)*10 + env(safe-area-inset-left,0px));padding-right:calc(var(--u)*10 + env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);}
   body.sim .hud, body.sim .leftbar, body.sim .logbtn{left:46px;}
   body.sim .hud{left:34px;top:12px;}   /* HUD 在假瀏海上方、不受其影響，往左移一點清出與切換鍵的空間 */
   body.sim .dock{padding-left:46px;}
-  .dock .grp{display:flex;gap:7px;align-items:center;}
-  .dock .sp{width:3px;height:42px;background:#ffffff77;border-radius:3px;margin:0 4px;}
+  .dock .grp{display:flex;gap:calc(var(--u)*7);align-items:center;}
+  .dock .sp{width:calc(var(--u)*3);height:calc(var(--u)*42);background:#ffffff77;border-radius:calc(var(--u)*3);margin:0 calc(var(--u)*4);}
   .dbtn{
-    width:62px;height:62px;border-radius:18px;background:#fffef6;border:3px solid #ffe0ad;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:27px;line-height:1;
+    width:calc(var(--u)*56);height:calc(var(--u)*56);border-radius:calc(var(--u)*17);background:#fffef6;border:calc(var(--u)*3) solid #ffe0ad;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:calc(var(--u)*25);line-height:1;
     box-shadow:0 4px 0 #e6c486;transition:transform .08s;
   }
   .dbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
   .dbtn:hover{transform:translateY(-2px);}
-  .dbtn small{font-size:10px;font-weight:800;color:#8a7350;margin-top:2px;}
+  .dbtn small{font-size:calc(var(--u)*11);font-weight:800;color:#8a7350;margin-top:calc(var(--u)*1);}
 
   /* 小牧場：直接圈在草地上的柵欄，動物自由走動 */
   .pen{position:absolute;left:64%;top:41%;transform:translate(-50%,-50%);width:610px;height:340px;z-index:4;}
@@ -314,9 +316,9 @@
     .house{top:13%;right:3%;font-size:60px;} .penlabel{font-size:11px;}
   }
   /* 場景切換（農場 / 牧場） */
-  .sceneswitch{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:2px;
-    background:#fffef6ea;border:2px solid #d9c9a6;border-radius:24px;padding:3px;box-shadow:0 3px 8px #0003;}
-  .sceneswitch button{border:none;background:none;border-radius:20px;padding:7px 18px;font-size:14px;font-weight:800;cursor:pointer;color:#9a8763;white-space:nowrap;}
+  .sceneswitch{position:absolute;top:calc(var(--u)*8);left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:calc(var(--u)*2);
+    background:#fffef6ea;border:calc(var(--u)*2) solid #d9c9a6;border-radius:calc(var(--u)*24);padding:calc(var(--u)*3);box-shadow:0 3px 8px #0003;}
+  .sceneswitch button{border:none;background:none;border-radius:calc(var(--u)*20);padding:calc(var(--u)*7) calc(var(--u)*18);font-size:calc(var(--u)*14);font-weight:800;cursor:pointer;color:#9a8763;white-space:nowrap;}
   .sceneswitch button.on{background:#aed581;color:#33691e;box-shadow:0 1px 3px #0002;}
   #scene.s-farm .pen{display:none;}
   #scene.s-ranch #world,#scene.s-ranch .tools{display:none;}
@@ -326,7 +328,7 @@
     font-size:14px;font-weight:800;color:#5b3f17;white-space:nowrap;}
   #scene.visiting .visitbar{display:flex;}
   #scene.visiting .sceneswitch{display:none;}
-  .visitbar button{border:2px solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:16px;padding:4px 14px;font-weight:800;cursor:pointer;font-size:13px;}
+  .visitbar button{border:calc(var(--u)*2) solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:calc(var(--u)*16);padding:calc(var(--u)*4) calc(var(--u)*14);font-weight:800;cursor:pointer;font-size:calc(var(--u)*13);}
   .visitbar button:active{transform:translateY(1px);}
   /* ===== 佈局編輯模式（?edit=1） ===== */
   body.editmode .bld{pointer-events:auto!important;touch-action:none;cursor:move;outline:2px dashed #ff5722;outline-offset:2px;}
@@ -556,9 +558,10 @@
   #scene.s-ranch .ranchui{display:flex;}
   body.narrow .ranchui{top:12px;}   /* 手機：牧場數量提示移到背景上方 */
   /* 放大/縮小按鈕 */
-  .zoomctrl{position:absolute;right:10px;bottom:100px;z-index:26;display:flex;flex-direction:column;gap:7px;}
-  .zbtn{width:42px;height:42px;border-radius:50%;background:#fffef6;border:3px solid #f3d9a8;color:#7a5a10;
-    font-size:22px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
+  /* 縮放鈕：一律放在工具列左側、dock 上方（原本桌機／窄版兩套位置合併成一套） */
+  .zoomctrl{position:absolute;right:calc(var(--u)*68 + var(--ui-safe-right));bottom:calc(var(--u)*66 + env(safe-area-inset-bottom,0px));z-index:26;display:flex;flex-direction:column;gap:calc(var(--u)*7);}
+  .zbtn{width:calc(var(--u)*44);height:calc(var(--u)*44);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;color:#7a5a10;
+    font-size:calc(var(--u)*22);font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
     cursor:pointer;box-shadow:0 3px 0 #e0c389;user-select:none;}
   .zbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
   .ranchui .rlabel{font-size:13px;font-weight:800;color:#5b3f17;background:#ffffffe0;padding:4px 12px;border-radius:12px;box-shadow:0 2px 5px #0002;white-space:nowrap;}
@@ -593,59 +596,48 @@
   .lbitems{display:flex;flex-direction:column;gap:8px;}
   .leftbar.expand-down{flex-direction:column;}   /* 功能鈕在上半部時往下展開 */
   /* ===== 功能鈕固定在底部 dock（倉庫右邊），選單往右展開 ===== */
-  .dock .leftbar{position:relative;left:auto;bottom:auto;z-index:auto;display:flex;flex-direction:row;align-items:center;gap:7px;pointer-events:auto;flex-shrink:0;}
+  .dock .leftbar{position:relative;left:auto;bottom:auto;z-index:auto;display:flex;flex-direction:row;align-items:center;gap:calc(var(--u)*7);pointer-events:auto;flex-shrink:0;}
   body.sim .dock .leftbar{left:auto;}   /* 蓋掉 body.sim .leftbar{left:46px}（預覽假瀏海偏移）——功能鈕在 dock 內不需位移，否則會多 46px 間距 */
   .dock .leftbar .lbtoggle{display:flex;}
-  .dock .lbitems{display:none;flex-direction:row;gap:8px;}
+  .dock .lbitems{display:none;flex-direction:row;gap:calc(var(--u)*8);}
   .dock .leftbar.open .lbitems{display:flex;}
-  .dock .leftbar .lbtn{width:62px;height:62px;font-size:27px;border-radius:18px;flex-shrink:0;}
-  .dock .leftbar .lbtn small{font-size:10px;margin-top:2px;}
-  body.narrow .dock .leftbar .lbtn{width:46px;height:46px;font-size:21px;border-radius:16px;}
-  body.narrow .dock .leftbar .lbtn small{font-size:9px;margin-top:1px;}
+  .dock .leftbar .lbtn{width:calc(var(--u)*56);height:calc(var(--u)*56);font-size:calc(var(--u)*25);border-radius:calc(var(--u)*17);flex-shrink:0;}
+  .dock .leftbar .lbtn small{font-size:calc(var(--u)*11);margin-top:calc(var(--u)*1);}
   /* 右上摺疊選單（同步/玩法/紀錄/佈局） */
-  .topmenu{position:absolute;top:calc(70px + env(safe-area-inset-top,0px));right:calc(8px + var(--ui-safe-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:30;}
-  .topmenu .lbtn{width:54px;height:54px;border-radius:16px;background:#fffef6;border:3px solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;cursor:pointer;user-select:none;}
-  .topmenu .lbtn small{font-size:9px;font-weight:800;color:#8a7350;margin-top:1px;}
+  .topmenu{position:absolute;top:calc(var(--u)*8 + env(safe-area-inset-top,0px));right:calc(var(--u)*8 + var(--ui-safe-right));display:flex;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*8);z-index:30;}
+  .topmenu .lbtn{width:calc(var(--u)*48);height:calc(var(--u)*48);border-radius:calc(var(--u)*14);background:#fffef6;border:calc(var(--u)*3) solid #ffe0ad;box-shadow:0 4px 0 #e6c486;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:calc(var(--u)*21);cursor:pointer;user-select:none;}
+  .topmenu .lbtn small{font-size:calc(var(--u)*8);font-weight:800;color:#8a7350;margin-top:0;}
   .topmenu .lbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #e6c486;}
-  .topmenu .tmitems{display:none;flex-direction:column;gap:8px;}
+  .topmenu .tmitems{display:none;flex-direction:column;gap:calc(var(--u)*8);}
   .topmenu.open .tmitems{display:flex;}
-  body.narrow .topmenu{top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + var(--ui-safe-right));}
-  body.narrow .topmenu .lbtn{width:40px;height:40px;font-size:17px;border-radius:12px;}   /* 縮小到近工具鈕尺寸、圓角對齊螢幕 */
-  body.narrow .topmenu .lbtn small{font-size:8px;margin-top:0;}
-  /* ===== 窄畫面（手機 / 手機模擬器，由 body.narrow 控制）===== */
-  body.narrow .tools{gap:6px;} body.narrow .tools .tool{width:46px;height:46px;font-size:21px;}
+  /* ===== 窄畫面（body.narrow）=====
+     只負責「版面重排」，不再負責尺寸——尺寸一律由 --u 連續變化。
+     這是責任劃分：尺度是連續的，版面是斷點的。 */
   body.narrow .tool .lbl{display:none!important;}
-  body.narrow .zoomctrl{right:calc(62px + var(--ui-safe-right));bottom:calc(60px + env(safe-area-inset-bottom,0px));}
-  /* 底部選單：改成可左右滑動 */
+  /* 底部選單：窄畫面改成可左右滑動 */
   body.narrow .dock{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;scroll-snap-type:x proximity;}
   body.narrow .dock::-webkit-scrollbar{display:none;}
-  body.narrow .dock .grp{flex-shrink:0;} body.narrow .dbtn{flex-shrink:0;scroll-snap-align:center;width:46px;height:46px;font-size:21px;border-radius:16px;}
-  body.narrow .dbtn small{font-size:9px;margin-top:1px;}
-  /* 左側功能：摺疊成選單，點「功能」展開 */
+  body.narrow .dock .grp{flex-shrink:0;}
+  body.narrow .dbtn{flex-shrink:0;scroll-snap-align:center;}
+  /* 功能鈕：窄畫面摺疊成選單 */
   body.narrow .leftbar .lbtoggle{display:flex;}
-  body.narrow .leftbar .lbtn{width:46px;height:46px;font-size:21px;}
   body.narrow .leftbar .lbitems{display:none;}
-  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:row;gap:7px;}
+  body.narrow .leftbar.open .lbitems{display:flex;flex-direction:row;gap:calc(var(--u)*7);}
   /* 仍保留媒體查詢做為後備（真手機） */
   @media(max-width:760px){ .dock{justify-content:flex-start;overflow-x:auto;} .dbtn{flex-shrink:0;} }
 
   /* Modal / 通用 */
-  .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:calc(14px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));}
+  .mask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:calc(var(--u)*14 + env(safe-area-inset-top,0px)) calc(var(--u)*14 + env(safe-area-inset-right,0px)) calc(var(--u)*14 + env(safe-area-inset-bottom,0px)) calc(var(--u)*14 + env(safe-area-inset-left,0px));}
   .mask.on{display:flex;}
-  .modal{background:#fffdf5;border-radius:18px;max-width:520px;width:100%;max-height:84%;overflow:hidden;border:3px solid #d7ccc8;display:flex;flex-direction:column;}   /* flex 直排：標題固定、body 自己捲動，供凍結表頭用 */
-  /* 窄畫面：彈窗吃滿寬度、字級縮一點，避免超出框 */
-  body.narrow .modal{max-width:480px;max-height:92%;}   /* 手機橫屏：限寬置中，不再滿版 */
-  body.narrow .modal h2{font-size:15px;padding:11px 13px;}
-  body.narrow .modal .body{padding:11px 12px;}
-  .modal h2{margin:0;padding:13px 16px;border-bottom:2px solid #ecdfc9;font-size:17px;display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:15px 15px 0 0;flex:0 0 auto;}
-  .modal .body{padding:14px 16px;overflow:auto;flex:1 1 auto;min-height:0;}
-  .modal .mhead{flex:0 0 auto;background:#fffdf5;padding:10px 16px;border-bottom:1px solid #efe6d3;}   /* 凍結表頭：分類＋說明固定在 h2 與捲動區之間，商品列在下方捲動 */
-  body.narrow .modal .mhead{padding:9px 12px;}
+  .modal{background:#fffdf5;border-radius:calc(var(--u)*18);max-width:calc(var(--u)*480);width:100%;max-height:92%;overflow:hidden;border:calc(var(--u)*3) solid #d7ccc8;display:flex;flex-direction:column;}   /* flex 直排：標題固定、body 自己捲動，供凍結表頭用 */
+  .modal h2{margin:0;padding:calc(var(--u)*11) calc(var(--u)*13);border-bottom:calc(var(--u)*2) solid #ecdfc9;font-size:calc(var(--u)*15);display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border-radius:calc(var(--u)*15) calc(var(--u)*15) 0 0;flex:0 0 auto;}
+  .modal .body{padding:calc(var(--u)*11) calc(var(--u)*12);overflow:auto;flex:1 1 auto;min-height:0;}
+  .modal .mhead{flex:0 0 auto;background:#fffdf5;padding:calc(var(--u)*9) calc(var(--u)*12);border-bottom:1px solid #efe6d3;}   /* 凍結表頭：分類＋說明固定在 h2 與捲動區之間，商品列在下方捲動 */
   .modal .mhead .tabs{margin-bottom:0;}
   .modal .mhead .hint{margin:6px 2px 0;}
-  .x{cursor:pointer;font-size:22px;line-height:1;border:none;background:none;color:#8d7b6a;}
+  .x{cursor:pointer;font-size:calc(var(--u)*22);line-height:1;border:none;background:none;color:#8d7b6a;}
   .shopitem,.invitem,.friend{display:flex;align-items:center;gap:10px;padding:8px;border:2px solid #e6dcc8;border-radius:12px;margin-bottom:8px;background:#fff;}
   .shopitem .e,.invitem .e,.friend .av{font-size:28px;}
   .shopitem .meta,.invitem .meta,.friend .meta{flex:1;}
@@ -681,7 +673,7 @@
   .logpanel .r{color:#c62828;font-weight:700;}
   .logpanel .b{color:#1565c0;font-weight:700;}
 
-  .toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
+  .toast{position:fixed;left:50%;top:calc(var(--u)*64 + env(safe-area-inset-top,0px));transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:calc(var(--u)*8) calc(var(--u)*16);border-radius:calc(var(--u)*20);font-weight:700;font-size:calc(var(--u)*14);z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(6px);}
 </style>
 </head>
@@ -971,7 +963,7 @@ const ANIMALS = {
 const RANCH_REQ=[1,1,3,5,8,11]; // 每個牧場欄位的解鎖等級
 // 動物圖像（內嵌 data URI，由使用者提供的圖檔縮圖而成）＋ 顯示高度(px)
 const ANIMAL_IMG={chick:{b:"animal/chicken.png"},cow:{b:"animal/cow.png"},sheep:{b:"animal/sheep.png"},pig:{b:"animal/pig.png"},bee:{b:"animal/bee.png"}};/*__ANIMALIMG__*/
-const AN_SIZE={chick:62, cow:80, sheep:76, pig:60, bee:50};   /* 蜜蜂 50px */
+const AN_SIZE={chick:93, cow:120, sheep:114, pig:90, bee:75};   /* 全部動物放大 1.5 倍（原 62/80/76/60/50） */
 
 // 每日登入獎勵（7 天循環，第 7 天大獎）。g=金幣 c=鑽石 h=魅力 s=種子
 const DAILY_REWARDS=[
@@ -3049,6 +3041,25 @@ function VH(){ if(SIM)return SIM_H;
     const sh=isLandscapeNow()?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
     if(sh>h)h=sh; } }catch(e){}
   return Math.round(h); }
+/* ============================================================
+   UI 尺度層 —— 唯一決定 UI 大小的地方
+   ------------------------------------------------------------
+   設計基準 844×390（＝橫向手機，沿用 SIM_W/SIM_H）。
+   直接吃既有的 VW()/VH()，好處有兩個：
+     1. iOS PWA、visualViewport、橫置那一堆陷阱已經在裡面處理好了。
+     2. VW() 是 SIM-aware 的 —— 預覽模式回傳 844，於是預覽與真機
+        走「同一條計算路徑」。以前預覽是把 #scene 整個 scale 縮小、
+        真機是套 body.narrow 換樣式，兩套機制不同，所以預覽永遠不準。
+   夾在 UI_MIN~UI_MAX 之間：UI 不能純等比縮放，因為觸控的最小尺寸
+   是絕對值（44px 左右），不是相對值；大螢幕也不該讓按鈕無限變胖。
+   ============================================================ */
+const UI_BASE_W=844, UI_BASE_H=390;   // 設計基準
+const UI_MIN=0.9, UI_MAX=1.2;         // 尺度上下限
+function syncUIScale(){
+  const u=Math.max(UI_MIN, Math.min(VW()/UI_BASE_W, VH()/UI_BASE_H, UI_MAX));
+  document.documentElement.style.setProperty("--u", u.toFixed(4)+"px");
+}
+
 function applySimScale(){
   const sc=document.getElementById("scene"); if(!sc)return;
   if(SIM){ simScale=Math.min(1,(window.innerHeight-40)/SIM_H,(window.innerWidth-40)/SIM_W);
@@ -3069,22 +3080,25 @@ function isNarrow(){
   return Math.min(VW(),VH())<=640||(isMobileDevice()&&isLandscapeNow());
 }  // 真機以裝置＋方向判斷；同時涵蓋 Android 高度較大的橫屏視口
 // 基礎縮放：手機把世界縮到適合螢幕（直屏/橫屏皆自動）；桌機維持 1:1
+const MOBILE_MIN_SCALE=0.62;   // ★手機預設縮放下限：原本全景約 0.38（物件太小），拉高到約 0.62 讓作物/動物看得清；要看全景可縮小
 function computeBaseScale(){
   if(!isNarrow()) return 1;
-  return Math.min(VW()/WORLD_W, VH()/WORLD_H);   // 手機：預設完整顯示整座農場（全景），再靠手勢放大看局部
+  const fit=Math.min(VW()/WORLD_W, VH()/WORLD_H);   // 全景（完整顯示整座農場）
+  return Math.max(fit, MOBILE_MIN_SCALE);           // 但不小於下限 → 預設就是放大的視角
 }
 // 縮到最小＝背景剛好填滿螢幕（不再露出綠色）
 function coverScale(){ return Math.max(VW()/WORLD_W, VH()/WORLD_H); }
 function calcWorldScale(){
   const s=computeBaseScale()*userZoom;
-  if(isNarrow()&&userZoom<=1)return computeBaseScale();   // 手機初始視角完整顯示世界，不再用 cover 強制放大裁切
+  if(isNarrow())return s;   // 手機：直接用 base×zoom（base 已含放大下限；縮到全景時 zoom<1）
   return Math.max(s, coverScale());   // 桌機/農場/牧場統一 cover 填滿：兩場景同大小、不露綠邊（cover≥VW/W，已涵蓋原本農場填寬需求，>2.2 比例也不會左右露背景）
 }
 // 使用者放大/縮小畫面
 function setZoom(mult){
   const oldS=worldScale||1;
   const cx=(VW()/2 - panX)/oldS, cy=(VH()/2 - panY)/oldS;   // 視窗中心對應的世界座標
-  userZoom=Math.max(1, Math.min(userZoom*mult, 5));
+  const minZ=isNarrow()?Math.min(1,(Math.min(VW()/WORLD_W,VH()/WORLD_H)/computeBaseScale())):1;   // 手機可縮到全景（低於1）；桌機仍最小1
+  userZoom=Math.max(minZ, Math.min(userZoom*mult, 5));
   worldScale=calcWorldScale();
   panX=VW()/2 - cx*worldScale; panY=VH()/2 - cy*worldScale;
   clampPan(); applyWorld();
@@ -3101,10 +3115,7 @@ function buildWorld(){
 }
 function clampPan(){
   const vw=VW(), vh=VH(), ww=WORLD_W*worldScale, wh=WORLD_H*worldScale;
-  // 手機「初始未放大」時，農場與牧場都鎖定置中；放大後(userZoom>1)才能拖動
-  if(isNarrow()&&userZoom<=1){
-    panX=Math.round((vw-ww)/2); panY=Math.round((vh-wh)/2); return;
-  }
+  // 世界比視窗小的軸自動置中；比視窗大的軸可在邊界內拖曳（不再用 userZoom 判斷，因手機預設就是放大視角）
   if(ww<=vw) panX=Math.round((vw-ww)/2); else panX=Math.max(vw-ww, Math.min(0, panX));
   if(wh<=vh) panY=Math.round((vh-wh)/2); else panY=Math.max(vh-wh, Math.min(0, panY));
 }
@@ -3136,7 +3147,11 @@ function updateFade(){
 function centerField(){
   const nar=isNarrow(),vw=VW(),vh=VH(),ww=WORLD_W*worldScale,wh=WORLD_H*worldScale;
   const initial=userZoom<=1;
-  if(initial&&(nar||G.scene==="ranch")){
+  if(nar&&G.scene!=="ranch"&&ww>vw){
+    // ★手機農場：預設放大視角 → 對準農田焦點（世界比視窗寬才需要，否則置中）
+    const fx=FFX,fy=FFY;
+    panX=vw/2-fx*worldScale;panY=vh/2-fy*worldScale;
+  }else if(initial&&(nar||G.scene==="ranch")){
     // 手機完整置中；牧場沒有農田焦點，網頁端也應以整張背景中心為初始視角。
     panX=Math.round((vw-ww)/2);panY=Math.round((vh-wh)/2);
   }else{
@@ -3150,6 +3165,7 @@ function centerField(){
   clampPan();applyWorld();
 }
 function layout(){
+  syncUIScale();          // 先定 --u，之後所有 UI 量測才是對的
   applySimScale();
   const sc=document.getElementById("scene");
   if(sc){ if(SIM){ sc.style.width=""; sc.style.height=""; }               // 模擬器交給 CSS 固定尺寸
@@ -3242,7 +3258,7 @@ function panDown(e){
   const _bld=e.target&&e.target.closest&&e.target.closest('#world .bld[data-act]');   // 描圖判斷：只有壓在建築實體(不透明像素)才擋平移；矩形框內的透明草地照舊可拖
   if(_bld){ const _img=_bld.querySelector('img'); const _p=e.touches?e.touches[0]:e;
     if(_img&&imgOpaqueAt(_img,_p.clientX,_p.clientY)){ dragActive=false; return; } }
-  if(userZoom<=1){ dragActive=false; return; }   // 方向2：未放大不啟動平移，點擊保持純點擊（放大後才能拖曳）
+  if(WORLD_W*worldScale<=VW()+1 && WORLD_H*worldScale<=VH()+1){ dragActive=false; return; }   // 世界完全放得下＝沒東西可拖，點擊保持純點擊；超出視窗才可平移
   const p=e.touches?e.touches[0]:e; dragActive=true; dragSX=p.clientX; dragSY=p.clientY; panSX=panX; panSY=panY; panMoved=false;
 }
 function panMove(e){
