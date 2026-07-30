@@ -244,7 +244,8 @@
   }
 
   /* 右側直立工具列 */
-  .tools{position:absolute;top:50%;right:calc(var(--u)*8 + var(--ui-safe-right));transform:translateY(-50%);display:flex;flex-direction:column;gap:calc(var(--u)*7);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+  /* 工具列垂直置中，但整體下移一點讓開右上的選單鈕（390 高的橫向手機最吃緊） */
+  .tools{position:absolute;top:calc(50% + var(--u)*24);right:calc(var(--u)*8 + var(--ui-safe-right));transform:translateY(-50%);display:flex;flex-direction:column;gap:calc(var(--u)*7);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
   .tool{
     width:calc(var(--u)*54);height:calc(var(--u)*54);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*25);cursor:pointer;
