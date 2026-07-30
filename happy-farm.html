@@ -244,8 +244,13 @@
   }
 
   /* 右側直立工具列 */
-  /* 工具列垂直置中，但整體下移一點讓開右上的選單鈕（390 高的橫向手機最吃緊） */
-  .tools{position:absolute;top:calc(50% + var(--u)*24);right:calc(var(--u)*8 + var(--ui-safe-right));transform:translateY(-50%);display:flex;flex-direction:column;gap:calc(var(--u)*7);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+  /* 工具列：不用「置中再偏移」（那是用猜的），改成框出一個帶狀區域——
+     上緣讓開右上選單鈕、下緣留安全區——再讓按鈕在帶內自己置中。
+     這樣不管視窗多高都不會撞到選單，390 高的橫向手機也剛好排得下。 */
+  .tools{position:absolute;right:calc(var(--u)*8 + var(--ui-safe-right));
+    top:calc(var(--u)*64 + env(safe-area-inset-top,0px));
+    bottom:calc(var(--u)*10 + env(safe-area-inset-bottom,0px));
+    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--u)*6);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
   .tool{
     width:calc(var(--u)*54);height:calc(var(--u)*54);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*25);cursor:pointer;
