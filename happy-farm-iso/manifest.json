@@ -1,7 +1,7 @@
 {
   "name": "開心農場 Happy Farm",
   "short_name": "開心農場",
-  "start_url": "happy-farm.html",
+  "start_url": "happy-farm-iso.html",
   "scope": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
