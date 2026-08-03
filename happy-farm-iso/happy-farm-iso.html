@@ -693,6 +693,24 @@
   .field,.fieldshadow,.bld,#dog,#penGround,.interacthint{display:none!important;}
   /* 農場／牧場切換鈕移除：兩者已是同一座島上的相鄰區域，拖曳即可到達 */
   .sceneswitch{display:none!important;}
+  /* 右側工具列縮小：54u → 42u（約 78%），連帶調小圖示、邊框、勾勾。
+     ★ 間距必須大於「選中狀態往外撐出的量」：scale 放大的半徑 + 外環寬度。
+       原本 scale(1.13)+4px 外環會撐出約 6.75px，配 5px 間距就會壓到相鄰按鈕。
+       現在 scale(1.06)+3px 外環 ≈ 4.3px，間距 10px 綽綽有餘。
+     5 顆按鈕總高 = 5×42 + 4×10 = 250，仍小於工具列可用高度 316（390−64−10）。 */
+  .tools{gap:calc(var(--u)*10);}
+  .tool{width:calc(var(--u)*42);height:calc(var(--u)*42);
+        border-width:calc(var(--u)*2.5);font-size:calc(var(--u)*20);
+        flex:0 0 auto;}                      /* 不參與壓縮，空間不足時寧可溢出也不變形 */
+  .tool.sel{transform:scale(1.06);
+        box-shadow:0 0 0 3px #fff7a8,0 0 10px 3px #ffbd23aa,0 3px 0 #b87500;
+        animation:toolsel2 1.25s ease-in-out infinite;}
+  @keyframes toolsel2{
+    0%,100%{box-shadow:0 0 0 3px #fff7a8,0 0 8px 3px #ffbd23aa,0 3px 0 #b87500;}
+    50%    {box-shadow:0 0 0 4px #fff370,0 0 13px 4px #ffbd23cc,0 3px 0 #b87500;}}
+  .tool.sel::after{width:calc(var(--u)*16);height:calc(var(--u)*16);font-size:10px;
+        right:calc(var(--u)*-4);top:calc(var(--u)*-5);}
+  .tool .lbl{right:calc(var(--u)*46);}
   #balloon{position:absolute;left:0;top:calc(var(--u)*70);z-index:6;display:block;font-size:calc(var(--u)*34);cursor:pointer;}
 </style>
 </head>
@@ -898,9 +916,13 @@
 
   <!-- 彈跳視窗（置於 scene 內，手機模擬器才會限制在框內、自適應大小） -->
   <div class="mask" id="mask"><div class="modal" id="modal"></div></div>
-</div>
 
-<div class="toast" id="toast"></div>
+  <!-- 提示訊息同理必須放在 scene 內。它是 position:fixed，而手機預覽時 #scene 有
+       CSS transform——有 transform 的祖先會成為 fixed 的定位基準，放在 scene 內
+       才會落在手機框裡；放在外面就是相對瀏覽器視窗，會飛到框外。
+       一般模式 #scene 沒有 transform、且尺寸等於視窗，行為與原本完全相同。 -->
+  <div class="toast" id="toast"></div>
+</div>
 
 <!-- 直屏時提示轉為橫向（強制橫屏） -->
 <div class="rotertip">
@@ -3638,7 +3660,7 @@ const Iso = {
 
 /* ---- 2) Camera：只影響世界層，UI 完全不受影響 ---- */
 const Camera = {
-  x:0, y:0, zoom:1.2, minZoom:0.42, maxZoom:3.4,
+  x:0, y:0, zoom:1.2, minZoom:0.30, maxZoom:3.4,   // minZoom 要比 BASE_ZOOM 低一點，開場才不會卡在下限
   toScreen(wx, wy, view){
     return { x:(wx - this.x) * this.zoom + view.w / 2,
              y:(wy - this.y) * this.zoom + view.h / 2 };
@@ -3741,11 +3763,15 @@ const FLAT_WORLD = true;
 /* 整體視角縮放基準：1 是原本大小，1.2＝放大兩成。
    開場、場景切換、回到農場都用這個值；可拖曳範圍是 Camera.clamp() 依
    「視窗半徑 / zoom」即時算的，所以改這個數字，可拖範圍會自動跟著調整。 */
-const BASE_ZOOM = 1.2;
+/* 開場縮放：以「高度看到柵欄的 110%」為準 → 390/(1050×1.10) ≒ 0.34。
+   寬高百分比不能各自指定——視窗 844×390（2.16）與柵欄菱形 2100×1050（2.0）比例不同，
+   高 110% 時寬必然是 119%。柵欄尺寸改了要重算。 */
+const BASE_ZOOM = 0.34;
 
 const FENCE = {
   /* 正方形：col 與 row 的邊長相同（各 14 格），投影到等角後是正菱形。
-     田地加到 4 排、牧場往下移之後，範圍跟著往前擴一格。 */
+     農舍佔地刻意超出後緣 0.2 格——深度排序上農舍（-5.4）大於那幾段後方柵欄
+     （-8.2 ~ -6.2），所以會畫在柵欄之上，看起來像房子頂著圍籬蓋出去。 */
   c0:-4.5, c1:9.5, r0:-4.5, r1:9.5,
   /* 素材本身已經畫成等角斜的，所以不需要剪切——只要把圖上的「兩個柱底錨點」
      對到那一段的兩個世界端點就好。ax0/ay0＝左端柱底、ax1/ay1＝右端柱底（圖片像素）。
@@ -3757,7 +3783,17 @@ const FENCE = {
     gate:{ key:"f_gate", src:"building/fence_gate.png", ax0:3.0, ay0:158.0, ax1:219.0, ay1:272.0 }
   },
   postScale:0.62,   // 轉角柱相對於柵欄段的縮放（素材本身畫得比較大）
-  gateCol:7         // 前緣（row = r1）第幾格放門；設成 null 就不放門
+  gateCol:7,        // 前緣（row = r1）第幾格放門；設成 null 就不放門
+  /* 鏡頭可以跑到柵欄外多少世界像素。
+     開場縮放下可見範圍已經比柵欄大，若不留這個餘裕，Camera.clamp() 會判定
+     「沒有空間可平移」而直接鎖死置中——想在全景下還能上下左右移動就需要它。
+     兩軸分開設定的原因：柵欄菱形是 2100×1050（2:1），視窗是 844×390（2.16:1），
+     用同一個 pad 兩軸幅度會差很多。這組數字讓**縮到最小（zoom 0.30）**時
+     x 與 y 的可拖幅度都 ≈300：
+       padX = (目標幅度 + 視窗寬/zoom) / 2 − 1050
+       padY = (目標幅度 + 視窗高/zoom − 1050) / 2
+     都設 0 就回到「柵欄外面永遠看不到」的嚴格模式。 */
+  padX:507, padY:275
 };
 
 /* 農場島：草地有邊界，島外留給遠景。格座標上用橢圓判定，
@@ -3787,16 +3823,29 @@ const ISLAND = {
    有了佔地，深度改用佔地最前端那一格，素材底部也對到佔地的前端頂點。
    沒寫 fw/fh 的物件（樹、裝飾）預設 1×1。 */
 const PROPS = [
-  { key:"house",    img:"building/house.png",    col:-2.2, row:-3.2, h:174, fw:2, fh:2, act:"profile", hint:"查看農舍" },   // 放大 1.2 倍（145 × 1.2）
-  { key:"doghouse", img:"building/doghouse.png", col:-0.3, row:-3.4, h:108, fw:1, fh:1, flip:true },   // 狗屋緊鄰農舍
-  { key:"storage",  img:"building/storage.png",  col:-3.2, row: 0.2, h:198, fw:2, fh:2, act:"inv",     hint:"開啟倉庫",   flip:true },
-  { key:"factory",  img:"building/factory.png",  col:-3.0, row: 4.2, h:196, fw:2, fh:2, act:"factory", hint:"開啟加工廠", flip:true },
+  /* 以下座標由 ?edit=1 編輯模式拖曳量出。
+     往畫面上方移動＝col 與 row 同時減少（螢幕 y = (col+row)×TILE_H/2）。 */
+  { key:"house",    img:"building/house.png",    col:-3.1, row:-3.1, h:198, fw:2, fh:2, act:"profile", hint:"查看農舍" },   // 放大 1.2 倍（145 × 1.2）
+  { key:"doghouse", img:"building/doghouse.png", col:-1.5, row:-3.6, h: 72, fw:1, fh:1, flip:true },   // 狗屋緊鄰農舍
+  { key:"storage",  img:"building/storage.png",  col:-3.1, row: 0.5, h:198, fw:2, fh:2, act:"inv",     hint:"開啟倉庫",   flip:true },
+  { key:"factory",  img:"building/factory.png",  col:-3.0, row: 4.2, h:215, fw:2, fh:2, act:"factory", hint:"開啟加工廠", flip:true },
   /* emoji 裝飾（🌳🌲🎃🌼）已移除。渲染端仍支援 glyph 欄位，
      之後要放真正的樹木/裝飾素材，加一筆帶 img 的資料就好。 */
 ];
 
-/* 看門狗站的位置：跟著狗屋走 */
-const DOG_AT = { col:0.7, row:-2.9 };
+/* 看門狗：位置跟著狗屋走，h 是顯示高度（世界像素），編輯模式可調 */
+const DOG_AT = { key:"dog", col:-1.2, row:-2.7, h:51 };
+
+/** 鏡頭邊界＝柵欄四角的世界座標包圍盒，再各軸外擴 FENCE.padX / padY */
+function fenceBounds(){
+  const cor = [Iso.toWorld(FENCE.c0, FENCE.r0), Iso.toWorld(FENCE.c1, FENCE.r0),
+               Iso.toWorld(FENCE.c0, FENCE.r1), Iso.toWorld(FENCE.c1, FENCE.r1)];
+  const px = FENCE.padX || 0, py = FENCE.padY || 0;
+  return {
+    x0:Math.min.apply(null, cor.map(p => p.x)) - px, x1:Math.max.apply(null, cor.map(p => p.x)) + px,
+    y0:Math.min.apply(null, cor.map(p => p.y)) - py, y1:Math.max.apply(null, cor.map(p => p.y)) + py
+  };
+}
 
 /* ---- 4) World：canvas 渲染 --------------------------------------
    收集所有可繪物件 → 依 col+row 排序 → 一個 for 迴圈畫完。
@@ -3810,13 +3859,7 @@ const World = {
   init(canvas){
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
-    // 鏡頭邊界＝柵欄圍出來的區域（取四角的世界座標包圍盒）
-    const cor = [Iso.toWorld(FENCE.c0, FENCE.r0), Iso.toWorld(FENCE.c1, FENCE.r0),
-                 Iso.toWorld(FENCE.c0, FENCE.r1), Iso.toWorld(FENCE.c1, FENCE.r1)];
-    this.bounds = {
-      x0:Math.min.apply(null, cor.map(p => p.x)), x1:Math.max.apply(null, cor.map(p => p.x)),
-      y0:Math.min.apply(null, cor.map(p => p.y)), y1:Math.max.apply(null, cor.map(p => p.y))
-    };
+    this.bounds = fenceBounds();
     this.resize();
     this.loadAll();
     Camera.zoom = BASE_ZOOM;
@@ -3850,10 +3893,15 @@ const World = {
     if (!this.cv) return;
     const r = this.cv.getBoundingClientRect();
     if (!r.width || !r.height) return;
+    /* 手機預覽（body.sim）是把整個 #scene 用 CSS transform 縮小的，
+       所以 getBoundingClientRect 拿到的是「縮過的」尺寸。
+       這裡要除回去用未縮放的 CSS 尺寸（844×390），視野才跟真機一致；
+       Input.pos() 也是除以 simScale，兩邊才對得上。 */
+    const k = (typeof SIM !== "undefined" && SIM && typeof simScale === "number" && simScale > 0) ? simScale : 1;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.view.w = r.width; this.view.h = r.height;
-    this.cv.width  = Math.round(r.width  * this.dpr);
-    this.cv.height = Math.round(r.height * this.dpr);
+    this.view.w = r.width / k; this.view.h = r.height / k;
+    this.cv.width  = Math.round(this.view.w * this.dpr);
+    this.cv.height = Math.round(this.view.h * this.dpr);
   },
 
   /** 螢幕 → 田地索引（沒中回 -1）。v1 那 88 行描圖判定整段刪除。 */
@@ -4274,8 +4322,17 @@ const World = {
           this.glyph(pr.glyph, s.x, s.y, (pr.gsize || 40) * z);
           return;
         }
+        if (ISO_EDIT && Ed.sel === pr){        // 編輯模式：畫出選中物件的佔地範圍
+          const fw = pr.fw || 1, fh = pr.fh || 1;
+          for (let a = 0; a < fw; a++) for (let b = 0; b < fh; b++){
+            const cc = pr.col - (fw - 1) / 2 + a, rr = pr.row - (fh - 1) / 2 + b;
+            const ww = Iso.toWorld(cc, rr), ss = Camera.toScreen(ww.x, ww.y, view);
+            this.diamond(ss.x, ss.y, z);
+            c.strokeStyle = "#ffd54a"; c.lineWidth = 2; c.stroke();
+          }
+        }
         const box = this.sprite(this.img[pr.key], s.x, s.y, pr.h, pr.flip);
-        if (box && pr.act) this.hit.push({ t:"prop", p:pr, x0:box.x0, y0:box.y0, x1:box.x1, y1:box.y1 });
+        if (box && (pr.act || ISO_EDIT)) this.hit.push({ t:"prop", p:pr, x0:box.x0, y0:box.y0, x1:box.x1, y1:box.y1 });
         if (box && pr.act && this.hover === pr.key && this.hoverKind === "prop"){
           c.save(); c.strokeStyle = "#ffffffaa"; c.lineWidth = 2;
           c.strokeRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0); c.restore();
@@ -4287,7 +4344,10 @@ const World = {
     if (G.dog){
       const w = Iso.toWorld(DOG_AT.col, DOG_AT.row), s = Camera.toScreen(w.x, w.y, view);
       add(Iso.depth(DOG_AT.col, DOG_AT.row) + 0.1, () => {
-        if (!this.sprite(this.img.dog, s.x, s.y, 51, true)) this.glyph("🐕", s.x, s.y, 30 * z);
+        const dbox = this.sprite(this.img.dog, s.x, s.y, DOG_AT.h, true);
+        if (!dbox) this.glyph("🐕", s.x, s.y, 30 * z);
+        // 編輯模式才把狗加進命中清單，遊戲中點狗應該落到底下的地磚
+        else if (ISO_EDIT) this.hit.push({ t:"prop", p:DOG_AT, x0:dbox.x0, y0:dbox.y0, x1:dbox.x1, y1:dbox.y1 });
       });
     }
 
@@ -4354,6 +4414,16 @@ const Input = {
 
     canvas.addEventListener("pointerdown", e => {
       if (modalOpen()) return;
+      if (ISO_EDIT){                                   // 編輯模式：壓在物件上＝拖曳它，不是平移世界
+        const p = pos(e), h = World.pickAny(p.x, p.y);
+        if (h && h.t === "prop"){
+          try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+          edSelect(h.p);
+          Ed.drag = { sx:p.x, sy:p.y, col:h.p.col, row:h.p.row };
+          this.drag = null;
+          return;
+        }
+      }
       this.pts.set(e.pointerId, pos(e));
       try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
       this.drag = pos(e); this.moved = 0;
@@ -4361,6 +4431,15 @@ const Input = {
 
     canvas.addEventListener("pointermove", e => {
       const p = pos(e);
+      if (Ed.drag && Ed.sel){                          // 編輯模式拖曳中
+        const wdx = (p.x - Ed.drag.sx) / Camera.zoom, wdy = (p.y - Ed.drag.sy) / Camera.zoom;
+        // 螢幕位移 → 格位移：等角反算（與 Iso.toGrid 同一組公式）
+        const dcol = wdy / TILE_H + wdx / TILE_W, drow = wdy / TILE_H - wdx / TILE_W;
+        Ed.sel.col = edSnapVal(Ed.drag.col + dcol);
+        Ed.sel.row = edSnapVal(Ed.drag.row + drow);
+        edSyncPanel();
+        return;
+      }
       if (this.pts.has(e.pointerId)) this.pts.set(e.pointerId, p);
       if (this.pts.size === 2){
         const v = [...this.pts.values()];
@@ -4385,6 +4464,7 @@ const Input = {
     });
 
     const end = e => {
+      if (Ed.drag){ Ed.drag = null; edSyncPanel(); return; }
       const wasDrag = this.drag, moved = this.moved;
       this.drag = null;
       this.pts.delete(e.pointerId);
@@ -4419,6 +4499,198 @@ const Input = {
     }, { passive:false });
   }
 };
+
+/* ============================================================
+   5.5) 佈局編輯模式 —— 網址加 ?edit=1 就開啟
+   ------------------------------------------------------------
+   拖曳建築直接改 col/row，右側面板即時顯示數值，改完按「複製 JS」
+   把整段 PROPS / PEN / FENCE 貼回原始碼。不開 ?edit=1 時完全不影響遊戲。
+   ============================================================ */
+const ISO_EDIT = /[?&]edit=1/.test(location.search);
+const Ed = { sel:null, drag:null, snap:0.1 };
+
+function edSnapVal(v){
+  const s = Ed.snap;
+  return s > 0 ? Math.round(v / s) * s : v;
+}
+function edFmt(v){ return (Math.round(v * 100) / 100).toString(); }
+
+/** 可編輯的物件清單：建築 + 看門狗（狗只有 col/row） */
+function edList(){
+  return PROPS.map(p => ({ key:p.key, ref:p }))
+              .concat([{ key:"dog（看門狗）", ref:DOG_AT }]);
+}
+function edSelect(ref){ Ed.sel = ref; edSyncPanel(); }
+
+function edPanel(){
+  let el = document.getElementById("edPanel");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "edPanel";
+  el.style.cssText = "position:fixed;right:8px;top:8px;width:260px;max-height:94vh;overflow:auto;" +
+    "background:#161b22f2;color:#e6edf3;font:12px/1.5 system-ui,sans-serif;border:1px solid #30363d;" +
+    "border-radius:10px;padding:10px;z-index:99999;box-shadow:0 6px 24px #0008;";
+  document.body.appendChild(el);
+  el.innerHTML =
+    '<div style="font-weight:700;margin-bottom:6px">🛠️ 佈局編輯 <span style="float:right;opacity:.6">?edit=1</span></div>' +
+    '<div style="opacity:.75;margin-bottom:8px">直接拖曳建築；方向鍵微調；選中的物件會畫出佔地範圍。</div>' +
+    '<div style="margin-bottom:6px">吸附 <select id="edSnap" style="width:70px">' +
+      '<option value="0.05">0.05</option><option value="0.1" selected>0.1</option>' +
+      '<option value="0.25">0.25</option><option value="0.5">0.5</option>' +
+      '<option value="1">1 格</option><option value="0">不吸附</option></select></div>' +
+    '<div id="edItems" style="margin-bottom:8px"></div>' +
+    '<div id="edFields" style="border-top:1px solid #30363d;padding-top:8px"></div>' +
+    '<div style="border-top:1px solid #30363d;margin-top:8px;padding-top:8px">' +
+      '<div style="font-weight:700;margin-bottom:4px">牧場 PEN</div><div id="edPen"></div>' +
+      '<div style="font-weight:700;margin:6px 0 4px">柵欄 FENCE</div><div id="edFence"></div></div>' +
+    '<button id="edCopy" style="width:100%;margin-top:10px;padding:7px;border:0;border-radius:6px;' +
+      'background:#238636;color:#fff;font-weight:700;cursor:pointer">📋 複製 JS</button>' +
+    '<div id="edMsg" style="min-height:16px;color:#7ee787;margin-top:4px"></div>';
+  el.querySelector("#edSnap").onchange = e => { Ed.snap = parseFloat(e.target.value); };
+  el.querySelector("#edCopy").onclick = edCopyJS;
+  return el;
+}
+
+function edNum(label, get, set, step){
+  const id = "ed_" + Math.random().toString(36).slice(2, 8);
+  setTimeout(() => {
+    const n = document.getElementById(id);
+    if (n) n.oninput = () => { set(parseFloat(n.value)); };
+  }, 0);
+  return '<label style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:2px 0">' +
+    '<span style="opacity:.8">' + label + '</span>' +
+    '<input id="' + id + '" type="number" step="' + (step || 0.1) + '" value="' + edFmt(get()) +
+    '" style="width:88px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:2px 4px"></label>';
+}
+
+/** 素材大小控制：數字框＋滑桿＋±鈕，並即時換算「畫出來有多寬」。
+    等角裡一格的水平對角線是 TILE_W/2 = 75，所以 寬 ÷ 75 就是佔地 fw+fh 的合理值；
+    宣告的佔地與實際寬度差太多，深度排序就會失準。 */
+function edSizeRow(s){
+  const im = World.img[s.key];
+  const asp = (im && im.height) ? im.width / im.height : 1;
+  const dw = s.h * asp, need = dw / (TILE_W / 2);
+  const has = (s.fw || 1) + (s.fh || 1);
+  /* 兩種方向的問題不一樣：
+     素材比佔地寬 → 深度會失準（旁邊的東西被判定在後面）；
+     佔地比素材寬 → 素材被 k 往前推、位置偏低。
+     1×1 是最小值，佔地不可能再縮，所以 has<=2 時不算問題。 */
+  const bad = s.fw != null && (need > has + 0.6 || (has > need + 0.6 && has > 2));
+  const id = "edh_" + Math.random().toString(36).slice(2, 8);
+  setTimeout(() => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const apply = v => { s.h = Math.max(4, Math.round(v)); edSyncPanel(); };
+    box.querySelector(".n").oninput  = e => { s.h = Math.max(4, parseFloat(e.target.value) || 4); };
+    box.querySelector(".r").oninput  = e => { s.h = parseFloat(e.target.value); box.querySelector(".n").value = s.h; edSizeInfo(box, s); };
+    box.querySelector(".r").onchange = () => edSyncPanel();
+    box.querySelector(".m").onclick  = () => apply(s.h * 0.95);
+    box.querySelector(".p").onclick  = () => apply(s.h * 1.05);
+  }, 0);
+  return '<div id="' + id + '" style="border-top:1px dashed #30363d;margin-top:6px;padding-top:6px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="opacity:.8">h（素材高度）</span>' +
+      '<span><button class="m" style="width:22px;background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer">−</button> ' +
+      '<input class="n" type="number" step="1" value="' + edFmt(s.h) + '" style="width:56px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:2px 4px"> ' +
+      '<button class="p" style="width:22px;background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer">＋</button></span>' +
+    '</div>' +
+    '<input class="r" type="range" min="20" max="400" step="1" value="' + edFmt(s.h) + '" style="width:100%;margin:4px 0">' +
+    '<div class="info" style="font-size:11px;' + (bad ? "color:#ffa657" : "opacity:.7") + '">' +
+      '畫出來 ' + Math.round(dw) + '×' + Math.round(s.h) + ' 世界px　→ 建議 fw+fh ≈ ' + need.toFixed(1) +
+      (s.fw != null ? '（目前 ' + has + (bad ? ' ⚠ 佔地與素材寬度不符' : ' ✓') + '）' : '') +
+    '</div>' +
+    '<div style="font-size:11px;opacity:.55;margin-top:2px">快捷鍵：<b>[</b> 縮小 5%　<b>]</b> 放大 5%（按住 Shift 為 1%）</div></div>';
+}
+function edSizeInfo(box, s){
+  const im = World.img[s.key];
+  const asp = (im && im.height) ? im.width / im.height : 1;
+  const dw = s.h * asp, need = dw / (TILE_W / 2), has = (s.fw || 1) + (s.fh || 1);
+  const el = box.querySelector(".info");
+  if (el) el.textContent = "畫出來 " + Math.round(dw) + "×" + Math.round(s.h) +
+    " 世界px　→ 建議 fw+fh ≈ " + need.toFixed(1) + (s.fw != null ? "（目前 " + has + "）" : "");
+}
+
+function edSyncPanel(){
+  if (!ISO_EDIT) return;
+  const el = edPanel();
+  // 物件清單
+  el.querySelector("#edItems").innerHTML = edList().map(it =>
+    '<button data-k="' + it.key + '" style="margin:2px 3px 0 0;padding:3px 7px;border-radius:5px;cursor:pointer;' +
+    'border:1px solid ' + (Ed.sel === it.ref ? "#f0b90b" : "#30363d") + ';' +
+    'background:' + (Ed.sel === it.ref ? "#3d2f05" : "#21262d") + ';color:#e6edf3">' + it.key + '</button>').join("");
+  el.querySelectorAll("#edItems button").forEach(b => {
+    b.onclick = () => { const f = edList().find(x => x.key === b.dataset.k); if (f) edSelect(f.ref); };
+  });
+  // 選中物件的欄位
+  const s = Ed.sel;
+  el.querySelector("#edFields").innerHTML = !s ? '<div style="opacity:.6">尚未選取</div>' :
+    edNum("col", () => s.col, v => { s.col = v; }) +
+    edNum("row", () => s.row, v => { s.row = v; }) +
+    (s.h != null ? edSizeRow(s) : "") +
+    (s.fw != null ? edNum("fw（佔幾欄）", () => s.fw, v => { s.fw = v; edSyncPanel(); }, 1) : "") +
+    (s.fh != null ? edNum("fh（佔幾列）", () => s.fh, v => { s.fh = v; edSyncPanel(); }, 1) : "");
+  el.querySelector("#edPen").innerHTML =
+    edNum("c0", () => PEN.c0, v => { PEN.c0 = v; }) + edNum("c1", () => PEN.c1, v => { PEN.c1 = v; }) +
+    edNum("r0", () => PEN.r0, v => { PEN.r0 = v; }) + edNum("r1", () => PEN.r1, v => { PEN.r1 = v; });
+  el.querySelector("#edFence").innerHTML =
+    edNum("c0", () => FENCE.c0, v => { FENCE.c0 = v; edBounds(); }) +
+    edNum("c1", () => FENCE.c1, v => { FENCE.c1 = v; edBounds(); }) +
+    edNum("r0", () => FENCE.r0, v => { FENCE.r0 = v; edBounds(); }) +
+    edNum("r1", () => FENCE.r1, v => { FENCE.r1 = v; edBounds(); });
+}
+
+/** 改柵欄之後鏡頭範圍要跟著重算，否則會拖不到新的邊界 */
+function edBounds(){ World.bounds = fenceBounds(); Camera.clamp(); }
+
+function edCopyJS(){
+  const props = PROPS.map(p => {
+    const f = [];
+    f.push('key:"' + p.key + '"');
+    f.push('img:"' + (p.img || "") + '"');
+    f.push("col:" + edFmt(p.col)); f.push("row:" + edFmt(p.row));
+    f.push("h:" + edFmt(p.h));
+    if (p.fw != null) f.push("fw:" + p.fw);
+    if (p.fh != null) f.push("fh:" + p.fh);
+    if (p.act) f.push('act:"' + p.act + '"');
+    if (p.hint) f.push('hint:"' + p.hint + '"');
+    if (p.flip) f.push("flip:true");
+    return "  { " + f.join(", ") + " },";
+  }).join("\n");
+  const txt =
+    "const PROPS = [\n" + props + "\n];\n\n" +
+    'const DOG_AT = { key:"dog", col:' + edFmt(DOG_AT.col) + ", row:" + edFmt(DOG_AT.row) + ", h:" + edFmt(DOG_AT.h) + " };\n\n" +
+    "PEN:   c0:" + edFmt(PEN.c0) + ", c1:" + edFmt(PEN.c1) + ", r0:" + edFmt(PEN.r0) + ", r1:" + edFmt(PEN.r1) + "\n" +
+    "FENCE: c0:" + edFmt(FENCE.c0) + ", c1:" + edFmt(FENCE.c1) + ", r0:" + edFmt(FENCE.r0) + ", r1:" + edFmt(FENCE.r1) + "\n";
+  const msg = document.getElementById("edMsg");
+  const ok = () => { if (msg){ msg.textContent = "已複製到剪貼簿"; setTimeout(() => msg.textContent = "", 2000); } };
+  try{
+    navigator.clipboard.writeText(txt).then(ok, () => { console.log(txt); if (msg) msg.textContent = "剪貼簿被擋，已印到 console"; });
+  }catch(e){ console.log(txt); if (msg) msg.textContent = "剪貼簿被擋，已印到 console"; }
+}
+
+function initEditMode(){
+  if (!ISO_EDIT) return;
+  edPanel(); edSyncPanel();
+  window.addEventListener("keydown", e => {
+    if (!Ed.sel) return;
+    if (e.key === "[" || e.key === "]"){          // 素材縮放：[ 縮小、] 放大，Shift 為細調
+      if (Ed.sel.h == null) return;
+      e.preventDefault();
+      const r = e.shiftKey ? 0.01 : 0.05;
+      Ed.sel.h = Math.max(4, Math.round(Ed.sel.h * (e.key === "]" ? 1 + r : 1 - r)));
+      edSyncPanel();
+      return;
+    }
+    const step = Ed.snap > 0 ? Ed.snap : 0.05;
+    const map = { ArrowUp:[-step,-step], ArrowDown:[step,step], ArrowLeft:[-step,step], ArrowRight:[step,-step] };
+    const d = map[e.key];
+    if (!d) return;
+    e.preventDefault();
+    Ed.sel.col = edSnapVal(Ed.sel.col + d[0]);
+    Ed.sel.row = edSnapVal(Ed.sel.row + d[1]);
+    edSyncPanel();
+  });
+}
 
 /* ============================================================
    6) 相容層：以下同名函式覆蓋 v1 舊世界層的實作
@@ -4514,6 +4786,7 @@ window.plotGrid = plotGrid; window.gridToPlotIndex = gridToPlotIndex;
 
 /* ============ start ============ */
 initWorldCanvas();   /* ★ 先建立 canvas 世界層（Iso/Camera/World/Input） */
+initEditMode();      /* ?edit=1 才會有作用 */
 init();
 setScene(G.scene||"farm");
 centerField();
