@@ -4229,13 +4229,27 @@ const World = {
     if (p.state === "planted" && typeof CROPS !== "undefined"){
       const cr = CROPS[p.crop];
       if (cr){
-        const sway = Math.sin(now / 700 + i) * 2 * z;
+        /* 動畫沿用 v1 的兩支 CSS keyframes，重點是「型態」而不只是數值：
+             cropsway   旋轉 ±5°、3 秒一輪、支點在根部  → 像被風吹
+             cropbounce 縮放 1~1.14、1.4 秒一輪         → 成熟時脹縮
+           一開始誤植成「平移 ±2px、0.7 秒」，平移加上四倍快的速度就變成抖動。
+           除數 477 ≒ 3000/2π（3 秒一輪）、223 ≒ 1400/2π（1.4 秒一輪）；
+           相位加 i，整片田才不會同步擺動。 */
+        const drawCrop = (text, px, rotDeg, scale) => {
+          c.save();
+          c.translate(s.x, s.y + 6 * z);        // 支點：作物底部中心
+          if (rotDeg) c.rotate(rotDeg * Math.PI / 180);
+          if (scale !== 1) c.scale(scale, scale);
+          this.glyph(text, 0, 0, px);
+          c.restore();
+        };
+        const swayDeg = Math.sin(now / 477 + i) * 5;
         if (p.ripe){
-          const bounce = Math.abs(Math.sin(now / 420 + i)) * 4 * z;
-          this.glyph(cr.grown, s.x + sway, s.y + 6 * z - bounce, 34 * z);
+          drawCrop(cr.grown, 34 * z, swayDeg, 1.07 + 0.07 * Math.sin(now / 223 + i));
         } else {
           const st = p.grow < cr.grow * 0.45 ? 0 : 1;
-          this.glyph(STAGE[st], s.x + sway, s.y + 6 * z, (st ? 26 : 20) * z);
+          // 種子埋在土裡，完全不動；幼苗只輕輕晃，擺幅是成株的六成
+          drawCrop(STAGE[st], (st ? 26 : 20) * z, st ? swayDeg * 0.6 : 0, 1);
           const bw = 44 * z, bh = 6 * z, bx = s.x - bw / 2, by = s.y + 13 * z;
           c.fillStyle = "#0006"; c.fillRect(bx, by, bw, bh);
           c.fillStyle = "#8fd14f"; c.fillRect(bx, by, bw * Math.min(1, p.grow / cr.grow), bh);
