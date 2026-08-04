@@ -2327,17 +2327,21 @@ function harvest(i){
 }
 
 /* ============ 工廠：升級（1-10級，需魅力門檻）＋農產加工 ============ */
+/* 加工品售價。毛利率 =（售價 − 原料價值）÷ 原料價值。
+   原本是 38.5%~51.1%（平均 42.5%），2026-08 調降到一律 +15%。
+   注意 fSellBonus() 的工廠等級加成（最高 +15%）同時作用在作物與加工品上，
+   所以它不會改變兩者的相對毛利，調平衡時不必把它算進去。 */
 const FGOODS={
-  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:360,   need:{radish:5,cucumber:5}},
-  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:640,   need:{tomato:8}},
-  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:880,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
-  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2700,  need:{strawberry:8}},
-  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3800,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
-  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4900,  need:{pumpkin:6,strawberry:4}},
-  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:4600,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
-  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:12500, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
-  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:18500, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
-  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:25000, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
+  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:300,   need:{radish:5,cucumber:5}},
+  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:505,   need:{tomato:8}},
+  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:725,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
+  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2210,  need:{strawberry:8}},
+  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3105,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
+  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4000,  need:{pumpkin:6,strawberry:4}},
+  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:3795,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
+  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:9940, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
+  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:14770, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
+  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:19020, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
 };
 const FLV=[null,null,   // FLV[n]＝升到 n 級的需求；魅力為門檻不消耗；效果涵蓋農場/牧場全域
   {gold:3000,  charm:10,  fx:"🌱 全作物成長 +5%（含解鎖玉米濃湯）"},
@@ -3749,8 +3753,16 @@ const PEN_FENCE = {
   row:{ key:"pf_row", src:"building/fence_pen_row.png", ax0:3.0, ay0:149.0, ax1:188.0, ay1:64.0  }
 };
 
-/* 動物在世界中的顯示高度（世界像素，一格地磚寬 150） */
-const AN_H = { chick:52, cow:76, sheep:70, pig:58, bee:34 };
+/* 動物在世界中的顯示高度（世界像素，一格地磚寬 150）。
+   放大約 1.35 倍：原本在開場的全景縮放下太小、很難點到。 */
+/* bee 另外再加碼：bee.png 只有 87×84（其他動物都是 120~170），
+   同樣的 h 畫出來就比別人小一圈，所以給它更大的值補回來。 */
+const AN_H = { chick:70, cow:100, sheep:92, pig:78, bee:68 };
+
+/* 動物的最小觸控範圍（螢幕像素）。素材再大，縮到全景時仍然只有十幾像素高，
+   所以命中框額外撐到這個尺寸——視覺不變，只是變好點。
+   44 是一般建議的最小觸控目標。 */
+const AN_TAP_MIN = 44;
 
 /* 平坦世界：不畫天空/遠山，草地直接鋪滿整個畫面。
    改成 false 就回到「有邊界的島 + 遠景幕布」。 */
@@ -3823,14 +3835,120 @@ const ISLAND = {
    有了佔地，深度改用佔地最前端那一格，素材底部也對到佔地的前端頂點。
    沒寫 fw/fh 的物件（樹、裝飾）預設 1×1。 */
 const PROPS = [
-  /* 以下座標由 ?edit=1 編輯模式拖曳量出。
-     往畫面上方移動＝col 與 row 同時減少（螢幕 y = (col+row)×TILE_H/2）。 */
-  { key:"house",    img:"building/house.png",    col:-3.1, row:-3.1, h:198, fw:2, fh:2, act:"profile", hint:"查看農舍" },   // 放大 1.2 倍（145 × 1.2）
-  { key:"doghouse", img:"building/doghouse.png", col:-1.5, row:-3.6, h: 72, fw:1, fh:1, flip:true },   // 狗屋緊鄰農舍
-  { key:"storage",  img:"building/storage.png",  col:-3.1, row: 0.5, h:198, fw:2, fh:2, act:"inv",     hint:"開啟倉庫",   flip:true },
-  { key:"factory",  img:"building/factory.png",  col:-3.0, row: 4.2, h:215, fw:2, fh:2, act:"factory", hint:"開啟加工廠", flip:true },
-  /* emoji 裝飾（🌳🌲🎃🌼）已移除。渲染端仍支援 glyph 欄位，
-     之後要放真正的樹木/裝飾素材，加一筆帶 img 的資料就好。 */
+  { key:"house", img:"building/house.png", col:-3.1, row:-3.1, h:198, fw:2, fh:2, act:"profile", hint:"查看農舍" },
+  { key:"doghouse", img:"building/doghouse.png", col:-1.5, row:-3.6, h:72, fw:1, fh:1, flip:true },
+  { key:"storage", img:"building/storage.png", col:-3.2, row:0.3, h:198, fw:2, fh:2, act:"inv", hint:"開啟倉庫", flip:true },
+  { key:"factory", img:"building/factory.png", col:-3, row:3.6, h:215, fw:2, fh:2, act:"factory", hint:"開啟加工廠", flip:true },
+];
+
+/* ============================================================
+   柵欄外的裝飾
+   ------------------------------------------------------------
+   道路做成「地磚」而不是 sprite：路面用跟草地一樣的 2:1 菱形，
+   畫在地面層，接縫天生就對齊，不會有柵欄那種角度誤差要補。
+   ============================================================ */
+const ROAD = {
+  /* 路面格改成一組可編輯的集合（key 是 "col,row"），編輯模式可以直接刷。
+     這組是用編輯模式手工刷出來的。 */
+  cells:new Set([]),
+  key(c, r){ return Math.round(c) + "," + Math.round(r); },
+  has(c, r){ return this.cells.has(this.key(c, r)); },
+  set(c, r, on){ const k = this.key(c, r); if (on) this.cells.add(k); else this.cells.delete(k); },
+  list(){ return [...this.cells].sort((a, b) => {
+    const A = a.split(","), B = b.split(",");
+    return (+A[1] - +B[1]) || (+A[0] - +B[0]);
+  }); }
+};
+
+/* 裝飾物（樹林、花叢、石頭、木樁）。
+   這組是用 ?edit=1 編輯模式手工排的，不是演算法產生的——
+   演算法排出來的東西會有明顯的機械感。
+   每筆可帶 flip（水平鏡像）與 rot（旋轉角度）。 */
+const DECOR = [
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:1.7, row:10.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2.2, row:11.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.2, row:14.1, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:5.2, row:14.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:5.5, row:13.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:5.6, row:12.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2.9, row:11.7, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2.8, row:10.6, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:5.2, row:10.5, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4, row:10.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.3, row:12.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:3.3, row:13.1, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2, row:12.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:0.7, row:10.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:1.1, row:11.7, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:1.2, row:12.8, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:6.3, row:10.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.4, row:11.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.1, row:11.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.1, row:11.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.1, row:11.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.1, row:11.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:7.3, row:11.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:6.2, row:11.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:7.7, row:12.6, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:6.4, row:12.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:5.3, row:11.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:7.7, row:15.1, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8, row:13.6, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8, row:14.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:6.7, row:13.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:6.6, row:14.6, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8.6, row:12.8, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8.5, row:11.7, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8.7, row:10.5, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:7.5, row:10.4, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:8.8, row:11.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:9.2, row:14.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:9.9, row:14.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:10.2, row:13.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:10, row:11.9, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:9.9, row:10.6, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:7.5, row:14.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:3.1, row:14.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:0.3, row:11.5, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2, row:14, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:2.3, row:14.5, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:3.4, row:15.3, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.3, row:15.2, h:118 },
+  { key:"d_tree_oak", img:"building/d_tree_oak.png", col:4.6, row:15.3, h:118 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:8.6, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:8.6, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:8.6, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:11.7, row:9.6, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.7, row:9.3, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:11.3, row:10.2, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.2, row:8.3, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.4, row:9.8, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:9.8, row:8.7, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:3.5, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:11.1, row:4.9, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:4.1, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.4, row:4.8, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.3, row:4, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.1, row:5.8, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:12.4, row:7, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:12, row:7.5, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:11.6, row:6.5, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:11, row:6.7, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.9, row:6.2, h:130 },
+  { key:"d_tree_pine", img:"building/d_tree_pine.png", col:10.5, row:6.6, h:130 },
+];
+
+/* 裝飾素材的種類表：編輯模式的調色盤用它，World.loadAll 也用它預載，
+   這樣就算 DECOR 被清空、素材仍然在記憶體裡，隨時可以放回去。 */
+const DECOR_KINDS = [
+  { key:"d_tree_oak",     img:"building/d_tree_oak.png",     label:"🌳 橡樹",  h:118 },
+  { key:"d_tree_pine",    img:"building/d_tree_pine.png",    label:"🌲 松樹",  h:130 },
+  { key:"d_tree_small",   img:"building/d_tree_small.png",   label:"🌿 小樹",  h:84  },
+  { key:"d_bush",         img:"building/d_bush.png",         label:"🍀 灌木",  h:46  },
+  { key:"d_flower_white", img:"building/d_flower_white.png", label:"🌼 白花",  h:30  },
+  { key:"d_flower_pink",  img:"building/d_flower_pink.png",  label:"🌸 粉花",  h:32  },
+  { key:"d_rock",         img:"building/d_rock.png",         label:"🪨 石頭",  h:40  },
+  { key:"d_log",          img:"building/d_log.png",          label:"🪵 木樁",  h:34  }
 ];
 
 /* 看門狗：位置跟著狗屋走，h 是顯示高度（世界像素），編輯模式可調 */
@@ -3877,6 +3995,8 @@ const World = {
     this.load("t_dirt",  "background/lend.png");
     this.load("t_grass", "background/grass.png");
     Object.keys(FENCE.imgs).forEach(k => this.load(FENCE.imgs[k].key, FENCE.imgs[k].src));
+    this.load("road", "background/road.png");
+    DECOR_KINDS.forEach(k => this.load(k.key, k.img));
     this.load(PEN_FENCE.col.key, PEN_FENCE.col.src);
     this.load(PEN_FENCE.row.key, PEN_FENCE.row.src);
   },
@@ -3902,6 +4022,13 @@ const World = {
     this.view.w = r.width / k; this.view.h = r.height / k;
     this.cv.width  = Math.round(this.view.w * this.dpr);
     this.cv.height = Math.round(this.view.h * this.dpr);
+  },
+
+  /** 螢幕 → 任意格座標（四捨五入），道路編輯用 */
+  pickCell(sx, sy){
+    const w = Camera.toWorldPt(sx, sy, this.view);
+    const g = Iso.toGrid(w.x, w.y);
+    return { col:Math.round(g.col), row:Math.round(g.row) };
   },
 
   /** 螢幕 → 田地索引（沒中回 -1）。v1 那 88 行描圖判定整段刪除。 */
@@ -3946,18 +4073,22 @@ const World = {
      前一列的地磚一畫上來就會蓋掉腳下 44 px。
      需要「底邊落在前端頂點」的物件（例如有佔地的建築），
      由呼叫端自己把 y 加上 TILE_H/2，語意才清楚。 */
-  sprite(im, sx, sy, h, flip){
+  sprite(im, sx, sy, h, flip, rot){
     if (!im) return null;
     const c = this.ctx, z = Camera.zoom;
     const dh = h * z, dw = im.width / im.height * dh;
     const x0 = sx - dw / 2, y0 = sy - dh;
-    if (flip){
-      c.save(); c.translate(sx, sy); c.scale(-1, 1);
+    if (!flip && !rot){
+      c.drawImage(im, x0, y0, dw, dh);
+    } else {
+      // 旋轉與鏡像都以「底邊中心」為支點，物件才不會離開它站的那一格
+      c.save(); c.translate(sx, sy);
+      if (rot) c.rotate(rot * Math.PI / 180);
+      if (flip) c.scale(-1, 1);
       c.drawImage(im, -dw / 2, -dh, dw, dh);
       c.restore();
-    } else {
-      c.drawImage(im, x0, y0, dw, dh);
     }
+    // 命中框一律回傳未旋轉的外框：旋轉後的精確外框對點選沒有幫助，反而更難點
     return { x0:x0, y0:y0, x1:x0 + dw, y1:y0 + dh };
   },
   glyph(text, sx, sy, px, color){
@@ -4218,8 +4349,11 @@ const World = {
            舊版用 PEN ± 0.5 會往外多半格，補丁就跟圍籬對不齊。 */
         const inPen = (col >= PEN.c0 + 0.5 && col <= PEN.c1 - 0.5 &&
                        r   >= PEN.r0 + 0.5 && r   <= PEN.r1 - 0.5);
+        const isRoad = ROAD.has(col, r);
         addG(Iso.depth(col, r), () => {
           if (edgeR || edgeL) this.drawIslandEdge(s, z, edgeR, edgeL);
+          // 路面：同樣是 2:1 菱形地磚，直接蓋掉草地那一格
+          if (isRoad && this.tile(this.img.road, s.x, s.y, z)) return;
           if (!this.tile(this.img.t_grass, s.x, s.y, z)){
             this.diamond(s.x, s.y, z);
             c.fillStyle = ((col + r) & 1) ? "#8fc766" : "#86bf5e"; c.fill();
@@ -4241,6 +4375,23 @@ const World = {
       // 田地也拆成兩層：土地本身屬於地面，作物與狀態圖示屬於物件
       addG(Iso.depth(gp.col, gp.row), () => this.drawPlotGround(p, i, s, z));
       add (Iso.depth(gp.col, gp.row), () => this.drawPlotItems(p, i, s, z, now));
+    });
+
+    /* 柵欄外的裝飾物：與建築走同一套佔地/深度規則（全部 1×1），
+       只是沒有 act，所以遊戲中點它們會落到底下的地磚。 */
+    DECOR.forEach(d => {
+      const w = Iso.toWorld(d.col, d.row);
+      w.y += TILE_H / 2;
+      const s = Camera.toScreen(w.x, w.y, view);
+      if (s.x < -260 || s.x > view.w + 260 || s.y < -320 || s.y > view.h + 260) return;
+      add(Iso.depth(d.col, d.row), () => {
+        if (ISO_EDIT && Ed.sel === d){          // 選中的裝飾：標出它站的那一格
+          this.diamond(s.x, s.y - TILE_H / 2 * z, z);
+          c.strokeStyle = "#ffd54a"; c.lineWidth = 2; c.stroke();
+        }
+        const box = this.sprite(this.img[d.key], s.x, s.y, d.h, d.flip, d.rot);
+        if (box && ISO_EDIT) this.hit.push({ t:"prop", p:d, x0:box.x0, y0:box.y0, x1:box.x1, y1:box.y1 });
+      });
     });
 
     /* 柵欄：沿著 FENCE 的四條邊逐段鋪。
@@ -4331,7 +4482,7 @@ const World = {
             c.strokeStyle = "#ffd54a"; c.lineWidth = 2; c.stroke();
           }
         }
-        const box = this.sprite(this.img[pr.key], s.x, s.y, pr.h, pr.flip);
+        const box = this.sprite(this.img[pr.key], s.x, s.y, pr.h, pr.flip, pr.rot);
         if (box && (pr.act || ISO_EDIT)) this.hit.push({ t:"prop", p:pr, x0:box.x0, y0:box.y0, x1:box.x1, y1:box.y1 });
         if (box && pr.act && this.hover === pr.key && this.hoverKind === "prop"){
           c.save(); c.strokeStyle = "#ffffffaa"; c.lineWidth = 2;
@@ -4367,7 +4518,13 @@ const World = {
         const def = (typeof ANIMALS !== "undefined") ? ANIMALS[a.a] : null;
         add(Iso.depth(a.gc, a.gr) + 0.2, () => {
           const box = this.sprite(this.img["an_" + a.a], s.x, s.y, AN_H[a.a] || 56, a.dir < 0);
-          if (box) this.hit.push({ t:"animal", i:i, x0:box.x0, y0:box.y0, x1:box.x1, y1:box.y1 });
+          if (box){
+            // 命中框至少 AN_TAP_MIN 見方（以素材中心往外撐），縮小時才點得到
+            const padX = Math.max(0, (AN_TAP_MIN - (box.x1 - box.x0)) / 2);
+            const padY = Math.max(0, (AN_TAP_MIN - (box.y1 - box.y0)) / 2);
+            this.hit.push({ t:"animal", i:i,
+              x0:box.x0 - padX, y0:box.y0 - padY, x1:box.x1 + padX, y1:box.y1 + padY });
+          }
           else if (def) this.glyph(def.emoji, s.x, s.y, 34 * z);
           if (a.ready && def){
             const bob = Math.sin(now / 320 + i) * 3;
@@ -4414,6 +4571,15 @@ const Input = {
 
     canvas.addEventListener("pointerdown", e => {
       if (modalOpen()) return;
+      if (ISO_EDIT && Ed.road){                        // 道路模式：點/拖 = 刷路面
+        const p = pos(e), g = World.pickCell(p.x, p.y);
+        try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+        Ed.paint = !ROAD.has(g.col, g.row);            // 起點是空的就畫、是路就擦
+        ROAD.set(g.col, g.row, Ed.paint);
+        edSyncPanel();
+        this.drag = null;
+        return;
+      }
       if (ISO_EDIT){                                   // 編輯模式：壓在物件上＝拖曳它，不是平移世界
         const p = pos(e), h = World.pickAny(p.x, p.y);
         if (h && h.t === "prop"){
@@ -4431,6 +4597,11 @@ const Input = {
 
     canvas.addEventListener("pointermove", e => {
       const p = pos(e);
+      if (ISO_EDIT && Ed.road && Ed.paint != null){    // 道路模式：拖曳連續刷
+        const g = World.pickCell(p.x, p.y);
+        if (ROAD.has(g.col, g.row) !== Ed.paint){ ROAD.set(g.col, g.row, Ed.paint); edSyncPanel(); }
+        return;
+      }
       if (Ed.drag && Ed.sel){                          // 編輯模式拖曳中
         const wdx = (p.x - Ed.drag.sx) / Camera.zoom, wdy = (p.y - Ed.drag.sy) / Camera.zoom;
         // 螢幕位移 → 格位移：等角反算（與 Iso.toGrid 同一組公式）
@@ -4464,6 +4635,7 @@ const Input = {
     });
 
     const end = e => {
+      if (Ed.paint != null){ Ed.paint = null; return; }
       if (Ed.drag){ Ed.drag = null; edSyncPanel(); return; }
       const wasDrag = this.drag, moved = this.moved;
       this.drag = null;
@@ -4507,7 +4679,7 @@ const Input = {
    把整段 PROPS / PEN / FENCE 貼回原始碼。不開 ?edit=1 時完全不影響遊戲。
    ============================================================ */
 const ISO_EDIT = /[?&]edit=1/.test(location.search);
-const Ed = { sel:null, drag:null, snap:0.1 };
+const Ed = { sel:null, drag:null, snap:0.1, road:false, paint:null };
 
 function edSnapVal(v){
   const s = Ed.snap;
@@ -4539,7 +4711,19 @@ function edPanel(){
       '<option value="0.25">0.25</option><option value="0.5">0.5</option>' +
       '<option value="1">1 格</option><option value="0">不吸附</option></select></div>' +
     '<div id="edItems" style="margin-bottom:8px"></div>' +
-    '<div id="edFields" style="border-top:1px solid #30363d;padding-top:8px"></div>' +
+    '<div style="border-top:1px solid #30363d;padding-top:8px">' +
+      '<button id="edRoad" style="width:100%;padding:5px;border:1px solid #30363d;border-radius:5px;' +
+        'background:#21262d;color:#e6edf3;cursor:pointer">🛣 道路編輯</button>' +
+      '<div id="edRoadInfo" style="font-size:11px;opacity:.6;margin-top:3px"></div>' +
+    '</div>' +
+    '<div style="border-top:1px solid #30363d;padding-top:8px;margin-top:8px">' +
+      '<div style="font-weight:700;margin-bottom:4px">放置裝飾 <span style="opacity:.6;font-weight:400">(放在畫面中央)</span></div>' +
+      '<div id="edPal"></div>' +
+      '<div id="edDecCount" style="opacity:.7;margin-top:4px"></div>' +
+      '<button id="edClear" style="width:100%;margin-top:4px;padding:4px;border:1px solid #6e2b2b;border-radius:5px;' +
+        'background:#2d1414;color:#ff9a9a;cursor:pointer">🗑 清空所有裝飾</button>' +
+    '</div>' +
+    '<div id="edFields" style="border-top:1px solid #30363d;padding-top:8px;margin-top:8px"></div>' +
     '<div style="border-top:1px solid #30363d;margin-top:8px;padding-top:8px">' +
       '<div style="font-weight:700;margin-bottom:4px">牧場 PEN</div><div id="edPen"></div>' +
       '<div style="font-weight:700;margin:6px 0 4px">柵欄 FENCE</div><div id="edFence"></div></div>' +
@@ -4548,7 +4732,31 @@ function edPanel(){
     '<div id="edMsg" style="min-height:16px;color:#7ee787;margin-top:4px"></div>';
   el.querySelector("#edSnap").onchange = e => { Ed.snap = parseFloat(e.target.value); };
   el.querySelector("#edCopy").onclick = edCopyJS;
+  el.querySelector("#edRoad").onclick = () => {
+    Ed.road = !Ed.road;
+    if (Ed.road) Ed.sel = null;                 // 兩個模式互斥，免得刷路時誤拖物件
+    edSyncPanel();
+  };
+  el.querySelector("#edClear").onclick = () => {
+    if (DECOR.length && !confirm("清空 " + DECOR.length + " 個裝飾？")) return;
+    DECOR.length = 0; Ed.sel = null; edSyncPanel();
+  };
   return el;
+}
+
+/** 在畫面中央放一個新的裝飾，並選取它 */
+function edAddDecor(kind){
+  const w = { x:Camera.x, y:Camera.y };
+  const g = Iso.toGrid(w.x, w.y - TILE_H / 2);
+  const d = { key:kind.key, img:kind.img, col:edSnapVal(g.col), row:edSnapVal(g.row),
+              h:kind.h, flip:false, rot:0 };
+  DECOR.push(d);
+  edSelect(d);
+}
+function edDeleteSel(){
+  const i = DECOR.indexOf(Ed.sel);
+  if (i < 0) return;                       // 建築與狗不給刪
+  DECOR.splice(i, 1); Ed.sel = null; edSyncPanel();
 }
 
 function edNum(label, get, set, step){
@@ -4610,6 +4818,33 @@ function edSizeInfo(box, s){
     " 世界px　→ 建議 fw+fh ≈ " + need.toFixed(1) + (s.fw != null ? "（目前 " + has + "）" : "");
 }
 
+/** 旋轉與水平鏡像 */
+function edRotRow(s){
+  const id = "edr_" + Math.random().toString(36).slice(2, 8);
+  setTimeout(() => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const set = v => { s.rot = ((Math.round(v) % 360) + 360) % 360; edSyncPanel(); };
+    box.querySelector(".n").oninput = e => { s.rot = parseFloat(e.target.value) || 0; };
+    box.querySelector(".ccw").onclick = () => set((s.rot || 0) - 15);
+    box.querySelector(".cw").onclick  = () => set((s.rot || 0) + 15);
+    box.querySelector(".zero").onclick = () => set(0);
+    box.querySelector(".flip").onclick = () => { s.flip = !s.flip; edSyncPanel(); };
+  }, 0);
+  return '<div id="' + id + '" style="border-top:1px dashed #30363d;margin-top:6px;padding-top:6px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="opacity:.8">rot（旋轉°）</span>' +
+      '<span><button class="ccw" style="width:24px;background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer">↺</button> ' +
+      '<input class="n" type="number" step="1" value="' + edFmt(s.rot || 0) + '" style="width:52px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:2px 4px"> ' +
+      '<button class="cw" style="width:24px;background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer">↻</button> ' +
+      '<button class="zero" style="background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer;padding:0 5px">0</button></span>' +
+    '</div>' +
+    '<button class="flip" style="width:100%;margin-top:5px;padding:4px;border:1px solid #30363d;border-radius:5px;' +
+      'background:' + (s.flip ? "#3d2f05" : "#21262d") + ';color:#e6edf3;cursor:pointer">↔ 水平鏡像' +
+      (s.flip ? "（已開）" : "") + '</button>' +
+    '<div style="font-size:11px;opacity:.55;margin-top:3px">快捷鍵：<b>R</b> 轉 15°（Shift 反向）　<b>F</b> 鏡像　<b>Delete</b> 刪除</div></div>';
+}
+
 function edSyncPanel(){
   if (!ISO_EDIT) return;
   const el = edPanel();
@@ -4621,14 +4856,39 @@ function edSyncPanel(){
   el.querySelectorAll("#edItems button").forEach(b => {
     b.onclick = () => { const f = edList().find(x => x.key === b.dataset.k); if (f) edSelect(f.ref); };
   });
+  // 道路模式
+  const rb = el.querySelector("#edRoad");
+  rb.style.background = Ed.road ? "#0d3a1a" : "#21262d";
+  rb.style.borderColor = Ed.road ? "#2ea043" : "#30363d";
+  rb.textContent = Ed.road ? "🛣 道路編輯（進行中，再按一次結束）" : "🛣 道路編輯";
+  el.querySelector("#edRoadInfo").textContent = Ed.road
+    ? "點格子切換路面，按住拖曳可連續刷；目前 " + ROAD.cells.size + " 格"
+    : "目前 " + ROAD.cells.size + " 格路面";
+
+  // 裝飾調色盤
+  el.querySelector("#edPal").innerHTML = DECOR_KINDS.map((k, i) =>
+    '<button data-i="' + i + '" style="margin:2px 3px 0 0;padding:3px 6px;border-radius:5px;cursor:pointer;' +
+    'border:1px solid #30363d;background:#21262d;color:#e6edf3">' + k.label + '</button>').join("");
+  el.querySelectorAll("#edPal button").forEach(b => {
+    b.onclick = () => edAddDecor(DECOR_KINDS[+b.dataset.i]);
+  });
+  el.querySelector("#edDecCount").textContent = "目前 " + DECOR.length + " 個裝飾";
+
   // 選中物件的欄位
   const s = Ed.sel;
-  el.querySelector("#edFields").innerHTML = !s ? '<div style="opacity:.6">尚未選取</div>' :
+  const isDecor = DECOR.indexOf(s) >= 0;
+  el.querySelector("#edFields").innerHTML = !s ? '<div style="opacity:.6">尚未選取（點畫面上的物件即可）</div>' :
+    '<div style="font-weight:700;margin-bottom:4px">' + (s.key || "?") + (isDecor ? '　<span style="opacity:.6;font-weight:400">裝飾</span>' : '') + '</div>' +
     edNum("col", () => s.col, v => { s.col = v; }) +
     edNum("row", () => s.row, v => { s.row = v; }) +
     (s.h != null ? edSizeRow(s) : "") +
+    edRotRow(s) +
     (s.fw != null ? edNum("fw（佔幾欄）", () => s.fw, v => { s.fw = v; edSyncPanel(); }, 1) : "") +
-    (s.fh != null ? edNum("fh（佔幾列）", () => s.fh, v => { s.fh = v; edSyncPanel(); }, 1) : "");
+    (s.fh != null ? edNum("fh（佔幾列）", () => s.fh, v => { s.fh = v; edSyncPanel(); }, 1) : "") +
+    (isDecor ? '<button id="edDel" style="width:100%;margin-top:6px;padding:5px;border:1px solid #6e2b2b;' +
+      'border-radius:5px;background:#2d1414;color:#ff9a9a;cursor:pointer">🗑 刪除這個（Delete）</button>' : '');
+  const del = el.querySelector("#edDel");
+  if (del) del.onclick = edDeleteSel;
   el.querySelector("#edPen").innerHTML =
     edNum("c0", () => PEN.c0, v => { PEN.c0 = v; }) + edNum("c1", () => PEN.c1, v => { PEN.c1 = v; }) +
     edNum("r0", () => PEN.r0, v => { PEN.r0 = v; }) + edNum("r1", () => PEN.r1, v => { PEN.r1 = v; });
@@ -4643,7 +4903,7 @@ function edSyncPanel(){
 function edBounds(){ World.bounds = fenceBounds(); Camera.clamp(); }
 
 function edCopyJS(){
-  const props = PROPS.map(p => {
+  const one = p => {
     const f = [];
     f.push('key:"' + p.key + '"');
     f.push('img:"' + (p.img || "") + '"');
@@ -4654,10 +4914,15 @@ function edCopyJS(){
     if (p.act) f.push('act:"' + p.act + '"');
     if (p.hint) f.push('hint:"' + p.hint + '"');
     if (p.flip) f.push("flip:true");
+    if (p.rot) f.push("rot:" + edFmt(p.rot));
     return "  { " + f.join(", ") + " },";
-  }).join("\n");
+  };
+  const props = PROPS.map(one).join("\n");
+  const decor = DECOR.map(one).join("\n");
   const txt =
     "const PROPS = [\n" + props + "\n];\n\n" +
+    "const DECOR = [\n" + decor + "\n];\n\n" +
+    "ROAD.cells = new Set([" + ROAD.list().map(k => '"' + k + '"').join(",") + "]);\n\n" +
     'const DOG_AT = { key:"dog", col:' + edFmt(DOG_AT.col) + ", row:" + edFmt(DOG_AT.row) + ", h:" + edFmt(DOG_AT.h) + " };\n\n" +
     "PEN:   c0:" + edFmt(PEN.c0) + ", c1:" + edFmt(PEN.c1) + ", r0:" + edFmt(PEN.r0) + ", r1:" + edFmt(PEN.r1) + "\n" +
     "FENCE: c0:" + edFmt(FENCE.c0) + ", c1:" + edFmt(FENCE.c1) + ", r0:" + edFmt(FENCE.r0) + ", r1:" + edFmt(FENCE.r1) + "\n";
@@ -4673,6 +4938,17 @@ function initEditMode(){
   edPanel(); edSyncPanel();
   window.addEventListener("keydown", e => {
     if (!Ed.sel) return;
+    if (e.key === "r" || e.key === "R"){          // 旋轉 15°
+      e.preventDefault();
+      Ed.sel.rot = ((Math.round((Ed.sel.rot || 0) + (e.shiftKey ? -15 : 15)) % 360) + 360) % 360;
+      edSyncPanel(); return;
+    }
+    if (e.key === "f" || e.key === "F"){          // 水平鏡像
+      e.preventDefault(); Ed.sel.flip = !Ed.sel.flip; edSyncPanel(); return;
+    }
+    if (e.key === "Delete" || e.key === "Backspace"){
+      e.preventDefault(); edDeleteSel(); return;
+    }
     if (e.key === "[" || e.key === "]"){          // 素材縮放：[ 縮小、] 放大，Shift 為細調
       if (Ed.sel.h == null) return;
       e.preventDefault();
