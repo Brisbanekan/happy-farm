@@ -1,0 +1,20 @@
+# ── 本機備份／暫存，不上傳 ──────────────────────────────
+*.bak
+_local-backup/
+
+# ── Python 快取 ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+
+# ── happy-farm-v2 舊版拆檔（僅本機參考用）─────────────
+happy-farm-v2/_legacy-body.html
+happy-farm-v2/_panels.html
+happy-farm-v2/css/_legacy-full.css
+
+# ── 作業系統／編輯器產生的雜檔 ─────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
