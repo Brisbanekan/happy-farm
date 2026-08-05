@@ -3573,20 +3573,31 @@ function applyBldClip(el){
 }
 const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
 const BLD_HINT={inv:"開啟倉庫",profile:"查看農舍",factory:"開啟農產加工廠"};
-/* x,y 為螢幕座標（clientX/Y 或 getBoundingClientRect）。
-   提示掛在 #scene 底下，而預覽模式的 #scene 帶 transform:scale(simScale)，
-   所以要先換算成「場景內部座標」，再夾在場景範圍內（#scene 是 overflow:hidden，
-   超出就會被整個切掉，這就是原本提示會消失或跑到建築物外的原因）。 */
-function showBldHint(el,x,y){
+/* 提示固定錨在建築物上，不跟著游標跑。
+   錨點取建築物上那顆「☝ 點我」標籤（.bldcue，各建築已個別調過位置），
+   沒有的話退回用元素外框中上緣。
+
+   座標換算有兩個坑：
+     1. 預覽模式 #scene 帶 transform:scale()，getBoundingClientRect 拿到的是縮放後的值，
+        要除以縮放倍率才會回到場景內部的邏輯座標。
+     2. 預覽模式 #scene 還有 11px 邊框，而 position:absolute 是以「padding box」
+        （邊框內側）為基準，所以要再扣掉邊框寬度。
+   最後夾在場景範圍內——#scene 是 overflow:hidden，超出去會被整個切掉。 */
+function showBldHint(el){
   const scene=document.getElementById("scene"); if(!scene)return;
   let hint=document.getElementById("interactHint");
   if(!hint){hint=document.createElement("div");hint.id="interactHint";hint.className="interacthint";scene.appendChild(hint);}
   hint.textContent="☝ "+(BLD_HINT[el.getAttribute("data-act")]||"點擊互動");
   hint.classList.add("on");   // 先顯示才量得到 offsetWidth/Height
-  const r=scene.getBoundingClientRect();
-  const sw=scene.offsetWidth||r.width, sh=scene.offsetHeight||r.height;
-  const k=(sw&&r.width)?(r.width/sw):1;                 // 實際縮放倍率（預覽模式＝simScale）
-  let lx=(x-r.left)/k, ly=(y-r.top)/k;                  // 螢幕座標 → 場景內部座標
+  const anchor=el.querySelector(".bldcue")||el;
+  const ar=anchor.getBoundingClientRect();
+  const x=ar.left+ar.width/2;
+  const y=(anchor===el)?(ar.top+ar.height*0.45):ar.top;   // 退回用外框時取中上段，避開透明的頂部留白
+  const sr=scene.getBoundingClientRect(), cs=getComputedStyle(scene);
+  const bl=parseFloat(cs.borderLeftWidth)||0, bt=parseFloat(cs.borderTopWidth)||0;
+  const k=scene.offsetWidth?(sr.width/scene.offsetWidth):1;   // 縮放倍率（預覽模式＝simScale）
+  const sw=scene.clientWidth, sh=scene.clientHeight;          // 內容區尺寸（不含邊框）
+  let lx=(x-sr.left)/k-bl, ly=(y-sr.top)/k-bt;                // 螢幕座標 → 場景內容區座標
   const w=hint.offsetWidth, h=hint.offsetHeight, pad=6;
   lx=Math.min(Math.max(lx, w/2+pad), sw-w/2-pad);       // 左右不出界（transform 是 -50%）
   ly=Math.min(Math.max(ly, h*1.15+pad), sh-pad);        // 上方不出界（transform 是 -115%）
@@ -3616,9 +3627,9 @@ function initBldHit(){
       if(typeof editOn!=="undefined"&&editOn){el.style.cursor='';return;}   // 編輯模式交給 CSS 的 move
       const img=el.querySelector('img');
       const hit=img&&imgOpaqueAt(img,ev.clientX,ev.clientY);el.style.cursor=hit?'pointer':'default';
-      if(hit)showBldHint(el,ev.clientX,ev.clientY);else hideBldHint();
+      if(hit)showBldHint(el);else hideBldHint();   // 位置只看建築物，與游標座標無關
     });
-    el.addEventListener('focus',function(){const r=el.getBoundingClientRect();showBldHint(el,r.left+r.width/2,r.top+r.height*.4);});
+    el.addEventListener('focus',function(){showBldHint(el);});
     el.addEventListener('mouseleave',function(){el.style.cursor='';hideBldHint();});
     el.addEventListener('blur',hideBldHint);
   });
