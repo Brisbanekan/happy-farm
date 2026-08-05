@@ -1026,27 +1026,33 @@ const SL_BETS=[50,100,500,1000];   // 可調押注檔位
 const SL_FS_AWARD=10;              // SCATTER ×3+ 送 10 局
 const SL_WILD_DROP=0.14;           // 免費局灑 WILD 機率(模擬 80 萬轉:觸發率≈10%、總RTP≈97%)
 // 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
+/* ============================================================
+   股市標的（模擬盤，2026-08 改版）
+   ------------------------------------------------------------
+   舊版直接把真實台股的「台幣股價」當金幣價用，1 張農積電＝105 萬金幣，
+   而玩家中期身家才 20 萬 —— 玩家反映「買張太貴」不是操作問題，是真的買不起。
+   新價格帶：股價 4~72 → 1 張（1000 股）＝ 4,000~72,000 金幣。
+   對照：作物單價 20~3,600、最貴加工品 19,840、工廠升滿需 350,000。
+
+   標的從 15 支收斂到 8 支（手機直向掃得完，每支才有記憶點），名稱沿用台股諧音。
+   base  基準價（長期均值回歸的中心）
+   volD  日波動標準差   volM  分鐘波動標準差   drift 日漂移
+   seed  行情種子——決定這支股票的走勢路徑，改了就是另一條線
+   ============================================================ */
 const STOCKS=[
-  // 台股權值股（Yahoo .TW 報價，價位為台幣）
-  {t:"2330", n:"農積電",    base:1050, y:"2330.TW"},
-  {t:"2317", n:"農海",      base:165,  y:"2317.TW"},
-  {t:"2454", n:"農發科",    base:1300, y:"2454.TW"},
-  {t:"2308", n:"農達電",    base:400,  y:"2308.TW"},
-  {t:"2382", n:"農達",      base:280,  y:"2382.TW"},
-  {t:"2881", n:"農邦金",    base:88,   y:"2881.TW"},
-  {t:"2882", n:"農泰金",    base:64,   y:"2882.TW"},
-  {t:"2412", n:"農華電",    base:123,  y:"2412.TW"},
-  {t:"2891", n:"農信金",    base:42,   y:"2891.TW"},
-  {t:"3711", n:"農月光投控", base:150, y:"3711.TW"},
-  // 台股低價熱門標的
-  {t:"9105", n:"農金寶-DR", base:13, y:"9105.TW"},
-  {t:"3481", n:"農創",     base:14, y:"3481.TW"},
-  {t:"2409", n:"農達光",   base:16, y:"2409.TW"},
-  {t:"2610", n:"農航",     base:22, y:"2610.TW"},
-  {t:"2002", n:"農鋼",     base:21, y:"2002.TW"}
+  {t:"2330", n:"農積電", base:72, volD:.013, volM:.00090, drift:.0008, seed:733001},   // 龍頭：波動最低、緩漲，存股用
+  {t:"2454", n:"農發科", base:60, volD:.020, volM:.00140, drift:.0006, seed:733002},   // 高價科技：中高波動
+  {t:"2308", n:"農達電", base:38, volD:.018, volM:.00125, drift:.0005, seed:733003},   // 中高價
+  {t:"2317", n:"農海",   base:26, volD:.015, volM:.00105, drift:.0004, seed:733004},   // 大型製造：中低波動
+  {t:"2881", n:"農邦金", base:18, volD:.010, volM:.00070, drift:.0003, seed:733005},   // 金融：最牛皮
+  {t:"2610", n:"農航",   base:8,  volD:.030, volM:.00210, drift:.0000, seed:733006},   // 景氣循環：高波動
+  {t:"2002", n:"農鋼",   base:6,  volD:.012, volM:.00085, drift:.0002, seed:733007},   // 牛皮低價股
+  {t:"3481", n:"農創",   base:4,  volD:.035, volM:.00245, drift:.0000, seed:733008}    // 低價高波動：散戶最愛
 ];
-// 已下架標的（舊 ADR/美股與更早的代號）：讀檔時以最後價格結算持倉返還金幣
-const STOCK_DELIST=["TSM","UMC","ASX","CHT","NVDA","AAPL","GOOGL","MSFT","TSLA","AMZN","NTSMC","NFAK","NHAI","TNPC","NAPL","NOOG","NSFT","NSLA","NMZN"];
+// 已下架標的：讀檔時以最後價格結算持倉返還金幣
+// 後 7 支為 2026-08 收斂標的時下架（農達/農月光投控/農華電/農泰金/農信金/農達光/農金寶-DR）
+const STOCK_DELIST=["TSM","UMC","ASX","CHT","NVDA","AAPL","GOOGL","MSFT","TSLA","AMZN","NTSMC","NFAK","NHAI","TNPC","NAPL","NOOG","NSFT","NSLA","NMZN",
+  "2382","3711","2412","2882","2891","2409","9105"];
 function stockName(t){const s=STOCKS.find(x=>x.t===t);return s?s.n:t;}
 const FERTS = {
   f1:{name:"普通肥料",emoji:"💩",cost:120,cut:8,cur:"gold",desc:"加速成長 8 秒"},
@@ -1233,6 +1239,22 @@ function normalizeState(){
   STOCKS.forEach(s=>{let st=G.stocks[s.t]; if(!st||typeof st.price!=="number")st=G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0};
     if(typeof st.avg!=="number")st.avg=(st.shares&&st.cost)?st.cost/st.shares:0;
     if(typeof st.debt!=="number")st.debt=0;});   // 融資負債欄位
+  /* 2026-08 價格尺度改版：舊存檔的持倉是舊尺度（農積電 1050），新尺度是 72。
+     不能只把成本價等比縮小 —— 那樣損益百分比雖然不變，但玩家的「絕對財富」會蒸發 15 倍
+     （2000 股農積電從 210 萬變成 14 萬）。金幣本身沒有改尺度，所以正確做法是
+     把所有持股以「改版前的價格」結算成金幣、清掉融資與掛單，總財富完全不變，再讓玩家重新進場。 */
+  if(!G.mktV||G.mktV<2){
+    STOCKS.forEach(s=>{const st=G.stocks[s.t]; if(!st)return;
+      const sh=st.shares||0;
+      if(sh!==0){ const px=(typeof st.price==="number"?st.price:st.avg)||0, av=st.avg||px;
+        const refund=sh>0?(Math.round(px*sh)-(st.debt||0)):Math.round((2*av-px)*(-sh));
+        G.gold+=Math.max(0,refund);
+        log("📐 股市改版："+s.n+" 持倉以舊價 "+fmtP(px)+" 結算，返還 "+Math.max(0,refund).toLocaleString()+" "+CO,"b"); }
+      st.shares=0; st.avg=0; st.debt=0; st.price=s.base; st.prev=s.base;});
+    if((G.stockOrders||[]).length)log("📐 股市改版：原有掛單已取消（價格尺度不同）","b");
+    G.stockOrders=[];
+    G.mktV=2;
+  }
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
   G.stockOrders=G.stockOrders.filter(o=>STOCKS.some(s=>s.t===o.t));   // 移除下架標的掛單
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
@@ -1627,8 +1649,138 @@ function openProfile(tab){
   showM('<h2>🏡 角色資料 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+tabs+body+'</div>');
 }
 
+/* ============================================================
+   行情引擎：價格 ＝ f(標的, 時間) 的純函數
+   ------------------------------------------------------------
+   為什麼不用「逐 tick 隨機累加」：
+     1. 純函數才能讓每台裝置各自算出「同一個盤」——不需要伺服器，
+        排行榜／股市大賽才有意義（大家看到的價格必須一樣）。
+     2. 圖表可以即時回算任意歷史區間，不必儲存任何 K 線資料。
+     3. 離線可算、重整不跳價。
+   時區固定 UTC+8：共同盤的前提是所有人用同一套日界與開盤時間。
+   ============================================================ */
+const MKT_OPEN_H=9, MKT_MINS=(24-MKT_OPEN_H)*60;                  // 09:00~24:00，共 900 分鐘
+const MKT_EPOCH_DAY=Math.floor(Date.UTC(2026,7,1)/86400000);      // 紀元日 2026-08-01
+const MKT_LIMIT=0.10;                                             // 漲跌停 ±10%（沿用台股規則）
+function mkt8(ts){ return ts+8*3600000; }                         // → UTC+8 掛鐘毫秒
+function mktDay(ts){ return Math.floor(mkt8(ts)/86400000)-MKT_EPOCH_DAY; }
+function mktMin(ts){ const m=Math.floor((mkt8(ts)%86400000)/60000)-MKT_OPEN_H*60;
+  return m<0?-1:Math.min(m,MKT_MINS); }                           // -1 ＝ 休市（00:00~09:00）
+function mktSess(ts){ const m=mktMin(ts);
+  return m<0?"休市":(m<180?"早盤":(m<540?"午盤":"夜盤")); }
+function mktSessVol(i){ return i<180?1.0:(i<540?0.5:1.4); }       // 夜盤波動最大：同事下班才會開遊戲
+
+/* 確定性亂數：同樣的 (種子, 日, 分) 永遠得到同樣的值 */
+function mktH32(a){ a=a|0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^(a>>>15),1|a); t=t+Math.imul(t^(t>>>7),61|t)^t;
+  return ((t^(t>>>14))>>>0)/4294967296; }
+function mktRnd(s,d,m){ return mktH32(Math.imul(s,73856093)^Math.imul(d,19349663)^Math.imul(m+1,83492791)); }
+function mktGauss(s,d,m){ return (mktRnd(s,d,m)+mktRnd(s,d,m+7919)+mktRnd(s,d,m+104729)-1.5)/0.5; }  // σ≈1
+
+/* 第一層：日線鏈——每日收盤價。從紀元日逐日推進，含均值回歸與漲跌停 */
+const mktCloseCache={};
+function mktDayClose(t,day){
+  const s=stockOf(t); const c=mktCloseCache[t]||(mktCloseCache[t]={});
+  if(day<=0)return s.base;
+  if(c[day]!=null)return c[day];
+  let from=0,p=s.base;
+  for(let d=day-1;d>0;d--){ if(c[d]!=null){from=d;p=c[d];break;} }   // 從最近的快取點續算
+  for(let d=from+1;d<=day;d++){
+    let r=s.drift+s.volD*mktGauss(s.seed,d,0);
+    r=Math.max(-MKT_LIMIT,Math.min(MKT_LIMIT,r));
+    p=p*(1+r);
+    p=p+(s.base-p)*0.03;                                   // 均值回歸，避免長期漂走失控
+    p=Math.max(s.base*0.45,Math.min(s.base*2.1,p));        // 硬邊界
+    c[d]=p;
+  }
+  return c[day];
+}
+/* 開盤價＝昨收 + 跳空（休市累積的變化一次反映，給玩家早上打開的理由）*/
+function mktDayOpen(t,day){
+  if(day<=0)return stockOf(t).base;
+  const s=stockOf(t), pc=mktDayClose(t,day-1);
+  const g=mktGauss(s.seed,day,9999)*s.volD*0.6;
+  return Math.max(pc*(1-MKT_LIMIT),Math.min(pc*(1+MKT_LIMIT),pc*(1+g)));
+}
+/* 第二層：盤中走勢——布朗橋，從開盤走到收盤，中間隨機但兩端必定吻合。
+   這樣日線與分線永遠一致，不會出現「圖表收在 A 但日線說收在 B」。 */
+const mktIntraCache={};
+function mktIntra(t,day){
+  const c=mktIntraCache[t];
+  if(c&&c.day===day)return c.arr;
+  const s=stockOf(t), o=mktDayOpen(t,day), cl=mktDayClose(t,day);
+  const pc=day>0?mktDayClose(t,day-1):o, lo=pc*(1-MKT_LIMIT), hi=pc*(1+MKT_LIMIT);
+  const N=MKT_MINS, raw=new Array(N+1); raw[0]=0;
+  for(let i=1;i<=N;i++)raw[i]=raw[i-1]+s.volM*mktGauss(s.seed,day,i)*mktSessVol(i);
+  const tot=raw[N], arr=new Array(N+1);
+  for(let i=0;i<=N;i++){ const w=i/N;
+    arr[i]=Math.max(lo,Math.min(hi,(o*(1-w)+cl*w)*(1+(raw[i]-w*tot)))); }
+  mktIntraCache[t]={day:day,arr:arr};
+  return arr;
+}
+function mktR2(v){ return Math.round(v*100)/100; }
+function mktPrice(t,ts){ ts=ts||Date.now();
+  const day=mktDay(ts), m=mktMin(ts);
+  return mktR2(m<0?mktDayClose(t,day-1):mktIntra(t,day)[m]); }
+function mktPrevClose(t,ts){ ts=ts||Date.now();
+  const day=mktDay(ts);
+  return mktR2(mktDayClose(t,mktMin(ts)<0?day-2:day-1)); }   // 休市時比昨日全天漲跌，而不是顯示 0%
+/* 圖表資料：直接算出來，不存也不抓 */
+function mktTs(day,i){ return Math.floor(((MKT_EPOCH_DAY+day)*86400000-8*3600000+(MKT_OPEN_H*60+i)*60000)/1000); }
+function mktBars(t,days,step){
+  const now=Date.now(), day=mktDay(now), cm=mktMin(now), out=[];
+  for(let d=Math.max(0,day-(days-1));d<=day;d++){
+    const arr=mktIntra(t,d), last=(d===day)?(cm<0?MKT_MINS:cm):MKT_MINS;
+    for(let i=0;i<=last;i+=step)out.push({time:mktTs(d,i)+CHART_TZOFF,value:mktR2(arr[i])});
+    if(last%step)out.push({time:mktTs(d,last)+CHART_TZOFF,value:mktR2(arr[last])});
+  }
+  return out;
+}
+function mktSpark(t,ts){ ts=ts||Date.now();
+  const day=mktDay(ts), m=mktMin(ts);
+  if(m<0)return [mktDayClose(t,day-1)];
+  const arr=mktIntra(t,day), step=Math.max(1,Math.floor(m/40)), sp=[];
+  for(let i=0;i<=m;i+=step)sp.push(mktR2(arr[i]));
+  if(sp[sp.length-1]!==mktR2(arr[m]))sp.push(mktR2(arr[m]));
+  return sp;
+}
+/* 把引擎算出的價格寫進 G.stocks —— 交易引擎（下單/平倉/斷頭）只讀 st.price，完全不用改 */
+let sparkTs=0;
+function mktSync(){
+  if(!G||!G.stocks)return;   // 存檔尚未初始化（頂層或早期呼叫）時直接跳過
+  const now=Date.now(), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
+  STOCKS.forEach(function(s){ const st=G.stocks[s.t]; if(!st)return;
+    st.price=mktPrice(s.t,now); st.prev=mktPrevClose(s.t,now);
+    st.sess=mktSess(now); st.qts=now;
+    if(doSpark||!SPARKS[s.t])SPARKS[s.t]=mktSpark(s.t,now); });
+}
+/* ============================================================
+   作物每日行情（±15%，每日 09:00 換盤）
+   ------------------------------------------------------------
+   原本 CROPS[k].sell 是寫死的常數，倉庫收成完就只能按賣出，沒有任何決策。
+   改成每日浮動之後：
+     · 倉庫從「倉庫」變成「持倉」——今天跌了，我囤著還是認賠？
+     · 種什麼變成賭注——現在漲的作物，等它長好還會漲嗎？
+     · 每天打開遊戲有一個具體理由：今天什麼價？
+   沿用股市那套確定性亂數，所以所有玩家看到的行情一致。
+   加工品（FGOODS）售價維持固定，於是原料便宜時加工利潤高、原料貴時直接賣划算——
+   工廠從「無腦賺錢」變成「低點囤原料」的決策。
+   ============================================================ */
+const CROP_VOL=0.075, CROP_CAP=0.15, CROP_MKT_VOL=0.030;   // 個股波動 σ7.5%、上限 ±15%、大盤同漲跌 σ3%
+function cropSeed(k){ let h=0; for(let i=0;i<k.length;i++)h=(Math.imul(h,31)+k.charCodeAt(i))|0; return h^0x5f3a; }
+function cropDay(ts){ ts=ts||Date.now(); const d=mktDay(ts); return mktMin(ts)<0?d-1:d; }   // 09:00 前算前一日行情
+function cropIdx(k,ts){ const d=cropDay(ts);
+  const r=mktGauss(0x9137,d,0)*CROP_MKT_VOL + mktGauss(cropSeed(k),d,1)*CROP_VOL;
+  return 1+Math.max(-CROP_CAP,Math.min(CROP_CAP,r)); }
+function cropPrice(k,ts){ return Math.max(1,Math.round(CROPS[k].sell*cropIdx(k,ts))); }
+function cropChg(k,ts){ return (cropIdx(k,ts)-1)*100; }
+/* 行情標籤：台股慣例紅漲綠跌 */
+function cropTag(k){ const c=cropChg(k);
+  if(Math.abs(c)<0.5)return '<span style="color:#8d7b6a">持平</span>';
+  return '<span style="color:'+(c>0?"#d32f2f":"#2e7d32")+'">'+(c>0?"▲":"▼")+Math.abs(c).toFixed(1)+'%</span>'; }
+
 /* ============ 股市 ============ */
-function updateMarket(){ pollAllQuotes(); }   // 改用真實市場報價（Yahoo Finance）
+function updateMarket(){ mktSync(); }
 let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos", stockView="home";
 function stockOf(t){return STOCKS.find(x=>x.t===t)||STOCKS[0];}
 function fmtP(v){return (Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});}
@@ -1637,7 +1789,7 @@ function openStocks(){
   document.getElementById("scene").classList.add("s-stock");
   document.getElementById("stockScene").classList.add("home");
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";   // 手機預覽鈕會蓋住倉位表，股市中隱藏
-  pollAllQuotes(true); renderStockHome(); loadFinNews();
+  mktSync(); renderStockHome(); loadFinNews();
 }
 function exitStock(){ stockOpen=false; stockDropOpen=false;
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
@@ -1770,35 +1922,23 @@ function setChartRange(r){chartRange=r;
 }
 function loadChart(){
   if(!ensureChart()){ if(lwTries++<20)setTimeout(loadChart,600); return; }   // CDN 尚未載入時重試
-  const s=stockOf(curStock); const rq=++chartReq;
-  const day=chartRange==="24H";
-  const tw=/\.TW$/.test(s.y);
-  const useDaily=day&&!tw;   // 台股 range=1d 不給分線 → 一律抓 5d 再切最後一日
-  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+
-    "?interval="+(day?"5m":"15m")+"&range="+(useDaily?"1d":"5d")+"&includePrePost="+useDaily+"&_ts="+Date.now();   // 24小時一律5分K（台股從5d切最後一日）
-  yFetch(u,function(d){
-    if(rq!==chartReq)return;
-    const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
-    const ts=res.timestamp||[], q=(res.indicators&&res.indicators.quote&&res.indicators.quote[0])||{}, cl=q.close||[];
-    let pts=[];
-    for(let i=0;i<ts.length;i++){ if(cl[i]!=null)pts.push({time:ts[i]+CHART_TZOFF,value:Math.round(cl[i]*100)/100}); }
-    const nd=chartRange==="2D"?2:chartRange==="3D"?3:(day&&tw?1:0);   // 2日/3日（台股24小時=1日）：從5日資料取最後N個交易日
-    if(nd){ const keys=[]; pts.forEach(p=>{const k=Math.floor(p.time/86400);if(keys.indexOf(k)<0)keys.push(k);});
-      const keep=keys.slice(-nd); pts=pts.filter(p=>keep.indexOf(Math.floor(p.time/86400))>=0); }
-    if(!pts.length)return;
-    // 逐日開盤：每個交易日各自的開盤價（多日圖呈階梯狀，隨交易日調整）
-    const opens=[]; let curDay=null, dayOpen=0;
-    pts.forEach(p=>{const dk=Math.floor(p.time/86400);
-      if(dk!==curDay){curDay=dk;dayOpen=p.value;}
-      opens.push({time:p.time,value:dayOpen});});
-    lwBase=dayOpen;   // 基準色以最後一個交易日的開盤為準
-    lwSeries.applyOptions({baseValue:{type:'price',price:lwBase}});
-    if(lwPriceLine){try{lwSeries.removePriceLine(lwPriceLine);}catch(e){} lwPriceLine=null;}
-    lwData=pts; lwOpens=opens; lwSeries.setData(pts);
-    if(lwOpenSeries)lwOpenSeries.setData(opens);
-    lwPriceLine=lwSeries.createPriceLine({price:lwBase,color:'#9aa3b0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'開盤',lineVisible:false});
-    lwChart.timeScale().fitContent(); updateLwLegend();
-  });
+  // 資料由行情引擎現算，不再發任何網路請求（也不用處理載入失敗與快取不一致）
+  const days=chartRange==="2D"?2:chartRange==="3D"?3:chartRange==="5D"?5:1;
+  const step=days>1?15:5;                                   // 多日圖 15 分一點、當日 5 分一點
+  const pts=mktBars(curStock,days,step);
+  if(!pts.length)return;
+  // 逐日開盤：每個交易日各自的開盤價（多日圖呈階梯狀）
+  const opens=[]; let curDay=null, dayOpen=0;
+  pts.forEach(p=>{const dk=Math.floor(p.time/86400);
+    if(dk!==curDay){curDay=dk;dayOpen=p.value;}
+    opens.push({time:p.time,value:dayOpen});});
+  lwBase=dayOpen;   // 基準色以最後一個交易日的開盤為準
+  lwSeries.applyOptions({baseValue:{type:'price',price:lwBase}});
+  if(lwPriceLine){try{lwSeries.removePriceLine(lwPriceLine);}catch(e){} lwPriceLine=null;}
+  lwData=pts; lwOpens=opens; lwSeries.setData(pts);
+  if(lwOpenSeries)lwOpenSeries.setData(opens);
+  lwPriceLine=lwSeries.createPriceLine({price:lwBase,color:'#9aa3b0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'開盤',lineVisible:false});
+  lwChart.timeScale().fitContent(); updateLwLegend();
 }
 function pickStock(t){curStock=t;stockDropOpen=false;loadChart();odUseCur();renderStockUI();}
 function toggleStockDrop(){stockDropOpen=!stockDropOpen;renderStockUI();}
@@ -1885,7 +2025,8 @@ function execTrade(t,side,qty,price,lev){
 }
 function closePosition(t){const st=G.stocks[t];if(!st||!st.shares)return;execTrade(t,st.shares>0?-1:1,Math.abs(st.shares),st.price);}
 function cancelOrder(id){G.stockOrders=(G.stockOrders||[]).filter(o=>o.id!==id);saveGame();renderStockUI();toast("已取消掛單");}
-function stockTick(){   // 每個遊戲心跳：以最新真實報價撮合限價單
+function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單 → 檢查斷頭
+  mktSync();
   (G.stockOrders||[]).slice().forEach(o=>{const st=G.stocks[o.t];if(!st)return;
     if((o.side>0&&st.price<=o.price)||(o.side<0&&st.price>=o.price)){
       G.stockOrders=G.stockOrders.filter(x=>x.id!==o.id);
@@ -1898,61 +2039,16 @@ function stockTick(){   // 每個遊戲心跳：以最新真實報價撮合限�
       const mr=st.price*st.shares/st.debt;
       if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
     }});
-  if(stockOpen)renderStockUI();
+  if(stockOpen){ if(stockView==="home")renderStockHome();
+    else{ renderStockUI();
+      // 圖表最後一點跟著跳動（不重畫整張，也不發任何請求）
+      if(lwSeries&&chartRange==="24H"){ const now=Date.now(), m=mktMin(now);
+        if(m>=0)try{lwSeries.update({time:mktTs(mktDay(now),m)+CHART_TZOFF,value:mktPrice(curStock,now)});}catch(e){} } } }
 }
-/* ---- 真實市場報價（Yahoo Finance，含盤前/盤中/盤後）；CORS 代理多重容錯 ---- */
+/* Yahoo 報價已移除（改用上方行情引擎）。YPROXIES 保留給財經新聞的 RSS 用。 */
 const YPROXIES=["https://api.allorigins.win/raw?url=","https://corsproxy.io/?url="];
-let yProxyIdx=0;
-function yFetch(u,ok,tryIdx){
-  tryIdx=tryIdx||0;
-  if(tryIdx>=YPROXIES.length)return;
-  const idx=(yProxyIdx+tryIdx)%YPROXIES.length;
-  const ctrl=("AbortController" in window)?new AbortController():null;
-  const timer=ctrl?setTimeout(function(){ctrl.abort();},8000):null;
-  fetch(YPROXIES[idx]+encodeURIComponent(u),ctrl?{signal:ctrl.signal}:{})
-    .then(function(r){if(timer)clearTimeout(timer);if(!r.ok)throw 0;return r.json();})
-    .then(function(d){yProxyIdx=idx;ok(d);})
-    .catch(function(){if(timer)clearTimeout(timer);yFetch(u,ok,tryIdx+1);});
-}
-function fetchQuote(t,cb){
-  const s=stockOf(t);
-  const tw=/\.TW$/.test(s.y);   // 台股：Yahoo 不回 range=1d 分線 → 抓 5d/15m 再取最後一個交易日
-  // _ts 快取破壞參數：避免 CORS 代理回舊快取造成報價與圖表不一致
-  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s.y)+(tw?"?interval=5m&range=5d":"?interval=5m&range=1d&includePrePost=true")+"&_ts="+Date.now();   // 台美股皆 5 分 K
-  yFetch(u,function(d){
-    const res=d&&d.chart&&d.chart.result&&d.chart.result[0]; if(!res)return;
-    const meta=res.meta||{}; const st=G.stocks[t]; if(!st)return;
-    if(meta.regularMarketTime&&(Date.now()/1000-meta.regularMarketTime)>6*86400)return;   // 過期資料不採用
-    let px=meta.regularMarketPrice;
-    const q=res.indicators&&res.indicators.quote&&res.indicators.quote[0];
-    const tss=res.timestamp||[];
-    let cs=[],dayk=[];
-    if(q&&q.close){for(let i=0;i<q.close.length;i++){if(q.close[i]!=null){cs.push(q.close[i]);dayk.push(Math.floor(((tss[i]||0)+28800)/86400));}}}   // UTC+8 分日
-    let prevTW=null;
-    if(tw&&cs.length){const lastD=dayk[dayk.length-1];const idx=dayk.indexOf(lastD);
-      if(idx>0)prevTW=cs[idx-1];   // 前一交易日收盤＝昨收
-      cs=cs.slice(idx);}           // 只留最後一個交易日
-    if(cs.length)px=cs[cs.length-1];   // 最新成交（美股含盤前/盤後）
-    if(cs.length>2){ const step=Math.max(1,Math.floor(cs.length/40));   // 首頁走勢小圖（降採樣約40點）
-      SPARKS[t]=cs.filter((_,i)=>i%step===0); if(SPARKS[t][SPARKS[t].length-1]!==cs[cs.length-1])SPARKS[t].push(cs[cs.length-1]);
-      try{localStorage.setItem("hfSparkCache",JSON.stringify({sp:SPARKS}));}catch(e){} }
-    if(!px)return;
-    st.price=Math.round(px*100)/100;
-    if(tw&&prevTW)st.prev=prevTW; else if(meta.chartPreviousClose)st.prev=meta.chartPreviousClose;
-    let sess="盤中";
-    const ts=res.timestamp&&res.timestamp[res.timestamp.length-1];
-    const tp=meta.currentTradingPeriod;
-    if(ts&&tp&&tp.regular){ if(ts<tp.regular.start)sess="盤前"; else if(ts>=tp.regular.end)sess="盤後"; }
-    st.sess=sess; st.qts=Date.now();
-    if(cb)cb();
-    if(stockOpen&&stockView==="home")renderStockHome();
-    else if(stockOpen&&t===curStock)renderStockUI();
-  });
-}
-function pollAllQuotes(fast){ STOCKS.forEach(function(s,i){ setTimeout(function(){fetchQuote(s.t);},i*(fast?350:1200)); }); }
-setTimeout(pollAllQuotes,2500);                                          // 開場先抓一輪真實報價
-setInterval(pollAllQuotes,90000);                                        // 全標的每 90 秒更新（背景撮合掛單也吃得到）
-setInterval(function(){ if(stockOpen)fetchQuote(curStock); },15000);     // 股市開啟中，當前標的每 15 秒更新
+/* 行情由 stockTick() 每個心跳（1.5 秒）更新，不再需要任何輪詢計時器。
+   開場那一次在 init() 之後呼叫（見檔案最末），因為這裡 G.stocks 還沒建立。 */
 
 function renderStockUI(){
   if(!stockOpen)return;
@@ -2495,7 +2591,8 @@ function openShop(tab){
         '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
-      const card='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 賣價 '+CO+c.sell+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';
+      // 顯示今日行情而非基準價：種什麼要看現在什麼價，這是浮動行情的重點
+      const card='<div class="shopitem"><span class="e">'+c.emoji+'</span><div class="meta"><b>'+seedName(k)+'</b><div>成長 '+c.grow+'s ｜ 今日賣價 '+CO+cropPrice(k)+' '+cropTag(k)+' ｜ 經驗 '+c.xp+(c.charm?' ｜ 魅力+'+c.charm:"")+' ｜ 解鎖 Lv.'+c.lvl+(cr?' ❤️'+cr:"")+'</div>'+(req.length?'<span class="locktag">尚需 '+req.join(" + ")+'</span>':"")+'</div>'+btn+'</div>';
       if(locked){cropLocked+=card;cropLockedCount++;}else cropOpen+=card;
     });
     h+=cropOpen+lockedShopFold("尚未解鎖的商品",cropLockedCount,cropLocked);
@@ -2519,7 +2616,7 @@ function openInv(tab){
     if(ks.length===0)h+='<p class="hint">倉庫是空的，去收成作物吧。</p>';
     else{ks.forEach(k=>{const c=CROPS[k];const cnt=G.harvest[k];
       h+='<div class="invitem"><span class="e">'+c.emoji+'</span>'+
-        '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">單價 '+CO+c.sell+'</div></div>'+
+        '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">今日 '+CO+cropPrice(k)+' '+cropTag(k)+' <span style="opacity:.65">（平時 '+c.sell+'）</span></div></div>'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
           '<button class="pbtn" style="padding:5px 9px" onclick="sqStep(\''+k+'\',-1)">−</button>'+
           '<input type="number" id="sq_'+k+'" value="1" min="1" max="'+cnt+'" oninput="sqClamp(\''+k+'\')" style="width:48px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
@@ -2527,7 +2624,9 @@ function openInv(tab){
           '<button class="pbtn gold" onclick="sellQtyInput(\''+k+'\')">賣出</button>'+
           '<button class="pbtn" onclick="sellAll(\''+k+'\')">全賣</button>'+
         '</div></div>';});
-      h+='<button class="bigbtn" onclick="sellEverything()">💰 全部賣掉</button>';}
+      let tot=0; ks.forEach(k=>tot+=cropPrice(k)*G.harvest[k]); tot=Math.round(tot*sellMul());
+      h+='<button class="bigbtn" onclick="sellEverything()">💰 全部賣掉（'+CO+tot.toLocaleString()+'）</button>'+
+         '<p class="hint">行情每天 09:00 換盤，最多 ±15%。價低時可以先囤著等反彈，也可以拿去工廠加工——加工品是固定價，原料便宜時加工最划算。</p>';}
   }else{
     const ks=Object.keys(G.seeds).filter(k=>G.seeds[k]>0);
     if(ks.length===0)h+='<p class="hint">沒有種子，到商店買。</p>';
@@ -2540,10 +2639,10 @@ function sqClamp(k){const el=document.getElementById("sq_"+k);if(!el)return;let 
 function sqStep(k,d){const el=document.getElementById("sq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sellQtyInput(k){const el=document.getElementById("sq_"+k);let n=parseInt(el&&el.value)||1;sellQty(k,n);}
 function sellMul(){return (buffOn("sell")?1.15:1)*fSellBonus();}   // 辣椒醬加乘 × 工廠全域賣價加成
-function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));const v=Math.round(CROPS[k].sell*n*sellMul());G.gold+=v;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+v);renderHUD();saveGame();openInv("harvest");}
+function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));const v=Math.round(cropPrice(k)*n*sellMul());G.gold+=v;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+v);renderHUD();saveGame();openInv("harvest");}
 function sellOne(k){sellQty(k,1);}
-function sellAll(k){if(!G.harvest[k])return;G.gold+=Math.round(CROPS[k].sell*G.harvest[k]*sellMul());delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
-function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=CROPS[k].sell*G.harvest[k]);t=Math.round(t*sellMul());G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
+function sellAll(k){if(!G.harvest[k])return;G.gold+=Math.round(cropPrice(k)*G.harvest[k]*sellMul());delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
+function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=cropPrice(k)*G.harvest[k]);t=Math.round(t*sellMul());G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
 function selectSeed(k){window.__plantSel=k;G.tool="plant";renderTools();toast("已選 "+CROPS[k].name+"，點翻好的田播種");closeM();}
 
 /* ============ 肥料 ============ */
@@ -3637,6 +3736,7 @@ function initBldHit(){
 /* ============ start ============ */
 buildWorld();
 init();
+mktSync();          // 開場先把行情算好，避免首次進股市看到基準價
 setScene(G.scene||"farm");
 centerField();
 initPan();
