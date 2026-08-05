@@ -1650,109 +1650,189 @@ function openProfile(tab){
 }
 
 /* ============================================================
-   行情引擎：價格 ＝ f(標的, 時間) 的純函數
+   行情引擎（beacon 模式）
    ------------------------------------------------------------
-   為什麼不用「逐 tick 隨機累加」：
-     1. 純函數才能讓每台裝置各自算出「同一個盤」——不需要伺服器，
-        排行榜／股市大賽才有意義（大家看到的價格必須一樣）。
-     2. 圖表可以即時回算任意歷史區間，不必儲存任何 K 線資料。
-     3. 離線可算、重整不跳價。
-   時區固定 UTC+8：共同盤的前提是所有人用同一套日界與開盤時間。
+   為什麼不能只用「時間的純函數」：
+     純前端確定性 ⟹ 必然算得出未來。只要價格是 f(時間)，
+     任何人打開 devtools 傳一個未來時間進去就知道會漲會跌。
+     混淆程式碼只是把破解時間從三秒變成三十分鐘，擋不住。
+     而且舊版用布朗橋，橋的終點就是當日收盤 —— 開盤那一刻就知道今天收在哪。
+
+   解法：熵從外部按時抵達。
+     drand（Cloudflare／EPFL 等機構共同運作的公開隨機信標）每 3 秒產生一輪
+     不可預測、但全世界都讀得到的隨機值。歷史輪次查得到、未來輪次查不到。
+     · 拿到種子後價格仍在本機算 → 完全即時，伺服器不發報價
+     · 每個人讀到同一個 beacon → 共同盤，排行榜與比賽才有意義
+     · 每 10 分鐘抓一次 129 bytes，比舊版抓 Yahoo 省兩個數量級
+
+   誠實的限制：
+     提前量無法歸零，只能壓到「一個區段」。要顯示即時價就必須先有決定它的熵，
+     有熵的人就算得出那一段。要歸零只能每筆報價都由伺服器下發，那就是真後端了。
+
+   結構：
+     日線層　每日開盤價鏈，一天 1 個 beacon（09:00 那一輪）
+     盤中層　每 10 分鐘一段、一段 1 個 beacon，從開盤前向遊走（不再用布朗橋，
+             因為橋需要預先知道收盤）
+     漲跌幅與漲跌停一律以「今日開盤」為基準 —— 昨收需要前一日完整分線，
+     那會讓每台裝置都得回補整段歷史才算得出來。
    ============================================================ */
 const MKT_OPEN_H=9, MKT_MINS=(24-MKT_OPEN_H)*60;                  // 09:00~24:00，共 900 分鐘
 const MKT_EPOCH_DAY=Math.floor(Date.UTC(2026,7,1)/86400000);      // 紀元日 2026-08-01
-const MKT_LIMIT=0.10;                                             // 漲跌停 ±10%（沿用台股規則）
+const MKT_LIMIT=0.10;                                             // 漲跌停 ±10%（以今日開盤為基準）
+const SEG_MIN=10, SEG_N=MKT_MINS/SEG_MIN;                         // 10 分鐘一段，一天 90 段
 function mkt8(ts){ return ts+8*3600000; }                         // → UTC+8 掛鐘毫秒
 function mktDay(ts){ return Math.floor(mkt8(ts)/86400000)-MKT_EPOCH_DAY; }
-function mktMin(ts){ const m=Math.floor((mkt8(ts)%86400000)/60000)-MKT_OPEN_H*60;
-  return m<0?-1:Math.min(m,MKT_MINS); }                           // -1 ＝ 休市（00:00~09:00）
+function mktMinF(ts){ const m=(mkt8(ts)%86400000)/60000-MKT_OPEN_H*60;
+  return m<0?-1:Math.min(m,MKT_MINS); }                           // 小數分鐘（讓價格在分鐘之間平滑移動）
+function mktMin(ts){ const m=mktMinF(ts); return m<0?-1:Math.floor(m); }
 function mktSess(ts){ const m=mktMin(ts);
   return m<0?"休市":(m<180?"早盤":(m<540?"午盤":"夜盤")); }
 function mktSessVol(i){ return i<180?1.0:(i<540?0.5:1.4); }       // 夜盤波動最大：同事下班才會開遊戲
 
-/* 確定性亂數：同樣的 (種子, 日, 分) 永遠得到同樣的值 */
+/* 確定性亂數：同樣的 (種子, 日, 分) 永遠得到同樣的值。種子混入 beacon 後才變得不可預測 */
 function mktH32(a){ a=a|0; a=a+0x6D2B79F5|0;
   let t=Math.imul(a^(a>>>15),1|a); t=t+Math.imul(t^(t>>>7),61|t)^t;
   return ((t^(t>>>14))>>>0)/4294967296; }
 function mktRnd(s,d,m){ return mktH32(Math.imul(s,73856093)^Math.imul(d,19349663)^Math.imul(m+1,83492791)); }
 function mktGauss(s,d,m){ return (mktRnd(s,d,m)+mktRnd(s,d,m+7919)+mktRnd(s,d,m+104729)-1.5)/0.5; }  // σ≈1
+function mktR2(v){ return Math.round(v*100)/100; }
+function mktTs(day,i){ return Math.floor(((MKT_EPOCH_DAY+day)*86400000-8*3600000+(MKT_OPEN_H*60+i)*60000)/1000); }
 
-/* 第一層：日線鏈——每日收盤價。從紀元日逐日推進，含均值回歸與漲跌停 */
-const mktCloseCache={};
-function mktDayClose(t,day){
-  const s=stockOf(t); const c=mktCloseCache[t]||(mktCloseCache[t]={});
-  if(day<=0)return s.base;
+/* ---- drand 取種子（歷史輪次不變 → 永久快取於 localStorage） ---- */
+const DR_URL="https://api.drand.sh/v2/beacons/quicknet/rounds/";
+const DR_GENESIS=1692803367, DR_PERIOD=3;
+function drRoundAt(sec){ return Math.floor((sec-DR_GENESIS)/DR_PERIOD)+1; }
+let BSEED={day:{},seg:{}};
+try{ const c=JSON.parse(localStorage.getItem("hfBeacon")||"null"); if(c&&c.day&&c.seg)BSEED=c; }catch(e){}
+/* 節流但保證尾巴會寫入 —— 單純「太近就跳過」會把最後一批種子丟掉，快取等於白做 */
+let bSaveTimer=null;
+function bSave(){ if(bSaveTimer)return;
+  bSaveTimer=setTimeout(function(){ bSaveTimer=null;
+    try{ localStorage.setItem("hfBeacon",JSON.stringify(BSEED)); }catch(e){} },1500); }
+const bPend={}; let bBusy=0; const bQ=[]; let bLastOK=0, bLastTry=0;
+/* 併發上限 8。務必用 try/catch 包住：只要有一個工作同步丟例外（例如環境沒有 fetch），
+   bBusy 就再也減不回來，整個佇列會永久卡死、行情從此不再更新。 */
+function bPump(){ while(bBusy<8&&bQ.length){ bBusy++; const job=bQ.shift();
+  try{ job(); }catch(e){ bBusy--; if(job.fail)job.fail(); } } }
+function bWant(kind,key,round){
+  const store=BSEED[kind]; if(store[key]!=null)return false;
+  const id=kind+":"+key; if(bPend[id])return false; bPend[id]=1;
+  const done=function(){ delete bPend[id]; };                     // 清掉才能在下一輪 bEnsure 重試
+  const job=function(){ bLastTry=Date.now();
+    fetch(DR_URL+round).then(r=>r.ok?r.json():null).then(function(j){
+      if(j&&j.signature){ store[key]=parseInt(j.signature.slice(0,8),16)|0; bLastOK=Date.now(); bSave(); }
+    }).catch(function(){}).then(function(){ done(); bBusy--; bPump(); });
+  };
+  job.fail=done;
+  bQ.push(job); bPump(); return true;
+}
+/* 補齊「從紀元到今天」的每日種子，以及今天已經走過的每一段 */
+function bEnsure(ts){
+  ts=ts||Date.now(); const day=mktDay(ts), m=mktMin(ts);
+  for(let d=1;d<=day;d++)bWant("day",d,drRoundAt(mktTs(d,0)));
+  if(m>=0){ const kNow=Math.floor(m/SEG_MIN);
+    for(let k=0;k<=kNow;k++)bWant("seg",day+":"+k,drRoundAt(mktTs(day,k*SEG_MIN))); }
+}
+function bHaveDays(day){ for(let d=1;d<=day;d++)if(BSEED.day[d]==null)return false; return true; }
+/* 行情是否即時：當前這一段的種子已到手 */
+function mktLive(ts){ ts=ts||Date.now(); const day=mktDay(ts), m=mktMin(ts);
+  if(!bHaveDays(day))return false;
+  if(m<0)return true;                                             // 休市不需要新種子
+  return BSEED.seg[day+":"+Math.floor(m/SEG_MIN)]!=null; }
+
+/* ---- 日線層：每日開盤價鏈（一天 1 個 beacon） ---- */
+const mktOpenCache={};
+function mktOpen(t,day){
+  const s=stockOf(t); if(day<=0)return s.base;
+  if(!bHaveDays(day))return null;                                 // 種子還沒到齊
+  const c=mktOpenCache[t]||(mktOpenCache[t]={});
   if(c[day]!=null)return c[day];
   let from=0,p=s.base;
-  for(let d=day-1;d>0;d--){ if(c[d]!=null){from=d;p=c[d];break;} }   // 從最近的快取點續算
+  for(let d=day-1;d>0;d--){ if(c[d]!=null){from=d;p=c[d];break;} } // 從最近的快取點續算
   for(let d=from+1;d<=day;d++){
-    let r=s.drift+s.volD*mktGauss(s.seed,d,0);
+    let r=s.drift+s.volD*mktGauss(s.seed^BSEED.day[d],d,0);
     r=Math.max(-MKT_LIMIT,Math.min(MKT_LIMIT,r));
     p=p*(1+r);
-    p=p+(s.base-p)*0.03;                                   // 均值回歸，避免長期漂走失控
-    p=Math.max(s.base*0.45,Math.min(s.base*2.1,p));        // 硬邊界
+    p=p+(s.base-p)*0.03;                                          // 均值回歸，避免長期漂走失控
+    p=Math.max(s.base*0.45,Math.min(s.base*2.1,p));               // 硬邊界
     c[d]=p;
   }
   return c[day];
 }
-/* 開盤價＝昨收 + 跳空（休市累積的變化一次反映，給玩家早上打開的理由）*/
-function mktDayOpen(t,day){
-  if(day<=0)return stockOf(t).base;
-  const s=stockOf(t), pc=mktDayClose(t,day-1);
-  const g=mktGauss(s.seed,day,9999)*s.volD*0.6;
-  return Math.max(pc*(1-MKT_LIMIT),Math.min(pc*(1+MKT_LIMIT),pc*(1+g)));
-}
-/* 第二層：盤中走勢——布朗橋，從開盤走到收盤，中間隨機但兩端必定吻合。
-   這樣日線與分線永遠一致，不會出現「圖表收在 A 但日線說收在 B」。 */
+/* ---- 盤中層：從開盤前向遊走，逐段吃 beacon ---- */
 const mktIntraCache={};
 function mktIntra(t,day){
-  const c=mktIntraCache[t];
-  if(c&&c.day===day)return c.arr;
-  const s=stockOf(t), o=mktDayOpen(t,day), cl=mktDayClose(t,day);
-  const pc=day>0?mktDayClose(t,day-1):o, lo=pc*(1-MKT_LIMIT), hi=pc*(1+MKT_LIMIT);
-  const N=MKT_MINS, raw=new Array(N+1); raw[0]=0;
-  for(let i=1;i<=N;i++)raw[i]=raw[i-1]+s.volM*mktGauss(s.seed,day,i)*mktSessVol(i);
-  const tot=raw[N], arr=new Array(N+1);
-  for(let i=0;i<=N;i++){ const w=i/N;
-    arr[i]=Math.max(lo,Math.min(hi,(o*(1-w)+cl*w)*(1+(raw[i]-w*tot)))); }
-  mktIntraCache[t]={day:day,arr:arr};
-  return arr;
+  const o=mktOpen(t,day); if(o==null)return null;
+  const now=Date.now(), isToday=(day===mktDay(now));
+  const mNow=isToday?mktMin(now):MKT_MINS;
+  const kNow=mNow<0?-1:Math.min(SEG_N-1,Math.floor(mNow/SEG_MIN));
+  const cached=mktIntraCache[t];
+  if(cached&&cached.day===day&&cached.k>=kNow)return cached;
+  const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
+  const arr=[o]; let p=o, k=-1;
+  for(let kk=0;kk<=(kNow<0?SEG_N-1:kNow);kk++){
+    const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;             // 缺種子 → 就停在這裡（凍結）
+    for(let m=1;m<=SEG_MIN;m++){
+      const i=kk*SEG_MIN+m;
+      p*=(1+s.volM*mktGauss(s.seed^sd,day,i)*mktSessVol(i));
+      p=Math.max(lo,Math.min(hi,p)); arr.push(p);
+    }
+    k=kk;
+  }
+  const res={day:day,k:k,arr:arr,open:o};
+  mktIntraCache[t]=res; return res;
 }
-function mktR2(v){ return Math.round(v*100)/100; }
 function mktPrice(t,ts){ ts=ts||Date.now();
-  const day=mktDay(ts), m=mktMin(ts);
-  return mktR2(m<0?mktDayClose(t,day-1):mktIntra(t,day)[m]); }
-function mktPrevClose(t,ts){ ts=ts||Date.now();
-  const day=mktDay(ts);
-  return mktR2(mktDayClose(t,mktMin(ts)<0?day-2:day-1)); }   // 休市時比昨日全天漲跌，而不是顯示 0%
-/* 圖表資料：直接算出來，不存也不抓 */
-function mktTs(day,i){ return Math.floor(((MKT_EPOCH_DAY+day)*86400000-8*3600000+(MKT_OPEN_H*60+i)*60000)/1000); }
+  const R=mktIntra(t,mktDay(ts)); if(!R)return null;
+  const last=R.arr.length-1, mf=mktMinF(ts);
+  if(mf<0||mf>=last)return mktR2(R.arr[last]);
+  const m=Math.floor(mf), f=mf-m;                                  // 分鐘之間線性內插，價格才不會一秒一跳
+  return mktR2(R.arr[m]+(R.arr[m+1]-R.arr[m])*f);
+}
+function mktPrevClose(t,ts){ return mktOpen(t,mktDay(ts||Date.now())); }   // 基準＝今日開盤
+/* 圖表資料：本機現算。缺種子的區間就不畫，不會假造 */
 function mktBars(t,days,step){
-  const now=Date.now(), day=mktDay(now), cm=mktMin(now), out=[];
-  for(let d=Math.max(0,day-(days-1));d<=day;d++){
-    const arr=mktIntra(t,d), last=(d===day)?(cm<0?MKT_MINS:cm):MKT_MINS;
-    for(let i=0;i<=last;i+=step)out.push({time:mktTs(d,i)+CHART_TZOFF,value:mktR2(arr[i])});
-    if(last%step)out.push({time:mktTs(d,last)+CHART_TZOFF,value:mktR2(arr[last])});
+  const now=Date.now(), day=mktDay(now), out=[];
+  for(let d=Math.max(1,day-(days-1));d<=day;d++){
+    const R=(d===day)?mktIntra(t,d):mktIntraDay(t,d);
+    if(!R)continue;
+    const last=R.arr.length-1;
+    for(let i=0;i<=last;i+=step)out.push({time:mktTs(d,i)+CHART_TZOFF,value:mktR2(R.arr[i])});
+    if(last%step)out.push({time:mktTs(d,last)+CHART_TZOFF,value:mktR2(R.arr[last])});
   }
   return out;
 }
-function mktSpark(t,ts){ ts=ts||Date.now();
-  const day=mktDay(ts), m=mktMin(ts);
-  if(m<0)return [mktDayClose(t,day-1)];
-  const arr=mktIntra(t,day), step=Math.max(1,Math.floor(m/40)), sp=[];
-  for(let i=0;i<=m;i+=step)sp.push(mktR2(arr[i]));
-  if(sp[sp.length-1]!==mktR2(arr[m]))sp.push(mktR2(arr[m]));
-  return sp;
+/* 過去某一天的完整分線（只有本機快取到那天的段種子時才畫得出來） */
+const mktPastCache={};
+function mktIntraDay(t,day){
+  const key=t+":"+day; if(mktPastCache[key]!==undefined)return mktPastCache[key];
+  const o=mktOpen(t,day); if(o==null)return (mktPastCache[key]=null);
+  const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
+  const arr=[o]; let p=o;
+  for(let kk=0;kk<SEG_N;kk++){ const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;
+    for(let m=1;m<=SEG_MIN;m++){ const i=kk*SEG_MIN+m;
+      p*=(1+s.volM*mktGauss(s.seed^sd,day,i)*mktSessVol(i));
+      p=Math.max(lo,Math.min(hi,p)); arr.push(p); } }
+  const res=arr.length>1?{day:day,arr:arr,open:o}:null;
+  return (mktPastCache[key]=res);
 }
-/* 把引擎算出的價格寫進 G.stocks —— 交易引擎（下單/平倉/斷頭）只讀 st.price，完全不用改 */
+function mktSpark(t,ts){ const R=mktIntra(t,mktDay(ts||Date.now())); if(!R)return null;
+  const last=R.arr.length-1, step=Math.max(1,Math.floor(last/40)), sp=[];
+  for(let i=0;i<=last;i+=step)sp.push(mktR2(R.arr[i]));
+  if(sp[sp.length-1]!==mktR2(R.arr[last]))sp.push(mktR2(R.arr[last]));
+  return sp; }
+/* 把引擎算出的價格寫進 G.stocks —— 交易引擎（下單/平倉/斷頭）只讀 st.price，完全沒改 */
 let sparkTs=0;
 function mktSync(){
-  if(!G||!G.stocks)return;   // 存檔尚未初始化（頂層或早期呼叫）時直接跳過
-  const now=Date.now(), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
+  if(!G||!G.stocks)return;
+  bEnsure();
+  const now=Date.now(), live=mktLive(now), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
   STOCKS.forEach(function(s){ const st=G.stocks[s.t]; if(!st)return;
-    st.price=mktPrice(s.t,now); st.prev=mktPrevClose(s.t,now);
-    st.sess=mktSess(now); st.qts=now;
-    if(doSpark||!SPARKS[s.t])SPARKS[s.t]=mktSpark(s.t,now); });
+    const px=mktPrice(s.t,now), op=mktOpen(s.t,mktDay(now));
+    if(px!=null)st.price=px;                                       // 拿不到就凍結在最後已知價
+    if(op!=null)st.prev=op;
+    st.sess=live?mktSess(now):"行情中斷"; st.qts=now;
+    if(doSpark||!SPARKS[s.t]){ const sp=mktSpark(s.t,now); if(sp)SPARKS[s.t]=sp; } });
 }
 /* ============================================================
    作物每日行情（±15%，每日 09:00 換盤）
@@ -1926,7 +2006,8 @@ function loadChart(){
   const days=chartRange==="2D"?2:chartRange==="3D"?3:chartRange==="5D"?5:1;
   const step=days>1?15:5;                                   // 多日圖 15 分一點、當日 5 分一點
   const pts=mktBars(curStock,days,step);
-  if(!pts.length)return;
+  if(!pts.length){ if(lwTries++<40)setTimeout(loadChart,800); return; }   // 種子還在抓 → 稍後重畫
+  lwTries=0;
   // 逐日開盤：每個交易日各自的開盤價（多日圖呈階梯狀）
   const opens=[]; let curDay=null, dayOpen=0;
   pts.forEach(p=>{const dk=Math.floor(p.time/86400);
@@ -1982,6 +2063,8 @@ function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
                       :("預估成本 "+CO+" "+total.toLocaleString()))
     +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+"股"):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq; }
 function placeOrder(side){
+  // 行情中斷時禁止交易：若允許用最後已知價下單，等於留一個「斷網就能撿便宜」的後門
+  if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
   const st=G.stocks[curStock];
   const qty=odQtyShares();
   if(qty<=0){toast("請輸入數量");return;}
@@ -2023,27 +2106,32 @@ function execTrade(t,side,qty,price,lev){
   }
   renderHUD();saveGame();renderStockUI();
 }
-function closePosition(t){const st=G.stocks[t];if(!st||!st.shares)return;execTrade(t,st.shares>0?-1:1,Math.abs(st.shares),st.price);}
+function closePosition(t){if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
+  const st=G.stocks[t];if(!st||!st.shares)return;execTrade(t,st.shares>0?-1:1,Math.abs(st.shares),st.price);}
 function cancelOrder(id){G.stockOrders=(G.stockOrders||[]).filter(o=>o.id!==id);saveGame();renderStockUI();toast("已取消掛單");}
 function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單 → 檢查斷頭
   mktSync();
-  (G.stockOrders||[]).slice().forEach(o=>{const st=G.stocks[o.t];if(!st)return;
-    if((o.side>0&&st.price<=o.price)||(o.side<0&&st.price>=o.price)){
-      G.stockOrders=G.stockOrders.filter(x=>x.id!==o.id);
-      toast("✅ 限價單成交："+stockName(o.t));
-      execTrade(o.t,o.side,o.qty,o.price,o.lev||0);
-    }});
-  // 融資維持率檢查：市值/融資金額 < 130% → 強制斷頭（台股規則）
-  STOCKS.forEach(function(x){const st=G.stocks[x.t];
-    if(st&&(st.debt||0)>0&&st.shares>0){
-      const mr=st.price*st.shares/st.debt;
-      if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
-    }});
+  // 行情中斷時價格是凍結的舊值 —— 拿它撮合會成交在不存在的價位，
+  // 拿它算維持率更糟：可能在市價其實已經反彈時把玩家斷頭。所以一律等行情回來再算。
+  if(mktLive()){
+    (G.stockOrders||[]).slice().forEach(o=>{const st=G.stocks[o.t];if(!st)return;
+      if((o.side>0&&st.price<=o.price)||(o.side<0&&st.price>=o.price)){
+        G.stockOrders=G.stockOrders.filter(x=>x.id!==o.id);
+        toast("✅ 限價單成交："+stockName(o.t));
+        execTrade(o.t,o.side,o.qty,o.price,o.lev||0);
+      }});
+    // 融資維持率檢查：市值/融資金額 < 130% → 強制斷頭（台股規則）
+    STOCKS.forEach(function(x){const st=G.stocks[x.t];
+      if(st&&(st.debt||0)>0&&st.shares>0){
+        const mr=st.price*st.shares/st.debt;
+        if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
+      }});
+  }
   if(stockOpen){ if(stockView==="home")renderStockHome();
     else{ renderStockUI();
       // 圖表最後一點跟著跳動（不重畫整張，也不發任何請求）
-      if(lwSeries&&chartRange==="24H"){ const now=Date.now(), m=mktMin(now);
-        if(m>=0)try{lwSeries.update({time:mktTs(mktDay(now),m)+CHART_TZOFF,value:mktPrice(curStock,now)});}catch(e){} } } }
+      if(lwSeries&&chartRange==="24H"&&mktLive()){ const now=Date.now(), m=mktMin(now), px=mktPrice(curStock,now);
+        if(m>=0&&px!=null)try{lwSeries.update({time:mktTs(mktDay(now),m)+CHART_TZOFF,value:px});}catch(e){} } } }
 }
 /* Yahoo 報價已移除（改用上方行情引擎）。YPROXIES 保留給財經新聞的 RSS 用。 */
 const YPROXIES=["https://api.allorigins.win/raw?url=","https://corsproxy.io/?url="];
@@ -2059,7 +2147,9 @@ function renderStockUI(){
   document.getElementById("stkTick").textContent=s.t;
   const pe=document.getElementById("stkPrice"); pe.textContent=fmtP(st.price); pe.className="stkPrice "+(chg>=0?"up":"dn");
   const ce=document.getElementById("stkChg"); ce.textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%"; ce.style.color=chg>=0?"#0ecb81":"#f6465d";
-  const se=document.getElementById("stkSess"); if(se){se.textContent=st.sess||"--";se.style.color=st.sess==="盤中"?"#0ecb81":(st.sess?"#f0b90b":"#848e9c");}
+  const se=document.getElementById("stkSess"); if(se){ const ss=st.sess||"--";
+    se.textContent=ss;
+    se.style.color=(ss==="行情中斷")?"#f6465d":(ss==="休市"?"#848e9c":"#0ecb81"); }   // 中斷紅、休市灰、開盤綠
   const posEl=document.getElementById("stkPos");
   posEl.textContent=st.shares?((st.shares>0?"+":"")+fmtShares(st.shares)):"--";
   posEl.style.color=st.shares>0?"#0ecb81":(st.shares<0?"#f6465d":"#eaecef");
