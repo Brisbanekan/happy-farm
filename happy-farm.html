@@ -248,21 +248,26 @@
      上緣讓開右上選單鈕、下緣留安全區——再讓按鈕在帶內自己置中。
      這樣不管視窗多高都不會撞到選單，390 高的橫向手機也剛好排得下。 */
   .tools{position:absolute;right:calc(var(--u)*8 + var(--ui-safe-right));
-    top:calc(var(--u)*64 + env(safe-area-inset-top,0px));
+    top:calc(var(--u)*72 + env(safe-area-inset-top,0px));
     bottom:calc(var(--u)*10 + env(safe-area-inset-bottom,0px));
-    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--u)*13);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
-  /* gap 從 6 加大到 13：選取中的工具會 scale(1.13)（半徑 +3.5u）並在右上角長出 ✓ 徽章（向上突出約 11u），
-     原本 6u 的間距不夠，放大後會壓到上一顆按鈕。4 顆 ×54u ＋ 3 段 ×13u ＝ 255u，仍遠小於可用帶高 316u。 */
+    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--u)*11);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+  /* ── 工具列尺寸的實測依據（預覽模式 844×390，扣掉 11px 邊框後內容區為 822×368）──
+     共 5 顆工具。選取中的那顆會 scale(1.13)，光暈環與 ✓ 徽章還會再往外突出約 4.5u。
+     舊值 54u/間距6u/上緣64u：總高 5×54+4×6 ＝ 294u，超過可用帶高 (368-64-10)＝294u 的極限，
+     justify-content:center 於是往上下各溢出，首顆頂端被推到 60.6u，撞上右上選單（底部 56u）。
+     現值 48u/間距11u/上緣72u：總高 5×48+4×11 ＝ 284u ≤ 帶高 286u，不溢出。
+     實測餘裕──離選單 9.5u、鄰居間 3.4u、離下緣 6.4u、離右緣 2.2u。 */
   .tool{
-    width:calc(var(--u)*54);height:calc(var(--u)*54);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
-    display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*25);cursor:pointer;
+    width:calc(var(--u)*48);height:calc(var(--u)*48);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
+    flex-shrink:0;   /* 不可壓縮：寬度固定而高度被壓會變成橢圓 */
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*22);cursor:pointer;
     box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .12s,filter .12s,box-shadow .12s;
   }
   .tool:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
   .tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;z-index:2;}   /* z-index:2＝放大後一律蓋在鄰居之上，不會被切到 */
-  .tool.sel::after{content:"✓";position:absolute;right:calc(var(--u)*-2);top:calc(var(--u)*-4);width:calc(var(--u)*20);height:calc(var(--u)*20);   /* 內收：原本 -5/-7 在 scale(1.13) 後會突出畫面右緣並壓到上一顆 */border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
+  .tool.sel::after{content:"✓";position:absolute;right:calc(var(--u)*-2);top:calc(var(--u)*-4);width:calc(var(--u)*18);height:calc(var(--u)*18);   /* 內收：原本 -5/-7、20u 在 scale(1.13) 後會突出畫面右緣並壓到上一顆 */border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
   @keyframes toolsel{0%,100%{box-shadow:0 0 0 4px #fff7a8,0 0 12px 4px #ffbd23aa,0 4px 0 #b87500;}50%{box-shadow:0 0 0 5px #fff370,0 0 20px 7px #ffbd23dd,0 4px 0 #b87500;}}
-  .tool .lbl{position:absolute;right:calc(var(--u)*56);top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:calc(var(--u)*11);font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
+  .tool .lbl{position:absolute;right:calc(var(--u)*50);top:50%;   /* 隨工具鈕 54→48 一起內縮 */transform:translateY(-50%);background:#0008;color:#fff;font-size:calc(var(--u)*11);font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
   .tool:hover .lbl,.tool.sel .lbl{opacity:1;}
   .tool.sel .lbl{background:#5b3a11e8;color:#fff8d6;border:1px solid #ffd45e;font-size:12px;padding:4px 8px;}
   /* 觸控裝置會把 tap 保留成 :hover，造成工具文字一直黏在畫面中央；實機保留光圈與勾選即可。 */
@@ -569,7 +574,7 @@
   body.narrow .ranchui{top:12px;}   /* 手機：牧場數量提示移到背景上方 */
   /* 放大/縮小按鈕 */
   /* 縮放鈕：一律放在工具列左側、dock 上方（原本桌機／窄版兩套位置合併成一套） */
-  .zoomctrl{position:absolute;right:calc(var(--u)*74 + var(--ui-safe-right));   /* 68→74：工具鈕選取後 scale(1.13) 會向左長到約 67.5u，留出餘裕免得縮放鈕被壓到 */bottom:calc(var(--u)*66 + env(safe-area-inset-bottom,0px));z-index:26;display:flex;flex-direction:column;gap:calc(var(--u)*7);}
+  .zoomctrl{position:absolute;right:calc(var(--u)*68 + var(--ui-safe-right));bottom:calc(var(--u)*66 + env(safe-area-inset-bottom,0px));z-index:26;display:flex;flex-direction:column;gap:calc(var(--u)*7);}
   .zbtn{width:calc(var(--u)*44);height:calc(var(--u)*44);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;color:#7a5a10;
     font-size:calc(var(--u)*22);font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
     cursor:pointer;box-shadow:0 3px 0 #e0c389;user-select:none;}
