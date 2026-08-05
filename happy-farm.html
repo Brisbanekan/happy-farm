@@ -250,15 +250,17 @@
   .tools{position:absolute;right:calc(var(--u)*8 + var(--ui-safe-right));
     top:calc(var(--u)*64 + env(safe-area-inset-top,0px));
     bottom:calc(var(--u)*10 + env(safe-area-inset-bottom,0px));
-    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--u)*6);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--u)*13);z-index:27;}   /* 高於 .zoomctrl(26)，避免縮放鈕蓋住肥料/一鍵收成 */
+  /* gap 從 6 加大到 13：選取中的工具會 scale(1.13)（半徑 +3.5u）並在右上角長出 ✓ 徽章（向上突出約 11u），
+     原本 6u 的間距不夠，放大後會壓到上一顆按鈕。4 顆 ×54u ＋ 3 段 ×13u ＝ 255u，仍遠小於可用帶高 316u。 */
   .tool{
     width:calc(var(--u)*54);height:calc(var(--u)*54);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*25);cursor:pointer;
     box-shadow:0 3px 0 #e0c389;position:relative;transition:transform .12s,filter .12s,box-shadow .12s;
   }
   .tool:active{transform:translateY(2px);box-shadow:0 1px 0 #e0c389;}
-  .tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;}
-  .tool.sel::after{content:"✓";position:absolute;right:calc(var(--u)*-5);top:calc(var(--u)*-7);width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
+  .tool.sel{background:linear-gradient(#fff8cf,#ffd95e);border-color:#e69b00;box-shadow:0 0 0 4px #fff7a8,0 0 16px 5px #ffbd23cc,0 4px 0 #b87500;transform:scale(1.13);filter:saturate(1.12);animation:toolsel 1.25s ease-in-out infinite;z-index:2;}   /* z-index:2＝放大後一律蓋在鄰居之上，不會被切到 */
+  .tool.sel::after{content:"✓";position:absolute;right:calc(var(--u)*-2);top:calc(var(--u)*-4);width:calc(var(--u)*20);height:calc(var(--u)*20);   /* 內收：原本 -5/-7 在 scale(1.13) 後會突出畫面右緣並壓到上一顆 */border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4f9c34;color:#fff;border:2px solid #fff;font-size:12px;font-weight:900;box-shadow:0 2px 4px #0004;}
   @keyframes toolsel{0%,100%{box-shadow:0 0 0 4px #fff7a8,0 0 12px 4px #ffbd23aa,0 4px 0 #b87500;}50%{box-shadow:0 0 0 5px #fff370,0 0 20px 7px #ffbd23dd,0 4px 0 #b87500;}}
   .tool .lbl{position:absolute;right:calc(var(--u)*56);top:50%;transform:translateY(-50%);background:#0008;color:#fff;font-size:calc(var(--u)*11);font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none;}
   .tool:hover .lbl,.tool.sel .lbl{opacity:1;}
@@ -278,7 +280,7 @@
   .hud{left:calc(10px + env(safe-area-inset-left,0px));}
   .leftbar{left:calc(8px + env(safe-area-inset-left,0px));}
   .logbtn{left:calc(10px + env(safe-area-inset-left,0px));}
-  .tools{right:calc(8px + var(--ui-safe-right));}
+  .tools{right:calc(10px + var(--ui-safe-right));}   /* 8→10：留給選取放大＋✓徽章向右突出的空間 */
   .sceneswitch{top:calc(var(--u)*8 + env(safe-area-inset-top,0px));}
   .visitbar{top:calc(var(--u)*8 + env(safe-area-inset-top,0px));}
   .dock{padding-left:calc(var(--u)*10 + env(safe-area-inset-left,0px));padding-right:calc(var(--u)*10 + env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);}
@@ -353,7 +355,9 @@
     animation:bldcue 1.5s ease-in-out infinite;}
   body:not(.editmode) .bld[data-act]:hover .bldcue,body:not(.editmode) .bld[data-act]:focus-visible .bldcue{background:#fff1a8;transform:translate(-50%,-50%) scale(1.12);}
   @keyframes bldcue{0%,100%{translate:0 0;}50%{translate:0 -5px;}}
-  .interacthint{position:fixed;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
+  /* 定位基準＝#scene（position:relative）。原本用 fixed：預覽模式下 #scene 有 transform:scale()，
+     會變成 fixed 的containing block，於是 clientX/Y 被當成場景內座標 → 提示飛到建築物外甚至畫面外。 */
+  .interacthint{position:absolute;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
     background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
   .interacthint.on{display:block;}
 
@@ -565,7 +569,7 @@
   body.narrow .ranchui{top:12px;}   /* 手機：牧場數量提示移到背景上方 */
   /* 放大/縮小按鈕 */
   /* 縮放鈕：一律放在工具列左側、dock 上方（原本桌機／窄版兩套位置合併成一套） */
-  .zoomctrl{position:absolute;right:calc(var(--u)*68 + var(--ui-safe-right));bottom:calc(var(--u)*66 + env(safe-area-inset-bottom,0px));z-index:26;display:flex;flex-direction:column;gap:calc(var(--u)*7);}
+  .zoomctrl{position:absolute;right:calc(var(--u)*74 + var(--ui-safe-right));   /* 68→74：工具鈕選取後 scale(1.13) 會向左長到約 67.5u，留出餘裕免得縮放鈕被壓到 */bottom:calc(var(--u)*66 + env(safe-area-inset-bottom,0px));z-index:26;display:flex;flex-direction:column;gap:calc(var(--u)*7);}
   .zbtn{width:calc(var(--u)*44);height:calc(var(--u)*44);border-radius:50%;background:#fffef6;border:calc(var(--u)*3) solid #f3d9a8;color:#7a5a10;
     font-size:calc(var(--u)*22);font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
     cursor:pointer;box-shadow:0 3px 0 #e0c389;user-select:none;}
@@ -2286,17 +2290,34 @@ function harvest(i){
 }
 
 /* ============ 工廠：升級（1-10級，需魅力門檻）＋農產加工 ============ */
+/* 加工品售價＝原料直接賣掉的總價 ×(1＋利潤率)。
+   利潤率隨等級由 15% 遞增到 20%（原本是 38~51%，加工比種田賺太多，作物經濟被架空）。
+   fSellBonus() 對作物與加工品同時生效，所以不影響這裡的比例。
+   ┌─────────┬───────────┬────────┬────────┐
+   │ 加工品   │ 原料總賣價 │ 新售價 │ 利潤率 │
+   ├─────────┼───────────┼────────┼────────┤
+   │ 蔬菜沙拉 │      260 │    300 │ 15.4% │
+   │ 番茄醬   │      440 │    510 │ 15.9% │
+   │ 玉米濃湯 │      632 │    730 │ 15.5% │
+   │ 草莓果醬 │    1,920 │  2,240 │ 16.7% │
+   │ 辣椒醬   │    2,700 │  3,160 │ 17.0% │
+   │ 西瓜汁   │    3,300 │  3,880 │ 17.6% │
+   │ 南瓜派   │    3,480 │  4,090 │ 17.5% │
+   │ 葡萄酒   │    8,640 │ 10,240 │ 18.5% │
+   │ 綜合果盤 │   12,840 │ 15,280 │ 19.0% │
+   │ 滿漢農宴 │   16,540 │ 19,840 │ 20.0% │
+   └─────────┴───────────┴────────┴────────┘ */
 const FGOODS={
-  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:360,   need:{radish:5,cucumber:5}},
-  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:640,   need:{tomato:8}},
-  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:880,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
-  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2700,  need:{strawberry:8}},
-  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3800,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
-  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4900,  need:{pumpkin:6,strawberry:4}},
-  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:4600,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
-  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:12500, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
-  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:18500, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
-  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:25000, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
+  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:300,   need:{radish:5,cucumber:5}},
+  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:510,   need:{tomato:8}},
+  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:730,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
+  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2240,  need:{strawberry:8}},
+  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3160,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
+  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4090,  need:{pumpkin:6,strawberry:4}},
+  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:3880,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
+  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:10240, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
+  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:15280, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
+  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:19840, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
 };
 const FLV=[null,null,   // FLV[n]＝升到 n 級的需求；魅力為門檻不消耗；效果涵蓋農場/牧場全域
   {gold:3000,  charm:10,  fx:"🌱 全作物成長 +5%（含解鎖玉米濃湯）"},
@@ -3547,11 +3568,24 @@ function applyBldClip(el){
 }
 const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
 const BLD_HINT={inv:"開啟倉庫",profile:"查看農舍",factory:"開啟農產加工廠"};
+/* x,y 為螢幕座標（clientX/Y 或 getBoundingClientRect）。
+   提示掛在 #scene 底下，而預覽模式的 #scene 帶 transform:scale(simScale)，
+   所以要先換算成「場景內部座標」，再夾在場景範圍內（#scene 是 overflow:hidden，
+   超出就會被整個切掉，這就是原本提示會消失或跑到建築物外的原因）。 */
 function showBldHint(el,x,y){
+  const scene=document.getElementById("scene"); if(!scene)return;
   let hint=document.getElementById("interactHint");
-  if(!hint){hint=document.createElement("div");hint.id="interactHint";hint.className="interacthint";document.getElementById("scene").appendChild(hint);}
-  const label=BLD_HINT[el.getAttribute("data-act")]||"點擊互動";
-  hint.textContent="☝ "+label;hint.style.left=x+"px";hint.style.top=y+"px";hint.classList.add("on");
+  if(!hint){hint=document.createElement("div");hint.id="interactHint";hint.className="interacthint";scene.appendChild(hint);}
+  hint.textContent="☝ "+(BLD_HINT[el.getAttribute("data-act")]||"點擊互動");
+  hint.classList.add("on");   // 先顯示才量得到 offsetWidth/Height
+  const r=scene.getBoundingClientRect();
+  const sw=scene.offsetWidth||r.width, sh=scene.offsetHeight||r.height;
+  const k=(sw&&r.width)?(r.width/sw):1;                 // 實際縮放倍率（預覽模式＝simScale）
+  let lx=(x-r.left)/k, ly=(y-r.top)/k;                  // 螢幕座標 → 場景內部座標
+  const w=hint.offsetWidth, h=hint.offsetHeight, pad=6;
+  lx=Math.min(Math.max(lx, w/2+pad), sw-w/2-pad);       // 左右不出界（transform 是 -50%）
+  ly=Math.min(Math.max(ly, h*1.15+pad), sh-pad);        // 上方不出界（transform 是 -115%）
+  hint.style.left=lx+"px"; hint.style.top=ly+"px";
 }
 function hideBldHint(){const hint=document.getElementById("interactHint");if(hint)hint.classList.remove("on");}
 function initBldHit(){
