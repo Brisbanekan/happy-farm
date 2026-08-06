@@ -476,6 +476,11 @@
   .shTop .shCashBox b{color:#16181d;}
   .shMain{flex:1;display:flex;gap:12px;min-height:0;margin:0 12px 12px;padding-left:env(safe-area-inset-left,0px);}
   .shList{flex:1;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 2px 10px #0000000d;}
+  .shTabs{display:flex;gap:6px;padding:0 14px 8px;flex-shrink:0;}
+  .shTabs button{border:none;background:#eef1f6;color:#5b6270;font-size:13px;font-weight:800;
+    padding:6px 14px;border-radius:9px;cursor:pointer;}
+  .shTabs button.on{background:#3e2b1e;color:#ffd66e;}
+  body.narrow .shTabs button{font-size:12px;padding:5px 10px;}
   .shNews{width:400px;flex-shrink:0;background:#fff;border-radius:16px;box-shadow:0 2px 10px #0000000d;display:flex;flex-direction:column;min-height:0;}
   .shNews .nTtl{font-size:14px;font-weight:800;padding:10px 14px 6px;flex-shrink:0;}
   .shNews .nList{flex:1;overflow:auto;padding:0 8px 8px;}
@@ -840,6 +845,11 @@
         <span class="ttl">📈 股市</span>
         <span class="shCashBox">可用金幣 <b id="shCash">--</b></span>
       </div>
+      <div class="shTabs">
+        <button id="shTabStock" class="on" onclick="setHomeTab('stock')">📈 股票</button>
+        <button id="shTabFut" onclick="setHomeTab('fut')">🌾 農產期貨</button>
+        <button id="shTabRank" onclick="setHomeTab('rank')">🏆 大賽排行</button>
+      </div>
       <div class="shMain">
         <div class="shList" id="shList"></div>
         <div class="shNews"><div class="nTtl">📰 財經新聞</div><div class="nList" id="shNewsList"><div class="nt" style="padding:10px">載入中…</div></div></div>
@@ -1053,7 +1063,7 @@ const STOCKS=[
 // 後 7 支為 2026-08 收斂標的時下架（農達/農月光投控/農華電/農泰金/農信金/農達光/農金寶-DR）
 const STOCK_DELIST=["TSM","UMC","ASX","CHT","NVDA","AAPL","GOOGL","MSFT","TSLA","AMZN","NTSMC","NFAK","NHAI","TNPC","NAPL","NOOG","NSFT","NSLA","NMZN",
   "2382","3711","2412","2882","2891","2409","9105"];
-function stockName(t){const s=STOCKS.find(x=>x.t===t);return s?s.n:t;}
+function stockName(t){ return instName(t); }
 const FERTS = {
   f1:{name:"普通肥料",emoji:"💩",cost:120,cut:8,cur:"gold",desc:"加速成長 8 秒"},
   f2:{name:"高級肥料",emoji:"✨",cost:3,cut:20,cur:"blue",desc:"加速成長 20 秒（藍幣）"},
@@ -1198,7 +1208,7 @@ function freshGame(){
   G.gold=200;G.credit=5;G.level=1;G.xp=0;G.charm=0;G.tool="hand";
   G.seeds={radish:3};G.harvest={};G.dog=null;G.ferts={f1:0,f2:0,bigspray:0};G.lastDaily="";G.ts=0;G.scene="farm";
   G.streak=0;G.totalDays=0;G.lastClaim="";G.lastMarketDate="";
-  G.stocks={};STOCKS.forEach(s=>G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0});
+  G.stocks={};allInst().forEach(s=>G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0});
   G.stockOrders=[];G.stockFav={};
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
   G.ranch=[];G.pals={};G.myCode="";
@@ -1236,7 +1246,7 @@ function normalizeState(){
       G.gold+=Math.max(0,refund);
       log("📤 "+k+" 已下架，持倉以 "+fmtP(px)+" 結算返還 "+Math.max(0,refund)+" "+CO,"b"); }
     delete G.stocks[k];});
-  STOCKS.forEach(s=>{let st=G.stocks[s.t]; if(!st||typeof st.price!=="number")st=G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0};
+  allInst().forEach(s=>{let st=G.stocks[s.t]; if(!st||typeof st.price!=="number")st=G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0};
     if(typeof st.avg!=="number")st.avg=(st.shares&&st.cost)?st.cost/st.shares:0;
     if(typeof st.debt!=="number")st.debt=0;});   // 融資負債欄位
   /* 2026-08 價格尺度改版：舊存檔的持倉是舊尺度（農積電 1050），新尺度是 72。
@@ -1256,7 +1266,7 @@ function normalizeState(){
     G.mktV=2;
   }
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
-  G.stockOrders=G.stockOrders.filter(o=>STOCKS.some(s=>s.t===o.t));   // 移除下架標的掛單
+  G.stockOrders=G.stockOrders.filter(o=>allInst().some(s=>s.t===o.t));   // 移除下架標的掛單
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
@@ -1779,6 +1789,7 @@ const mktOpenCache={};
 function mktOpen(t,day){
   const s=stockOf(t); if(day<=0)return s.base;
   if(!bHaveDays(day))return null;                                 // 種子還沒到齊
+  if(s.fut)return cropPriceOfDay(s.k,day);                        // 期貨：開盤價就是當日現貨
   const c=mktOpenCache[t]||(mktOpenCache[t]={});
   if(c[day]!=null)return c[day];
   let from=0,p=s.base;
@@ -1865,7 +1876,7 @@ function mktSync(){
   if(!G||!G.stocks)return;
   bEnsure();
   const now=Date.now(), live=mktLive(now), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
-  STOCKS.forEach(function(s){ const st=G.stocks[s.t]; if(!st)return;
+  allInst().forEach(function(s){ const st=G.stocks[s.t]; if(!st)return;
     const px=mktPrice(s.t,now), op=mktOpen(s.t,mktDay(now));
     if(px!=null)st.price=px;                                       // 拿不到就凍結在最後已知價
     if(op!=null)st.prev=op;
@@ -1885,22 +1896,151 @@ function mktSync(){
    工廠從「無腦賺錢」變成「低點囤原料」的決策。
    ============================================================ */
 const CROP_VOL=0.075, CROP_CAP=0.15, CROP_MKT_VOL=0.030;   // 個股波動 σ7.5%、上限 ±15%、大盤同漲跌 σ3%
+const CROP_HINT_BIAS=0.042;   // 展望對實現值的偏移量，調到讓展望約七成準（見下方說明）
 function cropSeed(k){ let h=0; for(let i=0;i<k.length;i++)h=(Math.imul(h,31)+k.charCodeAt(i))|0; return h^0x5f3a; }
 function cropDay(ts){ ts=ts||Date.now(); const d=mktDay(ts); return mktMin(ts)<0?d-1:d; }   // 09:00 前算前一日行情
-function cropIdx(k,ts){ const d=cropDay(ts);
-  const r=mktGauss(0x9137,d,0)*CROP_MKT_VOL + mktGauss(cropSeed(k),d,1)*CROP_VOL;
-  return 1+Math.max(-CROP_CAP,Math.min(CROP_CAP,r)); }
-function cropPrice(k,ts){ return Math.max(1,Math.round(CROPS[k].sell*cropIdx(k,ts))); }
-function cropChg(k,ts){ return (cropIdx(k,ts)-1)*100; }
+/* 明日展望：由「前一日」的 beacon 決定，所以今天就公布得出來。
+   而明天的實現值會朝展望方向偏移 CROP_HINT_BIAS —— 因果是「展望在前、價格在後」，
+   跟股票新聞同一套邏輯。這樣展望才是真的預期，不是把答案先印出來。 */
+function cropHintDir(k,d){
+  const sd=BSEED.day[d-1]; if(sd==null)return 0;
+  return mktRnd(cropSeed(k)^sd^0x51ab,d,950)<0.5?1:-1;
+}
+/* 找出「有種子可用」的最近一天：整天沒連線時退回前一天的行情，而不是憑空給個基準價 */
+function cropSeedDay(d){ for(let i=0;i<8;i++){ if(BSEED.day[d-i]!=null)return d-i; } return null; }
+function cropIdxOfDay(k,d){
+  const sd0=cropSeedDay(d); if(sd0==null)return null;
+  d=sd0; const sd=BSEED.day[d];
+  const r=mktGauss(0x9137^sd,d,0)*CROP_MKT_VOL
+        + mktGauss(cropSeed(k)^sd,d,1)*CROP_VOL
+        + cropHintDir(k,d)*CROP_HINT_BIAS;
+  return 1+Math.max(-CROP_CAP,Math.min(CROP_CAP,r));
+}
+function cropIdx(k,ts){ return cropIdxOfDay(k,cropDay(ts)); }
+function cropPriceOfDay(k,d){ const x=cropIdxOfDay(k,d); return x==null?null:Math.max(1,Math.round(CROPS[k].sell*x)); }
+function cropPrice(k,ts){ const x=cropIdx(k,ts); return x==null?CROPS[k].sell:Math.max(1,Math.round(CROPS[k].sell*x)); }
+function cropChg(k,ts){ const x=cropIdx(k,ts); return x==null?0:(x-1)*100; }
 /* 行情標籤：台股慣例紅漲綠跌 */
 function cropTag(k){ const c=cropChg(k);
   if(Math.abs(c)<0.5)return '<span style="color:#8d7b6a">持平</span>';
   return '<span style="color:'+(c>0?"#d32f2f":"#2e7d32")+'">'+(c>0?"▲":"▼")+Math.abs(c).toFixed(1)+'%</span>'; }
 
+/* ============================================================
+   每週配息 —— 給「不想盯盤」的玩家一條路
+   ------------------------------------------------------------
+   農邦金與農鋼是波動最低的兩支，讓它們配息，長抱才有意義。
+   數值先做成可調參數，回測後再定案。
+   結算時點：每週一（day % 7 === 0）開盤後第一次心跳。
+   ============================================================ */
+const DIV_RATE={"2881":0.008,"2002":0.006};   // 每週配息率（佔市值）
+function divWeek(day){ return Math.floor(day/7); }
+function divCheck(){
+  if(!G||!G.stocks)return;
+  const now=Date.now(), day=mktDay(now);
+  if(mktMin(now)<0)return;                       // 開盤後才發
+  if(!bHaveDays(day))return;
+  const wk=divWeek(day);
+  if(G.divWk===wk)return;
+  const first=(G.divWk==null);
+  G.divWk=wk;
+  if(first)return;                               // 第一次只記錄週次，不補發歷史
+  let tot=0;
+  Object.keys(DIV_RATE).forEach(function(t){
+    const st=G.stocks[t]; if(!st||!(st.shares>0))return;
+    const amt=Math.round(st.price*st.shares*DIV_RATE[t]);
+    if(amt<=0)return;
+    G.gold+=amt; tot+=amt;
+    log("💵 "+stockName(t)+" 配息 "+fmtShares(st.shares)+" 領到 "+amt.toLocaleString()+" "+CO,"g");
+  });
+  if(tot>0){ toast("💵 本週配息 +"+tot.toLocaleString()); renderHUD(); saveGame(); }
+}
+
+/* ============================================================
+   股市大賽排行榜
+   ------------------------------------------------------------
+   共同盤（所有人看到同一組價格）是這件事成立的前提，beacon 模式已經做到了。
+   每週結算一次，已實現與未實現損益分開排名。
+   資料寫進既有的 Firebase（ranks/{week}/{uid}），沿用 Google 登入的 uid。
+   注意：分數由客戶端上傳，理論上可以偽造 —— 同事圈可接受，
+   要防就得把結算搬到後端。
+   ============================================================ */
+function pnlUnrealized(){
+  let v=0;
+  allInst().forEach(function(s){ const st=G.stocks[s.t]; if(!st||!st.shares)return;
+    v+=(st.price-st.avg)*(st.shares>0?1:-1)*Math.abs(st.shares); });
+  return Math.round(v);
+}
+function rankWeekKey(){ return "w"+divWeek(mktDay(Date.now())); }
+function rankPush(){
+  try{
+    if(typeof fbDB==="undefined"||!fbDB||typeof fbUser==="undefined"||!fbUser)return;
+    const wk=rankWeekKey();
+    if(G.pnlWk!==wk){ G.pnlWk=wk; G.pnlReal=0; }     // 跨週自動歸零已實現損益
+    fbDB.ref("ranks/"+wk+"/"+fbUser.uid).set({
+      name:(typeof myName==="function"?myName():"農友"),
+      real:Math.round(G.pnlReal||0), unreal:pnlUnrealized(),
+      lv:G.level||1, ts:Date.now() });
+  }catch(e){}
+}
+let rankData=null, rankTs=0;
+function loadRank(){
+  const el=document.getElementById("shList"); if(!el)return;
+  try{
+    if(typeof fbDB==="undefined"||!fbDB){ rankData="nologin"; renderRank(el); return; }
+    if(Date.now()-rankTs<20000&&rankData){ renderRank(el); return; }
+    rankTs=Date.now();
+    rankPush();
+    fbDB.ref("ranks/"+rankWeekKey()).once("value").then(function(sn){
+      const v=sn.val()||{}; rankData=Object.keys(v).map(function(k){return v[k];});
+      renderRank(el);
+    }).catch(function(){ rankData="err"; renderRank(el); });
+  }catch(e){ rankData="err"; renderRank(el); }
+}
+function renderRank(el){
+  const wk=rankWeekKey();
+  if(rankData==="nologin"){ el.innerHTML='<div class="shHead"><div class="shName">🏆 本週大賽（'+wk+'）</div></div>'+
+    '<div style="padding:18px;color:#848e9c;font-size:13px">要先用 Google 登入才能參加排行榜。</div>'; return; }
+  if(!rankData||rankData==="err"){ el.innerHTML='<div class="shHead"><div class="shName">🏆 本週大賽（'+wk+'）</div></div>'+
+    '<div style="padding:18px;color:#848e9c;font-size:13px">'+(rankData==="err"?"讀取失敗，稍後再試。":"讀取中…")+'</div>'; return; }
+  const me=(typeof fbUser!=="undefined"&&fbUser)?fbUser.uid:null;
+  function table(key,title){
+    const a=rankData.slice().sort(function(x,y){return (y[key]||0)-(x[key]||0);}).slice(0,10);
+    if(!a.length)return '<div style="padding:10px;color:#848e9c;font-size:12px">'+title+'：尚無資料</div>';
+    return '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">'+title+'</div>'+
+      a.map(function(x,i){ const v=x[key]||0;
+        return '<div class="shRow" style="cursor:default">'+
+          '<div class="shIcon" style="background:'+(i===0?"#f0b90b":i===1?"#9aa3b0":i===2?"#b06a2c":"#607d8b")+'">'+(i+1)+'</div>'+
+          '<div class="shName"><b>'+String(x.name||"農友").replace(/</g,"&lt;")+'</b><span>Lv.'+(x.lv||1)+'</span></div>'+
+          '<div class="shPx"><b class="'+(v>=0?"up":"dn")+'">'+(v>=0?"+":"")+v.toLocaleString()+'</b></div></div>';
+      }).join("");
+  }
+  el.innerHTML='<div class="shHead"><div class="shName">🏆 本週大賽（'+wk+'）　參賽 '+rankData.length+' 人</div></div>'+
+    table("real","💰 已實現損益")+table("unreal","📊 未實現損益")+
+    '<p class="hint" style="padding:8px 10px">每週一自動換榜，已實現損益歸零重算。未實現損益隨行情即時變動。</p>';
+}
 /* ============ 股市 ============ */
 function updateMarket(){ mktSync(); }
 let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit", stkTab="pos", stockView="home";
-function stockOf(t){return STOCKS.find(x=>x.t===t)||STOCKS[0];}
+/* ============================================================
+   農產品期貨：商店裡每一種作物都是一個標的
+   ------------------------------------------------------------
+   1 口 ＝ 20 單位，全額付款（沿用現有的融資 6 成與做空機制）。
+   每日開盤價 ＝ 當日作物現貨價，盤中用 segment beacon 前向遊走 ——
+   跟股票同一套引擎，只是開盤價不走日線鏈而是貼著現貨。
+   合約成本落在 400~72,000 金幣，與股票的 4,000~72,000 對得上。
+   ============================================================ */
+const FUT_UNIT=20;
+const FUTS=Object.keys(CROPS).map(function(k){ return {
+  t:"C:"+k, k:k, n:CROPS[k].name, emoji:CROPS[k].emoji, fut:true,
+  base:CROPS[k].sell, volD:0, drift:0,
+  volM:0.0016+Math.min(0.0016,CROPS[k].sell/3600*0.0012),   // 高價作物波動略大
+  seed:(cropSeed(k)^0x1f7c9)|0 }; });
+const FUTMAP={}; FUTS.forEach(function(f){FUTMAP[f.t]=f;});
+function isFut(t){ return typeof t==="string"&&t.charCodeAt(0)===67&&t.charCodeAt(1)===58; }
+function futOf(t){ return FUTMAP[t]; }
+function stockOf(t){ return FUTMAP[t]||STOCKS.find(x=>x.t===t)||STOCKS[0]; }
+function instName(t){ const f=FUTMAP[t]; if(f)return f.emoji+f.name+"期"; const s=STOCKS.find(x=>x.t===t); return s?s.n:t; }
+function allInst(){ return STOCKS.concat(FUTS); }
 function fmtP(v){return (Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});}
 function openStocks(){
   stockOpen=true; stockView="home";
@@ -1917,6 +2057,8 @@ function backStockHome(){ stockView="home"; stockDropOpen=false;
 function openStockTrade(t){
   curStock=t; stockView="trade";
   document.getElementById("stockScene").classList.remove("home");
+  const b=document.getElementById("odUnit");   // 股票是「張」、期貨是「口」，切標的要同步
+  if(b)b.textContent=(odUnit==="s"?subName(t)+" ▾":unitName(t)+" ▾");
   loadChart(); setOrderType(orderType); odUseCur(); renderStockUI();
 }
 /* ---- 股市首頁清單 ---- */
@@ -1932,21 +2074,36 @@ function sparkSvg(arr,color,prev,rng){
     '<line x1="2" y1="16" x2="108" y2="16" stroke="#9aa3b0" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>'+
     '<polyline fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" points="'+pts+'"/></svg>';
 }
+let homeTab="stock";
+function setHomeTab(t){ homeTab=t;
+  ["stock","fut","rank"].forEach(function(x){
+    const b=document.getElementById("shTab"+(x==="stock"?"Stock":x==="fut"?"Fut":"Rank"));
+    if(b)b.classList.toggle("on",x===t); });
+  renderStockHome();
+  if(t==="rank")loadRank();
+}
 function renderStockHome(){
   if(!stockOpen||stockView!=="home")return;
   const el=document.getElementById("shList"); if(!el)return;
   document.getElementById("shCash").textContent=G.gold.toLocaleString();
+  if(homeTab==="rank"){ renderRank(el); return; }
+  const list=(homeTab==="fut")?FUTS:STOCKS;
   let gmax=1.5;   // 全標的統一 Y 軸範圍：取最大漲跌幅（下限 ±1.5%）
-  STOCKS.forEach(s=>{const st=G.stocks[s.t],sp=SPARKS[s.t];
+  list.forEach(s=>{const st=G.stocks[s.t],sp=SPARKS[s.t];
     if(sp&&st&&st.prev>0)sp.forEach(v=>{const p=Math.abs((v-st.prev)/st.prev*100);if(p>gmax)gmax=p;});});
-  const head='<div class="shHead"><div class="hIcon"></div><div class="shName">標的（名稱／代號）</div>'+
-    '<div class="shSpark">當日走勢（虛線＝今日開盤，±'+gmax.toFixed(1)+'%同比例）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
-  el.innerHTML=head+STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
+  const isF=(homeTab==="fut");
+  const head='<div class="shHead"><div class="hIcon"></div><div class="shName">'+
+    (isF?'標的（1 口 = '+FUT_UNIT+' 單位）':'標的（名稱／代號）')+'</div>'+
+    '<div class="shSpark">當日走勢（虛線＝今日開盤，±'+gmax.toFixed(1)+'%同比例）</div>'+
+    '<div class="shPx" style="align-items:flex-end">'+(isF?'每口｜漲跌幅':'價格｜漲跌幅')+'</div></div>';
+  el.innerHTML=head+list.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
+    const lot=isF?Math.round(st.price*FUT_UNIT):0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
-      '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+(s.n.charAt(0)==="農"&&s.n.length>1?s.n.charAt(1):s.n.charAt(0))+'</div>'+
-      '<div class="shName"><b>'+s.n+'</b><span>'+s.t+'</span></div>'+
+      '<div class="shIcon" style="background:'+(isF?'#4b7f3a':(SICON[s.t]||'#607d8b'))+'">'+
+        (isF?s.emoji:(s.n.charAt(0)==="農"&&s.n.length>1?s.n.charAt(1):s.n.charAt(0)))+'</div>'+
+      '<div class="shName"><b>'+s.n+(isF?'期':'')+'</b><span>'+(isF?('現貨 '+cropPrice(s.k)):s.t)+'</span></div>'+
       '<div class="shSpark">'+sparkSvg(SPARKS[s.t],up?'#16a34a':'#dc2626',st.prev,gmax)+'</div>'+
-      '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
+      '<div class="shPx"><b>$'+fmtP(isF?lot:st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
   }).join("");
 }
 /* ============================================================
@@ -2120,16 +2277,13 @@ const CROP_NEWS={
 };
 const CROP_W={ cw:["連日高溫","西南氣流帶來降雨","入秋轉涼","日照不足","早晚溫差加大","颱風外圍環流影響"] };
 function cropTsOfDay(day){ return (MKT_EPOCH_DAY+day)*86400000-8*3600000+12*3600000; }
-/* 明日展望：方向七成準、強度可能差一級。回傳的是「預期」不是事實 */
+/* 明日展望：方向來自 cropHintDir（今天就決定），強度是隨機的表述，
+   不是從明天的實際值反推 —— 明天的值這時候還不存在。 */
 function cropOutlook(k,day){
-  const ch=cropChg(k,cropTsOfDay(day));
   const sd=cropSeed(k)^day^0x51ab;
-  const right=mktRnd(sd,day,950)<(1-CROP_HINT_WRONG);
-  const dir=right?(ch>0?"up":"dn"):(ch>0?"dn":"up");
-  let lv=Math.abs(ch)<5?0:(Math.abs(ch)<10?1:2);
-  if(mktRnd(sd,day,951)<0.35)lv+=(mktRnd(sd,day,952)<0.5?-1:1);   // 強度也可能講差一級
-  lv=Math.max(0,Math.min(2,lv));
-  return {dir:dir,lv:lv,sd:sd};
+  const dir=cropHintDir(k,day)>0?"up":"dn";
+  const lv=Math.floor(mktRnd(sd,day,951)*3);
+  return {dir:dir,lv:Math.max(0,Math.min(2,lv)),sd:sd};
 }
 /* 每天固定挑 3 種作物播報，與實際漲跌幅無關（否則「上榜」本身就是情報） */
 function cropPickOfDay(day){
@@ -2256,7 +2410,10 @@ function loadChart(){
   lwPriceLine=lwSeries.createPriceLine({price:lwBase,color:'#9aa3b0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'開盤',lineVisible:false});
   lwChart.timeScale().fitContent(); updateLwLegend();
 }
-function pickStock(t){curStock=t;stockDropOpen=false;loadChart();odUseCur();renderStockUI();}
+function pickStock(t){curStock=t;stockDropOpen=false;
+  const b=document.getElementById("odUnit");
+  if(b)b.textContent=(odUnit==="s"?subName(t)+" ▾":unitName(t)+" ▾");
+  loadChart();odUseCur();renderStockUI();}
 function toggleStockDrop(){stockDropOpen=!stockDropOpen;renderStockUI();}
 function toggleFav(){G.stockFav[curStock]=!G.stockFav[curStock];saveGame();renderStockUI();}
 function setStkTab(t){stkTab=t;renderStockUI();}
@@ -2271,15 +2428,20 @@ function odPriceNow(){ const st=G.stocks[curStock];
   if(orderType==="market")return st.price;
   return parseFloat((document.getElementById("odPrice")||{}).value)||st.price; }
 let odUnit="l";   // 數量單位：l=張（預設，1張=1000股）、s=股
+function unitSize(t){ return isFut(t)?FUT_UNIT:1000; }
+function unitName(t){ return isFut(t)?"口":"張"; }
+function subName(t){ return isFut(t)?"單位":"股"; }
 function toggleOdUnit(){ odUnit=(odUnit==="s"?"l":"s");
-  const b=document.getElementById("odUnit"); if(b)b.textContent=(odUnit==="s"?"股 ▾":"張 ▾");
+  const b=document.getElementById("odUnit");
+  if(b)b.textContent=(odUnit==="s"?subName(curStock)+" ▾":unitName(curStock)+" ▾");
   const el=document.getElementById("odQty"); if(el)el.value="";
   updOdCost(); }
 function odQtyShares(){ const v=Math.floor(parseFloat((document.getElementById("odQty")||{}).value)||0);
-  return odUnit==="l"?v*1000:v; }
-function fmtShares(n){ const a=Math.abs(n||0); if(a<1000)return n+"股";
-  const lots=Math.floor(a/1000), rem=a%1000;
-  return (n<0?"-":"")+lots+"張"+(rem?rem+"股":""); }
+  return odUnit==="l"?v*unitSize(curStock):v; }
+function fmtShares(n,t){ const u=unitSize(t||curStock), un=unitName(t||curStock), sn=subName(t||curStock);
+  const a=Math.abs(n||0); if(a<u)return n+sn;
+  const lots=Math.floor(a/u), rem=a%u;
+  return (n<0?"-":"")+lots+un+(rem?rem+sn:""); }
 let levB=0;   // 融資成數（借款比例）：0=現股、0.4/0.5/0.6
 function setLev(b){ levB=b;
   const vals=[0,0.6];   // 現股 / 融資（預設6成，自備4成）
@@ -2287,7 +2449,7 @@ function setLev(b){ levB=b;
   updOdCost(); }
 function odQtySlide(v){ const lbl=document.getElementById("odPctLbl"); if(lbl)lbl.textContent=v+"%"; odQtyPct(v/100); }
 function odQtyPct(r){ const q=Math.floor(G.gold*r/(odPriceNow()*(1-levB)));   // 融資下自備款可買更多
-  const el=document.getElementById("odQty"); if(el)el.value=(odUnit==="l"?Math.floor(q/1000):(q>0?q:0)); updOdCost(); }
+  const el=document.getElementById("odQty"); if(el)el.value=(odUnit==="l"?Math.floor(q/unitSize(curStock)):(q>0?q:0)); updOdCost(); }
 function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
   const qty=odQtyShares(); const total=Math.round(odPriceNow()*qty); const self=Math.round(total*(1-levB));
   let liq="";
@@ -2296,7 +2458,7 @@ function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
     liq="　｜　預估強平價 <span style='color:#f6465d'>"+fmtP(1.3*nd/ns)+"</span>"; }   // 維持率130%＝市值/融資 → 強平價=1.3×融資/股數
   el.innerHTML=(levB>0?("自備款 "+CO+" "+self.toLocaleString()+"（融資 "+(total-self).toLocaleString()+"）")
                       :("預估成本 "+CO+" "+total.toLocaleString()))
-    +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+"股"):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq; }
+    +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+subName(curStock)):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq; }
 function placeOrder(side){
   // 行情中斷時禁止交易：若允許用最後已知價下單，等於留一個「斷網就能撿便宜」的後門
   if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
@@ -2321,6 +2483,8 @@ function execTrade(t,side,qty,price,lev){
     let repay=0;
     if(dir>0&&(st.debt||0)>0){ repay=(closeQ>=pos)?st.debt:Math.round(st.debt*closeQ/pos); st.debt-=repay; }   // 平多按比例償還融資
     G.gold=Math.max(0,Math.round(G.gold+st.avg*closeQ)+pnl-repay);
+    const _wk=rankWeekKey(); if(G.pnlWk!==_wk){G.pnlWk=_wk;G.pnlReal=0;}   // 跨週歸零
+    G.pnlReal=(G.pnlReal||0)+pnl;                                          // 累計本週已實現損益
     st.shares=pos-dir*closeQ; if(st.shares===0){st.avg=0;st.debt=0;}
     log((dir>0?"平多 ":"平空 ")+stockName(t)+" ×"+closeQ+" @ "+fmtP(price)+"，損益 "+(pnl>=0?"+":"")+pnl+" "+CO+(repay?("（償還融資 "+repay.toLocaleString()+"）"):""),(pnl>=0?"g":"r"));
     toast(pnl>=0?("💰 獲利 +"+pnl):("虧損 "+pnl));
@@ -2346,6 +2510,7 @@ function closePosition(t){if(!mktLive()){toast("⚠️ 行情連線中斷，暫�
 function cancelOrder(id){G.stockOrders=(G.stockOrders||[]).filter(o=>o.id!==id);saveGame();renderStockUI();toast("已取消掛單");}
 function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單 → 檢查斷頭
   mktSync();
+  divCheck();
   // 行情中斷時價格是凍結的舊值 —— 拿它撮合會成交在不存在的價位，
   // 拿它算維持率更糟：可能在市價其實已經反彈時把玩家斷頭。所以一律等行情回來再算。
   if(mktLive()){
@@ -2356,7 +2521,7 @@ function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單
         execTrade(o.t,o.side,o.qty,o.price,o.lev||0);
       }});
     // 融資維持率檢查：市值/融資金額 < 130% → 強制斷頭（台股規則）
-    STOCKS.forEach(function(x){const st=G.stocks[x.t];
+    allInst().forEach(function(x){const st=G.stocks[x.t];
       if(st&&(st.debt||0)>0&&st.shares>0){
         const mr=st.price*st.shares/st.debt;
         if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
@@ -2402,7 +2567,7 @@ function renderStockUI(){
         '<span>'+fmtP(xs.price)+'</span><span style="width:62px;text-align:right;color:'+(c>=0?'#0ecb81':'#f6465d')+'">'+(c>=0?'+':'')+c.toFixed(2)+'%</span></div>';}).join("");
   }
   // 底部：倉位 / 當前委託
-  const posRows=STOCKS.filter(x=>(G.stocks[x.t].shares||0)!==0);
+  const posRows=allInst().filter(x=>(G.stocks[x.t].shares||0)!==0);
   document.getElementById("posN").textContent=posRows.length;
   document.getElementById("ordN").textContent=(G.stockOrders||[]).length;
   document.getElementById("btPos").classList.toggle("on",stkTab==="pos");
@@ -2418,8 +2583,8 @@ function renderStockUI(){
       if(lg&&(xs.debt||0)>0){const mr=xs.price*xs.shares/xs.debt*100;
         fin=Math.round(xs.debt).toLocaleString()+'（<span class="'+(mr<140?'dn':'up')+'">'+Math.round(mr)+'%</span>）';
         liq='<span class="dn">'+fmtP(1.3*xs.debt/xs.shares)+'</span>';}   // 跌到此價維持率=130%
-      h+='<tr><td><b>'+x.n+'</b> <span class="'+(lg?'up':'dn')+'">'+(lg?'多':'空')+'</span></td>'+
-        '<td>'+fmtShares(xs.shares)+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td><td>'+fin+'</td><td>'+liq+'</td>'+
+      h+='<tr><td><b>'+(x.fut?x.emoji+x.n+'期':x.n)+'</b> <span class="'+(lg?'up':'dn')+'">'+(lg?'多':'空')+'</span></td>'+
+        '<td>'+fmtShares(xs.shares,x.t)+'</td><td>'+fmtP(xs.avg)+'</td><td>'+fmtP(xs.price)+'</td><td>'+fin+'</td><td>'+liq+'</td>'+
         '<td class="'+(pnl>=0?'up':'dn')+'">'+(pnl>=0?'+':'')+Math.round(pnl)+'（'+(roi>=0?'+':'')+roi.toFixed(2)+'%）</td>'+
         '<td><button class="cbtn" onclick="closePosition(\''+x.t+'\')">市價平倉</button></td></tr>';
     });
