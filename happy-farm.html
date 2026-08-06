@@ -1769,17 +1769,19 @@ function mktIntra(t,day){
   const cached=mktIntraCache[t];
   if(cached&&cached.day===day&&cached.k>=kNow)return cached;
   const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
+  // 只取這支標的的事件；事件在發布後才推動價格（見 nFactor）
+  const evs=nEventsOfDay(day,kNow<0?SEG_N-1:kNow).filter(function(e){return e.t===t;});
   const arr=[o]; let p=o, k=-1;
   for(let kk=0;kk<=(kNow<0?SEG_N-1:kNow);kk++){
     const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;             // 缺種子 → 就停在這裡（凍結）
     for(let m=1;m<=SEG_MIN;m++){
       const i=kk*SEG_MIN+m;
       p*=(1+s.volM*mktGauss(s.seed^sd,day,i)*mktSessVol(i));
-      p=Math.max(lo,Math.min(hi,p)); arr.push(p);
+      arr.push(Math.max(lo,Math.min(hi,p*nFactor(day,i,evs))));    // 事件加成疊在隨機走勢上
     }
     k=kk;
   }
-  const res={day:day,k:k,arr:arr,open:o};
+  const res={day:day,k:k,arr:arr,open:o,evs:evs};
   mktIntraCache[t]=res; return res;
 }
 function mktPrice(t,ts){ ts=ts||Date.now();
@@ -1808,11 +1810,12 @@ function mktIntraDay(t,day){
   const key=t+":"+day; if(mktPastCache[key]!==undefined)return mktPastCache[key];
   const o=mktOpen(t,day); if(o==null)return (mktPastCache[key]=null);
   const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
+  const evs=nEventsOfDay(day,SEG_N-1).filter(function(e){return e.t===t;});
   const arr=[o]; let p=o;
   for(let kk=0;kk<SEG_N;kk++){ const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;
     for(let m=1;m<=SEG_MIN;m++){ const i=kk*SEG_MIN+m;
       p*=(1+s.volM*mktGauss(s.seed^sd,day,i)*mktSessVol(i));
-      p=Math.max(lo,Math.min(hi,p)); arr.push(p); } }
+      arr.push(Math.max(lo,Math.min(hi,p*nFactor(day,i,evs)))); } }
   const res=arr.length>1?{day:day,arr:arr,open:o}:null;
   return (mktPastCache[key]=res);
 }
@@ -1911,37 +1914,188 @@ function renderStockHome(){
       '<div class="shPx"><b>$'+fmtP(st.price)+'</b><span class="'+(up?'up':'dn')+'">'+(up?'↗':'↘')+' '+Math.abs(c).toFixed(2)+'%</span></div></div>';
   }).join("");
 }
-/* ---- 財經新聞（Yahoo奇摩財經 RSS，經 CORS 代理） ---- */
-let newsTs=0;
-function yFetchText(u,ok,tryIdx,fail){
-  tryIdx=tryIdx||0; if(tryIdx>=YPROXIES.length){if(fail)fail();return;}
-  const idx=(1+tryIdx)%YPROXIES.length;   // 新聞先走 corsproxy（allorigins 對 RSS 較慢）
-  const ctrl=("AbortController" in window)?new AbortController():null;
-  const timer=ctrl?setTimeout(function(){ctrl.abort();},9000):null;
-  fetch(YPROXIES[idx]+encodeURIComponent(u),ctrl?{signal:ctrl.signal}:{})
-    .then(function(r){if(timer)clearTimeout(timer);if(!r.ok)throw 0;return r.text();})
-    .then(function(d){ok(d);})
-    .catch(function(){if(timer)clearTimeout(timer);yFetchText(u,ok,tryIdx+1,fail);});
+/* ============================================================
+   財經新聞（遊戲內生成）
+   ------------------------------------------------------------
+   舊版抓真實 RSS，畫面上寫著台積電、SpaceX，盤面卻是農積電在跳，
+   兩者毫無關係 —— 讀一次就再也不會點開。
+
+   關鍵設計：新聞在前、價格在後。
+     先由 beacon 種子確定性地生成「事件」，事件再造成價格變動；
+     而且新聞必須在價格走完之前發布，讀到的人才有行動空間。
+     反過來做（先算價格、再套一句「農積電上漲 3%」）那是旁白不是新聞，
+     玩家看圖表就知道了。
+
+   措辭三檔對應強度，讓玩家有東西可以「學」：
+     公告／證實  強 3~6%，30 分鐘走完
+     傳出／傳將  中 1~3%，60 分鐘走完
+     市場臆測    弱 0.5~1.5%，而且方向由「三段之後」的 beacon 決定 ——
+                 讀到的當下真的不知道會往哪走（六成機率照標題方向）。
+   最後這一檔是刻意的：全部新聞都準的話，玩家就只是照表操作，很快就膩。
+   ============================================================ */
+const NEWS_IND={"2330":"tech","2454":"tech","2308":"tech","2317":"mfg","2881":"fin","2610":"ship","2002":"steel","3481":"tech"};
+const NEWS_W={
+  cust:["北美雲端大廠","歐系車廠","日系電機集團","中東主權基金","國內電信龍頭"],
+  prod:["高階製程晶片","伺服器模組","車用電源","光學元件","儲能系統"],
+  brok:["外資券商","本土投顧","主權基金","壽險法人"],
+  risk:["庫存去化不如預期","匯損壓縮毛利","客戶拉貨動能轉弱","同業殺價競爭"],
+  site:["中科廠區","南科二廠","桃園廠","越南新廠"],
+  acc:["機台異常","停電事故","原料短缺","品保爭議"],
+  lane:["美西線","歐洲線","東南亞線","近洋線"],
+  qtr:["第三季","第四季","明年上半年"]
+};
+const NEWS_TPL={
+  tech:{ up:{ s:["{n}公告取得{cust}{prod}訂單，產能能見度看到{qtr}",
+                 "{n}證實{prod}良率突破，{qtr}毛利率可望走升"],
+              m:["{n}傳將擴大{prod}產線，供應鏈同步受惠",
+                 "{n}傳獲{cust}追加拉貨，出貨動能轉強"],
+              w:["市場臆測{n}將切入{cust}供應鏈，{brok}態度保留",
+                 "{n}{qtr}接單有望回溫，惟能見度仍低"] },
+         dn:{ s:["{n}{site}傳{acc}，{prod}出貨恐遞延",
+                 "{n}公告下修{qtr}財測，主因{risk}"],
+              m:["{n}遭{brok}調降評等，指{risk}",
+                 "{n}傳遭{cust}砍單，{prod}稼動率下滑"],
+              w:["市場臆測{n}{qtr}訂單轉弱，公司未回應",
+                 "{n}面臨{risk}，衝擊幅度待觀察"] } },
+  mfg:{ up:{ s:["{n}公告{site}擴產案通過，{qtr}產能倍增",
+                "{n}證實接獲{cust}長約，{prod}成主要成長動能"],
+             m:["{n}傳將調漲{prod}報價，反映成本上升",
+                "{n}傳與{cust}洽談合作，市場預期正面"],
+             w:["市場臆測{n}將受惠{prod}換機潮，實際效益未明",
+                "{n}{qtr}營運有望觸底，{brok}看法分歧"] },
+        dn:{ s:["{n}{site}發生{acc}，短期產出受影響",
+                "{n}公告{qtr}營收年減，{risk}"],
+             m:["{n}傳面臨{risk}，法人下修目標價",
+                "{n}傳訂單遞延至{qtr}，短線承壓"],
+             w:["市場臆測{n}接單放緩，公司低調以對",
+                "{n}成本壓力升溫，影響程度仍待評估"] } },
+  fin:{ up:{ s:["{n}公告{qtr}獲利創同期新高，擬提高配息",
+                "{n}證實資產處分利益入帳，淨值同步走揚"],
+             m:["{n}傳將調升{qtr}財測，利差可望擴大",
+                "{n}傳獲{brok}加碼買超，籌碼面轉佳"],
+             w:["市場臆測{n}將受惠升息循環，惟時點未定",
+                "{n}放款動能溫和回升，成效待觀察"] },
+       dn:{ s:["{n}公告提列呆帳，{qtr}獲利受衝擊",
+               "{n}證實海外曝險部位認列評價損失"],
+            m:["{n}傳{risk}，{brok}轉趨保守",
+               "{n}傳降息預期升溫，利差收窄壓抑獲利"],
+            w:["市場臆測{n}資產品質轉弱，公司否認",
+               "{n}手續費收入成長放緩，影響有限"] } },
+  ship:{ up:{ s:["{lane}運價單週跳漲，{n}{qtr}營收可望創高",
+                 "{n}公告新增{lane}航班，艙位供不應求"],
+              m:["{n}傳調漲{lane}附加費，反映艙位緊俏",
+                 "{n}傳將處分老舊船舶，帳上可望認列利益"],
+              w:["市場臆測{lane}旺季提前，{brok}持保留態度",
+                 "{n}{qtr}裝載率有望回升，能見度仍低"] },
+        dn:{ s:["{lane}運價單週重挫，{n}營收動能轉弱",
+                "{n}公告{qtr}虧損擴大，主因{risk}"],
+             m:["{n}傳{lane}艙位供過於求，運價鬆動",
+                "{n}遭{brok}調降評等，指{risk}"],
+             w:["市場臆測{lane}需求轉弱，實際情況待確認",
+                "{n}油價成本上揚，衝擊程度未明"] } },
+  steel:{ up:{ s:["{n}公告調漲{qtr}盤價，反映原料成本",
+                  "{n}證實接獲{cust}長期供料合約"],
+               m:["{n}傳將調升內銷盤價，下游備貨轉積極",
+                  "{n}傳{site}高爐檢修完成，產出恢復正常"],
+               w:["市場臆測{n}將受惠基建需求，時程未定",
+                  "{n}{qtr}接單溫和回升，{brok}看法分歧"] },
+         dn:{ s:["{n}公告調降{qtr}盤價，因{risk}",
+                 "{n}{site}傳{acc}，產能利用率下滑"],
+              m:["{n}傳下游拉貨轉弱，庫存壓力升高",
+                 "{n}傳面臨{risk}，法人下修評等"],
+              w:["市場臆測{n}盤價將鬆動，公司未證實",
+                 "{n}原料成本波動，影響尚待觀察"] } }
+};
+const NEWS_TIER={ s:{lo:0.030,hi:0.060,dur:30,label:"公告"},
+                  m:{lo:0.010,hi:0.030,dur:60,label:"傳出"},
+                  w:{lo:0.005,hi:0.015,dur:90,label:"臆測"} };
+function nPick(arr,r){ return arr[Math.floor(r*arr.length)%arr.length]; }
+function nFill(tpl,name,seed){ let i=0;
+  return tpl.replace(/\{(\w+)\}/g,function(_,k){
+    if(k==="n")return name;
+    const pool=NEWS_W[k]; if(!pool)return "";
+    return nPick(pool,mktRnd(seed,777,i++)); }); }
+/* 某一段是否發生事件 —— 由「該段的 beacon 種子」決定，所以在那一段之前算不出來 */
+function nEventAt(day,k){
+  const sd=BSEED.seg[day+":"+k]; if(sd==null)return null;
+  if(mktRnd(sd,day,5000+k)>=0.12)return null;                  // 12% × 90 段 ≈ 一天 11 則，8 支標的平均各 1.4 則
+  const s=STOCKS[Math.floor(mktRnd(sd,day,5100+k)*STOCKS.length)%STOCKS.length];
+  const tr=mktRnd(sd,day,5200+k), tier=tr<0.25?"s":(tr<0.70?"m":"w");
+  const T=NEWS_TIER[tier];
+  const stated=mktRnd(sd,day,5300+k)<0.5?"up":"dn";
+  const mag=T.lo+(T.hi-T.lo)*mktRnd(sd,day,5400+k);
+  let dir=stated, resolveK=k;
+  if(tier==="w"){                                              // 臆測：方向由三段之後的 beacon 決定
+    resolveK=k+3;
+    const rd=BSEED.seg[day+":"+resolveK];
+    if(rd==null)dir=null;                                      // 還沒揭曉 → 暫時不影響價格
+    else dir=(mktRnd(rd,day,5500+k)<0.6)?stated:(stated==="up"?"dn":"up");   // 六成照標題走
+  }
+  const tpl=nPick(NEWS_TPL[NEWS_IND[s.t]][stated][tier],mktRnd(sd,day,5600+k));
+  return { day:day, k:k, t:s.t, name:s.n, tier:tier, label:T.label,
+           stated:stated, dir:dir, mag:mag, dur:T.dur, resolveK:resolveK,
+           min:k*SEG_MIN, title:nFill(tpl,s.n,sd+k) };
 }
-const NEWS_FEEDS=["https://news.ltn.com.tw/rss/business.xml","https://feeds.feedburner.com/ettoday/finance"];
-function loadFinNews(force,fi){
-  fi=fi||0;
+function nEventsOfDay(day,uptoK){
+  const out=[]; for(let k=0;k<=uptoK;k++){ const e=nEventAt(day,k); if(e)out.push(e); }
+  return out;
+}
+/* 事件對價格的加成：發布後依措辭強度在 30~90 分鐘內平滑走完 */
+function nSmooth(x){ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); }
+function nFactor(day,minute,evs){
+  let f=1;
+  for(let i=0;i<evs.length;i++){ const e=evs[i]; if(!e.dir)continue;
+    const from=(e.tier==="w")?e.resolveK*SEG_MIN:e.min;        // 臆測要等揭曉那一段才開始動
+    if(minute<=from)continue;
+    f*=(1+(e.dir==="up"?1:-1)*e.mag*nSmooth((minute-from)/e.dur));
+  }
+  return f;
+}
+/* ---- 作物明日行情快報 ---- */
+const CROP_NEWS={
+  up:["{c}產區傳{cw}，{qtr}供給量下滑","{cw}影響{c}採收，批發價走揚","{c}外銷訂單增加，內銷供給趨緊"],
+  dn:["{c}進入盛產期，市場供給充裕","產地{c}集中上市，價格承壓","{cw}緩解，{c}產量優於預期"]
+};
+const CROP_W={ cw:["連日高溫","西南氣流帶來降雨","入秋轉涼","日照不足","早晚溫差加大"], qtr:["近期","本週","短期內"] };
+function cropNewsFor(day){
+  const out=[];
+  Object.keys(CROPS).forEach(function(k){
+    const ch=cropChg(k,(MKT_EPOCH_DAY+day)*86400000-8*3600000+12*3600000);
+    if(Math.abs(ch)<7)return;                                  // 只報幅度較大的
+    const dir=ch>0?"up":"dn", sd=cropSeed(k)^day;
+    let tpl=nPick(CROP_NEWS[dir],mktRnd(sd,day,900));
+    tpl=tpl.replace(/\{c\}/g,CROPS[k].name)
+           .replace(/\{cw\}/g,nPick(CROP_W.cw,mktRnd(sd,day,901)))
+           .replace(/\{qtr\}/g,nPick(CROP_W.qtr,mktRnd(sd,day,902)));
+    out.push({title:"🌾 "+tpl,chg:ch,crop:k});
+  });
+  out.sort(function(a,b){return Math.abs(b.chg)-Math.abs(a.chg);});
+  return out.slice(0,3);
+}
+/* ---- 新聞面板 ---- */
+let newsK=-99;   // 上次重畫新聞時的段序號
+function nTimeLabel(day,minute){
+  const ms=(MKT_EPOCH_DAY+day)*86400000-8*3600000+(MKT_OPEN_H*60+minute)*60000;
+  const d=new Date(ms+8*3600000);   // 以 UTC+8 顯示（行情本來就固定台北時間）
+  return ("0"+(d.getUTCMonth()+1)).slice(-2)+"/"+("0"+d.getUTCDate()).slice(-2)+" "+
+         ("0"+d.getUTCHours()).slice(-2)+":"+("0"+d.getUTCMinutes()).slice(-2); }
+function loadFinNews(){
   const el=document.getElementById("shNewsList"); if(!el)return;
-  if(!force&&!fi&&Date.now()-newsTs<600000&&el.querySelector(".nItem"))return;   // 10 分鐘快取
-  if(fi>=NEWS_FEEDS.length){el.innerHTML='<div class="nt" style="padding:10px">暫時載入不到新聞</div>';return;}
-  yFetchText(NEWS_FEEDS[fi],function(xml){
-    const doc=new DOMParser().parseFromString(xml,"text/xml");
-    const items=Array.prototype.slice.call(doc.querySelectorAll("item"),0,20);
-    if(!items.length){loadFinNews(force,fi+1);return;}
-    el.innerHTML=items.map(function(it){
-      const g=function(tag){const n=it.querySelector(tag);return n?n.textContent.trim():"";};
-      const t=g("title").replace(/</g,"&lt;");
-      const d=new Date(g("pubDate"));
-      const tm=isNaN(d)?"":(("0"+(d.getMonth()+1)).slice(-2)+"/"+("0"+d.getDate()).slice(-2)+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2));
-      return '<a class="nItem" href="'+g("link")+'" target="_blank" rel="noopener"><span>'+t+'</span><div class="nt">'+tm+'</div></a>';
-    }).join("");
-    newsTs=Date.now();
-  },0,function(){loadFinNews(force,fi+1);});
+  const now=Date.now(), day=mktDay(now), m=mktMin(now);
+  if(!bHaveDays(day)){ el.innerHTML='<div class="nt" style="padding:10px">行情連線中…</div>'; return; }
+  const kNow=m<0?SEG_N-1:Math.floor(m/SEG_MIN);
+  const evs=nEventsOfDay(day,kNow).slice().reverse();           // 新的在上
+  let h='';
+  // 明日作物行情快報：今天就看得到，才有囤貨的意義
+  const cn=cropNewsFor(day+1);
+  if(cn.length){ h+='<div class="nItem" style="background:#f2f7ef"><span><b>明日農產行情快報</b></span><div class="nt">'+
+    cn.map(function(x){return x.title+'（'+(x.chg>0?'+':'')+x.chg.toFixed(1)+'%）';}).join('<br>')+'</div></div>'; }
+  if(!evs.length&&!cn.length)h+='<div class="nt" style="padding:10px">今日尚無重大消息。</div>';
+  h+=evs.map(function(e){
+    const c=e.tier==="s"?"#d32f2f":(e.tier==="m"?"#e58900":"#8a93a3");
+    return '<div class="nItem"><span><b style="color:'+c+'">['+e.label+']</b> '+e.title+'</span>'+
+      '<div class="nt">'+nTimeLabel(e.day,e.min)+'　'+e.name+'</div></div>'; }).join("");
+  el.innerHTML=h;
 }
 /* ---- Lightweight Charts 圖表（24小時～5個交易日） ---- */
 let lwChart=null,lwSeries=null,lwOpenSeries=null,lwData=[],lwOpens=[],chartRange="24H",chartReq=0,lwTries=0,lwBase=0,lwPriceLine=null;
@@ -2127,14 +2281,17 @@ function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單
         if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
       }});
   }
+  // 新聞只在「換段」時重畫（每 10 分鐘），不必每 1.5 秒重建整份清單
+  if(stockOpen&&stockView==="home"){ const m=mktMin(Date.now()), k=m<0?-1:Math.floor(m/SEG_MIN);
+    if(k!==newsK){ newsK=k; loadFinNews(); } }
   if(stockOpen){ if(stockView==="home")renderStockHome();
     else{ renderStockUI();
       // 圖表最後一點跟著跳動（不重畫整張，也不發任何請求）
       if(lwSeries&&chartRange==="24H"&&mktLive()){ const now=Date.now(), m=mktMin(now), px=mktPrice(curStock,now);
         if(m>=0&&px!=null)try{lwSeries.update({time:mktTs(mktDay(now),m)+CHART_TZOFF,value:px});}catch(e){} } } }
 }
-/* Yahoo 報價已移除（改用上方行情引擎）。YPROXIES 保留給財經新聞的 RSS 用。 */
-const YPROXIES=["https://api.allorigins.win/raw?url=","https://corsproxy.io/?url="];
+/* Yahoo 報價與 RSS 新聞都已移除，兩個 CORS 代理依賴也一併拿掉。
+   現在對外只剩 drand 一個來源（行情種子）。 */
 /* 行情由 stockTick() 每個心跳（1.5 秒）更新，不再需要任何輪詢計時器。
    開場那一次在 init() 之後呼叫（見檔案最末），因為這裡 G.stocks 還沒建立。 */
 
