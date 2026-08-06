@@ -1780,8 +1780,8 @@ function mktIntra(t,day){
   const cached=mktIntraCache[t];
   if(cached&&cached.day===day&&cached.k>=kNow)return cached;
   const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
-  // 只取這支標的的事件；事件在發布後才推動價格（見 nFactor）
-  const evs=nEventsOfDay(day,kNow<0?SEG_N-1:kNow).filter(function(e){return e.t===t;});
+  // 事件要多掃 NEWS_PRE_SEG 段：標題還沒發布，但「提前反映」那段價格已經要開始走了
+  const evs=nEventsOfDay(day,(kNow<0?SEG_N-1:kNow)+NEWS_PRE_SEG).filter(function(e){return e.t===t;});
   const arr=[o]; let p=o, k=-1;
   for(let kk=0;kk<=(kNow<0?SEG_N-1:kNow);kk++){
     const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;             // 缺種子 → 就停在這裡（凍結）
@@ -1821,7 +1821,7 @@ function mktIntraDay(t,day){
   const key=t+":"+day; if(mktPastCache[key]!==undefined)return mktPastCache[key];
   const o=mktOpen(t,day); if(o==null)return (mktPastCache[key]=null);
   const s=stockOf(t), lo=o*(1-MKT_LIMIT), hi=o*(1+MKT_LIMIT);
-  const evs=nEventsOfDay(day,SEG_N-1).filter(function(e){return e.t===t;});
+  const evs=nEventsOfDay(day,SEG_N-1+NEWS_PRE_SEG).filter(function(e){return e.t===t;});
   const arr=[o]; let p=o;
   for(let kk=0;kk<SEG_N;kk++){ const sd=BSEED.seg[day+":"+kk]; if(sd==null)break;
     for(let m=1;m<=SEG_MIN;m++){ const i=kk*SEG_MIN+m;
@@ -2026,62 +2026,104 @@ function nFill(tpl,name,seed){ let i=0;
     if(k==="n")return name;
     const pool=NEWS_W[k]; if(!pool)return "";
     return nPick(pool,mktRnd(seed,777,i++)); }); }
-/* 某一段是否發生事件 —— 由「該段的 beacon 種子」決定，所以在那一段之前算不出來 */
+/* 事件由「發布前 6 段（60 分鐘）」那一段的種子決定，標題才在第 k 段發布。
+   為什麼要這樣繞：真實市場的消息會提前反映（有人先知道），我們也要讓價格在
+   標題出現前就開始走。但如果事件是由第 k 段的種子決定，等種子到手時
+   那 60 分鐘早就過去了 —— 補算會把已經畫出去的走勢回溯改寫。
+   改由 k-6 段的種子決定，計算到「發布前 60 分鐘」那一刻時種子已經在手，
+   因果順序才成立。 */
+const NEWS_PRE_SEG=6, NEWS_PRE_MIN=NEWS_PRE_SEG*SEG_MIN;
+const NEWS_WRONG=0.22;              // 公告／傳出也會失準（利多出盡、利空出盡）
+const NEWS_PRE_LO=0.55, NEWS_PRE_HI=0.95;   // 發布前就走完的比例
 function nEventAt(day,k){
-  const sd=BSEED.seg[day+":"+k]; if(sd==null)return null;
-  if(mktRnd(sd,day,5000+k)>=0.12)return null;                  // 12% × 90 段 ≈ 一天 11 則，8 支標的平均各 1.4 則
+  const gk=k-NEWS_PRE_SEG; if(gk<0)return null;
+  const sd=BSEED.seg[day+":"+gk]; if(sd==null)return null;
+  if(mktRnd(sd,day,5000+k)>=0.12)return null;                  // 12% × 90 段 ≈ 一天 11 則
   const s=STOCKS[Math.floor(mktRnd(sd,day,5100+k)*STOCKS.length)%STOCKS.length];
   const tr=mktRnd(sd,day,5200+k), tier=tr<0.25?"s":(tr<0.70?"m":"w");
   const T=NEWS_TIER[tier];
   const stated=mktRnd(sd,day,5300+k)<0.5?"up":"dn";
   const mag=T.lo+(T.hi-T.lo)*mktRnd(sd,day,5400+k);
-  let dir=stated, resolveK=k;
-  if(tier==="w"){                                              // 臆測：方向由三段之後的 beacon 決定
-    resolveK=k+3;
-    const rd=BSEED.seg[day+":"+resolveK];
-    if(rd==null)dir=null;                                      // 還沒揭曉 → 暫時不影響價格
-    else dir=(mktRnd(rd,day,5500+k)<0.6)?stated:(stated==="up"?"dn":"up");   // 六成照標題走
+  let dir=stated, pre=0;
+  if(tier==="w"){
+    // 臆測：不提前反映（傳聞本來就沒人敢先押），方向等發布時才由該段種子決定，六成照標題
+    const rd=BSEED.seg[day+":"+k];
+    dir=(rd==null)?null:((mktRnd(rd,day,5500+k)<0.6)?stated:(stated==="up"?"dn":"up"));
+  }else{
+    // 公告／傳出：兩成二機率反向，並且 55~95% 在標題出現前就走完
+    if(mktRnd(sd,day,5800+k)<NEWS_WRONG)dir=(stated==="up"?"dn":"up");
+    pre=NEWS_PRE_LO+(NEWS_PRE_HI-NEWS_PRE_LO)*mktRnd(sd,day,5700+k);
   }
   const tpl=nPick(NEWS_TPL[NEWS_IND[s.t]][stated][tier],mktRnd(sd,day,5600+k));
   return { day:day, k:k, t:s.t, name:s.n, tier:tier, label:T.label,
-           stated:stated, dir:dir, mag:mag, dur:T.dur, resolveK:resolveK,
+           stated:stated, dir:dir, mag:mag, dur:T.dur, pre:pre,
            min:k*SEG_MIN, title:nFill(tpl,s.n,sd+k) };
 }
 function nEventsOfDay(day,uptoK){
   const out=[]; for(let k=0;k<=uptoK;k++){ const e=nEventAt(day,k); if(e)out.push(e); }
   return out;
 }
-/* 事件對價格的加成：發布後依措辭強度在 30~90 分鐘內平滑走完 */
+/* 事件對價格的加成。
+   pre 段：標題前 60 分鐘內先走完 pre 比例（消息提前反映）
+   post 段：標題發布後依措辭強度在 30~90 分鐘內走完剩下的 (1-pre) */
 function nSmooth(x){ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); }
 function nFactor(day,minute,evs){
   let f=1;
   for(let i=0;i<evs.length;i++){ const e=evs[i]; if(!e.dir)continue;
-    const from=(e.tier==="w")?e.resolveK*SEG_MIN:e.min;        // 臆測要等揭曉那一段才開始動
-    if(minute<=from)continue;
-    f*=(1+(e.dir==="up"?1:-1)*e.mag*nSmooth((minute-from)/e.dur));
+    const sgn=(e.dir==="up"?1:-1), pub=e.min;
+    let frac;
+    if(minute<=pub-NEWS_PRE_MIN)continue;
+    else if(minute<pub)frac=e.pre*nSmooth((minute-(pub-NEWS_PRE_MIN))/NEWS_PRE_MIN);
+    else frac=e.pre+(1-e.pre)*nSmooth((minute-pub)/e.dur);
+    f*=(1+sgn*e.mag*frac);
   }
   return f;
 }
-/* ---- 作物明日行情快報 ---- */
+/* ---- 作物行情展望（給 t+1 的預期，不給答案） ----
+   原本直接把明天的漲跌幅印出來，等於公布答案，玩家不用判斷。
+   改成：畫面上看得到的是「今天的時價」，新聞只給明天的方向性預期，
+   而且預期會失準 —— 三成機率講反、強度也可能講差一級。
+   另外每天固定挑 3 種作物播報（不論漲跌幅大小），
+   否則「有被報導 ＝ 一定有大行情」本身就是洩漏。 */
+const CROP_HINT_WRONG=0.30;
 const CROP_NEWS={
-  up:["{c}產區傳{cw}，{qtr}供給量下滑","{cw}影響{c}採收，批發價走揚","{c}外銷訂單增加，內銷供給趨緊"],
-  dn:["{c}進入盛產期，市場供給充裕","產地{c}集中上市，價格承壓","{cw}緩解，{c}產量優於預期"]
+  up:[ ["{c}產區{cw}，供給略為吃緊","{c}到貨量微幅減少，價格可望小揚","{cw}影響{c}採收進度"],
+       ["{c}產區傳{cw}，供給明顯轉緊","{cw}衝擊{c}產區，後續到貨量看減","{c}外銷訂單增溫，內銷供給趨緊"],
+       ["{cw}重創{c}主產區，供給恐大幅吃緊","{c}災損擴大，市場預期價格大幅走揚","{c}產地緊縮，批發價恐急拉"] ],
+  dn:[ ["{c}到貨量略增，價格小幅承壓","{c}產區天候穩定，供給略為寬鬆","{c}買氣持平，價格區間整理"],
+       ["{c}進入盛產期，市場供給充裕","產地{c}集中上市，價格承壓","{cw}緩解，{c}產量優於預期"],
+       ["{c}大量集中到貨，價格恐重挫","{c}盛產加上買氣轉弱，跌勢恐擴大","產地{c}爆量，批發價急跌"] ]
 };
-const CROP_W={ cw:["連日高溫","西南氣流帶來降雨","入秋轉涼","日照不足","早晚溫差加大"], qtr:["近期","本週","短期內"] };
+const CROP_W={ cw:["連日高溫","西南氣流帶來降雨","入秋轉涼","日照不足","早晚溫差加大","颱風外圍環流影響"] };
+function cropTsOfDay(day){ return (MKT_EPOCH_DAY+day)*86400000-8*3600000+12*3600000; }
+/* 明日展望：方向七成準、強度可能差一級。回傳的是「預期」不是事實 */
+function cropOutlook(k,day){
+  const ch=cropChg(k,cropTsOfDay(day));
+  const sd=cropSeed(k)^day^0x51ab;
+  const right=mktRnd(sd,day,950)<(1-CROP_HINT_WRONG);
+  const dir=right?(ch>0?"up":"dn"):(ch>0?"dn":"up");
+  let lv=Math.abs(ch)<5?0:(Math.abs(ch)<10?1:2);
+  if(mktRnd(sd,day,951)<0.35)lv+=(mktRnd(sd,day,952)<0.5?-1:1);   // 強度也可能講差一級
+  lv=Math.max(0,Math.min(2,lv));
+  return {dir:dir,lv:lv,sd:sd};
+}
+/* 每天固定挑 3 種作物播報，與實際漲跌幅無關（否則「上榜」本身就是情報） */
+function cropPickOfDay(day){
+  const ks=Object.keys(CROPS), out=[], used={};
+  for(let i=0;i<3&&i<ks.length;i++){
+    let idx=Math.floor(mktRnd(0x7ea1,day,960+i)*ks.length)%ks.length;
+    let guard=0; while(used[idx]&&guard++<ks.length)idx=(idx+1)%ks.length;
+    used[idx]=1; out.push(ks[idx]);
+  }
+  return out;
+}
 function cropNewsFor(day){
-  const out=[];
-  Object.keys(CROPS).forEach(function(k){
-    const ch=cropChg(k,(MKT_EPOCH_DAY+day)*86400000-8*3600000+12*3600000);
-    if(Math.abs(ch)<7)return;                                  // 只報幅度較大的
-    const dir=ch>0?"up":"dn", sd=cropSeed(k)^day;
-    let tpl=nPick(CROP_NEWS[dir],mktRnd(sd,day,900));
-    tpl=tpl.replace(/\{c\}/g,CROPS[k].name)
-           .replace(/\{cw\}/g,nPick(CROP_W.cw,mktRnd(sd,day,901)))
-           .replace(/\{qtr\}/g,nPick(CROP_W.qtr,mktRnd(sd,day,902)));
-    out.push({title:"🌾 "+tpl,chg:ch,crop:k});
+  return cropPickOfDay(day).map(function(k){
+    const o=cropOutlook(k,day);
+    let tpl=nPick(CROP_NEWS[o.dir][o.lv],mktRnd(o.sd,day,953));
+    tpl=tpl.replace(/\{c\}/g,CROPS[k].name).replace(/\{cw\}/g,nPick(CROP_W.cw,mktRnd(o.sd,day,954)));
+    return {title:tpl,crop:k,dir:o.dir,lv:o.lv};
   });
-  out.sort(function(a,b){return Math.abs(b.chg)-Math.abs(a.chg);});
-  return out.slice(0,3);
 }
 /* ---- 新聞面板 ---- */
 let newsK=-99;   // 上次重畫新聞時的段序號
@@ -2097,10 +2139,14 @@ function loadFinNews(){
   const kNow=m<0?SEG_N-1:Math.floor(m/SEG_MIN);
   const evs=nEventsOfDay(day,kNow).slice().reverse();           // 新的在上
   let h='';
-  // 明日作物行情快報：今天就看得到，才有囤貨的意義
+  // 明日農產展望：只給方向性預期，不給數字。時價在倉庫／商店看，判斷交給玩家
   const cn=cropNewsFor(day+1);
-  if(cn.length){ h+='<div class="nItem" style="background:#f2f7ef"><span><b>明日農產行情快報</b></span><div class="nt">'+
-    cn.map(function(x){return x.title+'（'+(x.chg>0?'+':'')+x.chg.toFixed(1)+'%）';}).join('<br>')+'</div></div>'; }
+  if(cn.length){ const ar=["看平","看漲","強漲"], dr=["看平","看跌","重跌"];
+    h+='<div class="nItem" style="background:#f2f7ef"><span><b>🌾 明日農產展望</b></span><div class="nt">'+
+    cn.map(function(x){ const lbl=(x.dir==="up"?ar:dr)[x.lv];
+      const col=x.lv===0?"#8d7b6a":(x.dir==="up"?"#d32f2f":"#2e7d32");
+      return x.title+' <b style="color:'+col+'">'+lbl+'</b>'; }).join('<br>')+
+    '<div style="margin-top:4px;opacity:.7">※ 展望僅供參考，不保證準確</div></div>'; }
   if(!evs.length&&!cn.length)h+='<div class="nt" style="padding:10px">今日尚無重大消息。</div>';
   h+=evs.map(function(e){
     const c=e.tier==="s"?"#d32f2f":(e.tier==="m"?"#e58900":"#8a93a3");
