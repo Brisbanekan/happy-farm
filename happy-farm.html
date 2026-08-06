@@ -1751,6 +1751,29 @@ function mktLive(ts){ ts=ts||Date.now(); const day=mktDay(ts), m=mktMin(ts);
   if(m<0)return true;                                             // 休市不需要新種子
   return BSEED.seg[day+":"+Math.floor(m/SEG_MIN)]!=null; }
 
+/* ---- 中心價：會自己緩慢漂移 ----
+   原本回歸的中心是寫死的 s.base，而且回歸係數高達 0.03。
+   紅隊實測：只要用「低於基準價 8% 買、高於 8% 賣」這種最笨的策略，
+   120 天平均 +66.6%（農創 +284%），而買進持有只有 +4.2%。
+   這個漏洞不需要看原始碼 —— 盯久了任何人都會發現「農創低於 3.6 就買」。
+   改成中心價自己走一條很慢的隨機遊走（σ 0.4%/日，夾在基準價的 0.75~1.35 倍），
+   固定的甜蜜點就不存在了。 */
+const mktBaseCache={};
+function mktBase(t,day){
+  const s=stockOf(t); if(day<=0)return s.base;
+  const c=mktBaseCache[t]||(mktBaseCache[t]={});
+  if(c[day]!=null)return c[day];
+  let from=0,f=1;
+  for(let d=day-1;d>0;d--){ if(c[d]!=null){from=d;f=c[d]/s.base;break;} }
+  for(let d=from+1;d<=day;d++){
+    const sd=BSEED.day[d]; if(sd==null)return null;
+    f*=(1+0.004*mktGauss(s.seed^sd^0x2b1d,d,1));
+    f+=(1-f)*0.004;                                               // 極弱的回歸，只防無限漂走
+    f=Math.max(0.75,Math.min(1.35,f));
+    c[d]=s.base*f;
+  }
+  return c[day];
+}
 /* ---- 日線層：每日開盤價鏈（一天 1 個 beacon） ---- */
 const mktOpenCache={};
 function mktOpen(t,day){
@@ -1761,11 +1784,12 @@ function mktOpen(t,day){
   let from=0,p=s.base;
   for(let d=day-1;d>0;d--){ if(c[d]!=null){from=d;p=c[d];break;} } // 從最近的快取點續算
   for(let d=from+1;d<=day;d++){
+    const bs=mktBase(t,d)||s.base;
     let r=s.drift+s.volD*mktGauss(s.seed^BSEED.day[d],d,0);
     r=Math.max(-MKT_LIMIT,Math.min(MKT_LIMIT,r));
     p=p*(1+r);
-    p=p+(s.base-p)*0.03;                                          // 均值回歸，避免長期漂走失控
-    p=Math.max(s.base*0.45,Math.min(s.base*2.1,p));               // 硬邊界
+    p=p+(bs-p)*0.010;                                             // 回歸係數 0.03→0.01，且中心會漂移
+    p=Math.max(bs*0.45,Math.min(bs*2.1,p));                       // 硬邊界跟著中心走
     c[d]=p;
   }
   return c[day];
