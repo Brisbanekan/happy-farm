@@ -1902,7 +1902,7 @@ function renderStockHome(){
   STOCKS.forEach(s=>{const st=G.stocks[s.t],sp=SPARKS[s.t];
     if(sp&&st&&st.prev>0)sp.forEach(v=>{const p=Math.abs((v-st.prev)/st.prev*100);if(p>gmax)gmax=p;});});
   const head='<div class="shHead"><div class="hIcon"></div><div class="shName">標的（名稱／代號）</div>'+
-    '<div class="shSpark">當日走勢（虛線＝昨收，±'+gmax.toFixed(1)+'%同比例）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
+    '<div class="shSpark">當日走勢（虛線＝今日開盤，±'+gmax.toFixed(1)+'%同比例）</div><div class="shPx" style="align-items:flex-end">價格｜漲跌幅</div></div>';
   el.innerHTML=head+STOCKS.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
       '<div class="shIcon" style="background:'+(SICON[s.t]||'#607d8b')+'">'+(s.n.charAt(0)==="農"&&s.n.length>1?s.n.charAt(1):s.n.charAt(0))+'</div>'+
