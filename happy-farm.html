@@ -414,13 +414,14 @@
   .pkHead{display:flex;align-items:center;gap:4px;}
   .pkAv{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:#ddd;object-fit:cover;}
   .pkNm{font-weight:900;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pkD{width:15px;height:15px;border-radius:50%;background:#fff;border:1.5px solid #333;
-    font-size:9px;font-weight:900;line-height:12px;text-align:center;flex-shrink:0;}
+  .pkD{min-width:15px;height:15px;padding:0 2px;border-radius:8px;background:#fff;border:1.5px solid #333;
+    font-size:8.5px;font-weight:900;line-height:12px;text-align:center;flex-shrink:0;color:#222;}
+  .pkD.sb{background:#bbdefb;border-color:#1565c0;color:#0d3f78;}
+  .pkD.bb{background:#ffe082;border-color:#e0a020;color:#6b4a00;}
   .pkRow{display:flex;justify-content:space-between;font-size:9.5px;color:#6b6155;}
   .pkRow b{color:#a05a00;font-size:10.5px;}
   .pkRow.bet b{color:#1565c0;}
   .pkSt{font-size:9px;color:#8a7f70;min-height:11px;}
-  .pkPers{font-size:8.5px;color:#9a8f80;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .pkCards{display:flex;gap:3px;justify-content:center;margin:3px 0 2px;}
   /* 撲克牌：角落有小索引，跟一般牌面一樣 */
   .pkC{position:relative;width:26px;height:36px;border-radius:4px;background:#fdfaf2;
@@ -450,6 +451,7 @@
   .pkWinBox.on{display:block;}
   .pkWinBox small{display:block;font-size:10px;opacity:.8;}
   .pkWinBox b{font-size:16px;}
+  .pkWinCards{display:flex;gap:4px;justify-content:center;margin:5px 0 3px;}
   /* 右側面板 */
   .pkSide{width:238px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;min-height:0;}
   .pkPanel{background:#132a20;border:1px solid #244635;border-radius:11px;padding:8px;flex-shrink:0;}
@@ -479,12 +481,11 @@
   body.narrow .pkSide{width:168px;}
   body.narrow .pkSeat{width:92px;font-size:9px;padding:3px 4px;border-radius:8px;}
   body.narrow .pkNm{font-size:9.5px;} body.narrow .pkAv{width:17px;height:17px;}
-  body.narrow .pkD{width:12px;height:12px;font-size:8px;line-height:9px;}
+  body.narrow .pkD{min-width:12px;height:12px;font-size:7px;line-height:9px;padding:0 1.5px;}
   body.narrow .pkRow{font-size:8.5px;} body.narrow .pkRow b{font-size:9.5px;}
   /* 橫向手機的桌面只有約 300px 高、七個座位排在橢圓上，
      座位必須壓到 70px 以內才不會上下相疊 —— 併行籌碼列、砍掉個性標籤。 */
   body.narrow .pkSeat{padding:2px 4px;line-height:1.2;}
-  body.narrow .pkSeat .pkPers{display:none;}
   body.narrow .pkSt{font-size:8px;min-height:0;}
   body.narrow .pkCards{margin:2px 0 1px;gap:2px;}
   body.narrow .pkRow{font-size:8px;}
@@ -2395,6 +2396,9 @@ function pkShowdown(){
   const live=pkInHand();
   if(live.length===1){
     live[0].chips+=PK.pot; live[0].win=PK.pot;
+    // 其他人都蓋牌時本來可以不亮牌，但這是單機遊戲，亮出來玩家才知道剛剛在跟什麼
+    live[0].showdown=true;
+    if(PK.board.length>=3)live[0].score=pkBest(live[0].hole.concat(PK.board));
     pkLog("🏆 "+live[0].n+" 贏得 "+PK.pot+"（其他人蓋牌）");
   }else{
     live.forEach(function(p){ p.showdown=true; p.score=pkBest(p.hole.concat(PK.board)); });
@@ -2556,8 +2560,10 @@ function pkRender(){
   // 勝者橫幅
   const winners=PK.over?PK.seats.filter(p=>p.win>0):[];
   if(winners.length){ winEl.className="pkWinBox on";
+    const w0=winners[0];
     winEl.innerHTML='<small>本局勝者</small><b>'+winners.map(p=>p.n).join("、")+'</b>'+
-      (winners[0].score?'<small>'+pkHandName(winners[0].score)+'</small>':''); }
+      (w0.hole&&w0.hole.length?'<div class="pkWinCards">'+w0.hole.map(c=>pkCardHtml(c)).join("")+'</div>':'')+
+      (w0.score?'<small>'+pkHandName(w0.score)+'</small>':''); }
   else winEl.className="pkWinBox";
   seatsEl.innerHTML=PK.seats.map(function(p,i){
     const pos=PK_POS[i];
@@ -2575,12 +2581,13 @@ function pkRender(){
       (p.out?" out":"")+(p.folded&&!p.out?" folded":"")+
       '" style="left:'+pos[0]+'%;top:'+pos[1]+'%">'+
       '<div class="pkHead"><img class="pkAv" src="'+(p.av||"")+'" alt=""><span class="pkNm">'+p.n+'</span>'+
-        (i===PK.btn?'<span class="pkD">D</span>':'')+'</div>'+
+        (i===PK.btn?'<span class="pkD" title="莊家">D</span>':'')+
+        (i===PK.sbSeat?'<span class="pkD sb" title="小盲注">SB</span>':'')+
+        (i===PK.bbSeat?'<span class="pkD bb" title="大盲注">BB</span>':'')+'</div>'+
       cards+
       '<div class="pkRow"><span>籌碼</span><b>'+p.chips.toLocaleString()+'</b></div>'+
       '<div class="pkRow bet"><span>本輪下注</span><b>'+(p.bet||0).toLocaleString()+'</b></div>'+
-      '<div class="pkSt">'+st+'</div>'+
-      '<div class="pkPers">'+(p.pers||"")+'</div></div>';
+      '<div class="pkSt">'+st+'</div></div>';
   }).join("");
 }
 function pkRenderLog(){ const el=document.getElementById("pkLog"); if(!el)return;
@@ -2638,6 +2645,45 @@ function pkBuyIn(){
   pkStart(PK_BUYIN_MIN);
   log("🃏 進入德州撲克，帶入 "+PK_BUYIN_MIN.toLocaleString()+" "+CO,"b");
 }
+/* ---- 玩法說明 ---- */
+function openPokerHelp(){
+  const rows=PK_NAMES.slice().reverse().map(function(n,i){
+    const ex=["A K Q J 10 同花","5 6 7 8 9 同花","四張同點","三張＋一對","五張同花色",
+              "五張連號","三張同點","兩組對子","一組對子","都沒湊成"][i];
+    return '<tr><td style="text-align:right;color:#8a7f70">'+(10-i)+'</td><td><b>'+n+'</b></td>'+
+      '<td style="color:#6b6155">'+ex+'</td></tr>';
+  }).join("");
+  showM('<h2>🃏 德州撲克玩法 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
+    '<p class="hint">你 vs 6 位電腦。入場帶 '+PK_BUYIN_MIN.toLocaleString()+' 籌碼，離桌時剩多少就帶回多少金幣。</p>'+
+    '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">一手牌怎麼進行</div>'+
+    '<p class="hint" style="line-height:1.9">'+
+      '每人先發 <b>2 張底牌</b>（只有自己看得到），桌面再陸續翻出 <b>5 張公共牌</b>。<br>'+
+      '用這 7 張裡最好的 <b>5 張</b>比大小，最大的贏走底池。<br><br>'+
+      '<b>四輪下注</b>：翻牌前 → 翻牌（3 張）→ 轉牌（1 張）→ 河牌（1 張）'+
+    '</p>'+
+    '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">位置與盲注</div>'+
+    '<p class="hint" style="line-height:1.9">'+
+      '<span class="pkD" style="display:inline-block">D</span> 莊家鈕，每手往左移一位。<br>'+
+      '<span class="pkD sb" style="display:inline-block">SB</span> 小盲注 '+PK_SB+'　'+
+      '<span class="pkD bb" style="display:inline-block">BB</span> 大盲注 '+PK_BB+
+      ' —— 這兩位在拿到牌之前就要先下注。<br>'+
+      '翻牌前由大盲的左手邊先行動；翻牌後改由莊家鈕的左手邊先行動。'+
+    '</p>'+
+    '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">你可以做什麼</div>'+
+    '<p class="hint" style="line-height:1.9">'+
+      '<b>棄牌</b>　放棄這手，已下注的收不回來<br>'+
+      '<b>過牌</b>　沒人下注時免費看下一張<br>'+
+      '<b>跟注</b>　補到跟當前最高注一樣<br>'+
+      '<b>加注</b>　最少要加「上一次加注的幅度」（至少一個大盲 '+PK_BB+'）<br>'+
+      '<b>All-in</b>　把籌碼全推。籌碼比別人少時，你只能贏走「有跟到」的那部分，多的錢會另外分成邊池'+
+    '</p>'+
+    '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">牌型大小（由大到小）</div>'+
+    '<table style="width:100%;font-size:12.5px;border-collapse:collapse;line-height:1.8">'+rows+'</table>'+
+    '<p class="hint" style="margin-top:8px">同牌型時比牌面點數，完全一樣則平分底池。<br>'+
+      'A 可以當最大，也可以在 A-2-3-4-5 裡當 1。</p>'+
+    '<p class="hint">牌局進行中可以隨時回農場，回來接著打；關掉重開也會還原。</p>'+
+    '</div>');
+}
 /* ---- 遊藝場外殼 ---- */
 let arcadeTab="slot";
 function openArcade(){ if(!PK)pkRestore(); openSlot(); setArcadeTab(arcadeTab); }
@@ -2647,7 +2693,9 @@ function setArcadeTab(t){
   const a=document.getElementById("arTabSlot"), b=document.getElementById("arTabPoker");
   if(a)a.classList.toggle("on",t==="slot"); if(b)b.classList.toggle("on",t==="poker");
   const info=document.getElementById("arInfoBtn");
-  if(info){ info.style.display=(t==="slot")?"":"none"; }
+  if(info){ info.style.display="";
+    info.textContent=(t==="poker")?"📖 玩法說明":"📖 賠率說明";
+    info.onclick=(t==="poker")?openPokerHelp:openSlotPay; }
   if(t==="poker"){ pkRender(); pkRenderBar(); if(PK)pkRenderLog(); }
   else slRenderUI();
 }
