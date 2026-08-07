@@ -395,7 +395,7 @@
   #scene.s-slot.pk-on .stkBack{background:#1e3a2c;color:#9dc9b0;border-color:#2a4a38;}
 
   /* ===== 德州撲克 ===== */
-  #pkWrap{flex:1;display:flex;min-height:0;padding:8px;gap:8px;}
+  #pkWrap{flex:1;display:flex;min-height:0;padding:6px 8px 8px;gap:8px;}
   .pkLeft{flex:1;min-width:0;display:flex;}
   .pkTable{flex:1;position:relative;min-height:0;}
   /* 橢圓木框牌桌 */
@@ -470,13 +470,21 @@
     border-radius:11px;padding:6px 9px;color:#9dc9b0;font-size:10.5px;line-height:1.55;}
   .pkLog div{margin-bottom:2px;} .pkLog div:last-child{color:#fff;font-weight:700;}
   /* 橫向手機 */
-  body.narrow #pkWrap{padding:5px;gap:5px;}
+  body.narrow #pkWrap{padding:2px 4px 4px;gap:4px;}
+  body.narrow .pkFelt{left:1%;right:1%;top:1%;bottom:1%;box-shadow:0 0 0 6px #6b4426,0 0 0 8px #4a2d18,inset 0 0 40px #0007;}
   body.narrow .pkSide{width:168px;}
   body.narrow .pkSeat{width:92px;font-size:9px;padding:3px 4px;border-radius:8px;}
   body.narrow .pkNm{font-size:9.5px;} body.narrow .pkAv{width:17px;height:17px;}
   body.narrow .pkD{width:12px;height:12px;font-size:8px;line-height:9px;}
   body.narrow .pkRow{font-size:8.5px;} body.narrow .pkRow b{font-size:9.5px;}
-  body.narrow .pkSt{font-size:8px;min-height:9px;} body.narrow .pkPers{font-size:7.5px;}
+  /* 橫向手機的桌面只有約 300px 高、七個座位排在橢圓上，
+     座位必須壓到 70px 以內才不會上下相疊 —— 併行籌碼列、砍掉個性標籤。 */
+  body.narrow .pkSeat{padding:2px 4px;line-height:1.2;}
+  body.narrow .pkSeat .pkPers{display:none;}
+  body.narrow .pkSt{font-size:8px;min-height:0;}
+  body.narrow .pkCards{margin:2px 0 1px;gap:2px;}
+  body.narrow .pkRow{font-size:8px;}
+  body.narrow .pkRow.bet{display:none;}                 /* 下注額改顯示在狀態列 */
   body.narrow .pkC{width:19px;height:27px;} body.narrow .pkC .cm{font-size:11px;}
   body.narrow .pkC .ct,body.narrow .pkC .cb{font-size:6px;}
   body.narrow .pkC.big{width:30px;height:43px;} body.narrow .pkC.big .cm{font-size:18px;}
@@ -2463,7 +2471,7 @@ function pkCashOut(){ if(PK&&PK.over)pkFinish(); }
 /* 座位座標（% of 牌桌）。照橢圓排：我在正下方，其餘順時針。
    夾在 y 20~80 是因為橫向手機的桌面只有約 210px 高、座位約 76px，
    超出這個範圍上下排會被桌緣切掉；左右也要留出座位半寬。 */
-const PK_POS=[[50,82],[17,66],[11,38],[32,15],[68,15],[89,38],[83,66]];
+const PK_POS=[[50,86],[18,72],[10,41],[32,16],[68,16],[90,41],[82,72]];
 function pkRender(){
   const seatsEl=document.getElementById("pkSeats"); if(!seatsEl)return;
   const potEl=document.getElementById("pkPot"), boardEl=document.getElementById("pkBoard"),
@@ -2487,6 +2495,7 @@ function pkRender(){
     const cards=p.out?"":(p.hole.length?
       '<div class="pkCards">'+p.hole.map(c=>pkCardHtml(show?c:null)).join("")+'</div>':"");
     let st="";
+    if(p.bet>0)st="下注 "+p.bet.toLocaleString();
     if(p.out)st="淘汰";
     else if(p.folded)st="棄牌";
     else if(p.allin)st="All-in";
