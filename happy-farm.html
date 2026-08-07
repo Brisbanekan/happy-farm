@@ -379,6 +379,55 @@
     background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
   .interacthint.on{display:block;}
 
+  /* ===== 遊藝場分頁 ===== */
+  .arTabs{display:flex;gap:6px;margin-left:6px;}
+  .arTabs button{border:none;background:#ffffffcc;color:#8a6a2a;font-size:13px;font-weight:800;
+    padding:5px 12px;border-radius:9px;cursor:pointer;white-space:nowrap;}
+  .arTabs button.on{background:#e65100;color:#fff;}
+  #scene.s-slot.pk-on .slFsBanner,#scene.s-slot.pk-on .slMid,#scene.s-slot.pk-on .slBot{display:none!important;}
+  #scene.s-slot:not(.pk-on) #pkWrap{display:none!important;}
+  /* ===== 德州撲克 ===== */
+  #pkWrap{flex:1;display:flex;flex-direction:column;min-height:0;padding:6px 10px 8px;gap:6px;}
+  .pkTable{flex:1;min-height:0;position:relative;border-radius:18px;
+    background:radial-gradient(ellipse at 50% 45%,#2f7d4f 0%,#1f5c39 65%,#17482d 100%);
+    border:5px solid #6b4426;box-shadow:inset 0 0 40px #0006;}
+  .pkSeats{position:absolute;inset:0;}
+  .pkSeat{position:absolute;transform:translate(-50%,-50%);width:104px;text-align:center;
+    background:#ffffffee;border-radius:11px;padding:4px 5px;box-shadow:0 2px 6px #0004;font-size:11px;}
+  .pkSeat.me{background:#fff8d9;border:2px solid #f2b329;}
+  .pkSeat.act{outline:3px solid #ffd54f;box-shadow:0 0 14px #ffd54f;}
+  .pkSeat.out{opacity:.42;}
+  .pkSeat b{display:block;font-size:12px;color:#3e2723;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pkSeat .chips{color:#a05a00;font-weight:800;}
+  .pkSeat .bet{color:#1565c0;font-weight:800;min-height:14px;}
+  .pkSeat .st{font-size:10px;color:#7a6a55;min-height:12px;}
+  .pkCards{display:flex;gap:2px;justify-content:center;margin-top:2px;}
+  .pkC{width:26px;height:36px;border-radius:4px;background:#fff;border:1px solid #bbb;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:13px;font-weight:900;line-height:1;box-shadow:0 1px 2px #0003;}
+  .pkC.r{color:#d32f2f;} .pkC.b{color:#1a1a1a;}
+  .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 5px,#1e4versa 5px 10px);}
+  .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 5px,#1e458a 5px 10px);color:transparent;}
+  .pkC.big{width:38px;height:53px;font-size:17px;}
+  .pkCenter{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);text-align:center;width:min(92%,420px);}
+  .pkPot{color:#ffe082;font-weight:900;font-size:15px;text-shadow:0 1px 3px #0008;}
+  .pkBoard{display:flex;gap:5px;justify-content:center;margin:7px 0;min-height:53px;}
+  .pkStage{color:#cfe8d6;font-size:12px;font-weight:700;min-height:16px;text-shadow:0 1px 2px #0008;}
+  .pkLog{height:46px;overflow:auto;background:#0b1e14cc;border-radius:8px;padding:4px 8px;
+    color:#cfe8d6;font-size:11.5px;line-height:1.5;flex-shrink:0;}
+  .pkLog div{opacity:.85;} .pkLog div:last-child{opacity:1;color:#fff;font-weight:700;}
+  .pkBar{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;flex-shrink:0;min-height:38px;}
+  .pkBtn{border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;
+    background:#fffef6;color:#3e2723;box-shadow:0 3px 0 #0003;}
+  .pkBtn:active{transform:translateY(2px);box-shadow:0 1px 0 #0003;}
+  .pkBtn.fold{background:#ef9a9a;} .pkBtn.call{background:#a5d6a7;} .pkBtn.raise{background:#ffd54f;}
+  .pkBtn.main{background:#ffb300;color:#fff;padding:8px 26px;}
+  .pkBtn:disabled{opacity:.4;cursor:default;}
+  .pkRaise{display:flex;align-items:center;gap:5px;background:#ffffffdd;border-radius:10px;padding:4px 8px;}
+  .pkRaise input{width:88px;padding:5px;border:2px solid #cdbb95;border-radius:7px;text-align:center;font-size:13px;}
+  body.narrow .pkSeat{width:88px;font-size:10px;} body.narrow .pkC{width:22px;height:31px;font-size:11px;}
+  body.narrow .pkC.big{width:31px;height:44px;font-size:14px;}
+  body.narrow .pkLog{height:34px;} body.narrow .arTabs button{font-size:12px;padding:4px 9px;}
   /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
@@ -823,7 +872,7 @@
         <div class="lbitems" id="lbItems">
           <div class="lbtn" id="decoBtn" onclick="toggleDecoMode();closeLeftbar()">🏡<small>擺設</small></div>
           <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
-          <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
+          <div class="lbtn" onclick="openArcade();closeLeftbar()">🎡<small>遊藝場</small></div>
           <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
         </div>
       </div>
@@ -834,8 +883,12 @@
   <div id="slotScene">
     <div class="slTop">
       <button class="stkBack" onclick="exitSlot()">← 農場</button>
-      <span class="ttl">🐸 農青哥</span>
-      <button class="slInfoBtn" onclick="openSlotPay()">📖 賠率說明</button>
+      <span class="ttl">🎡 遊藝場</span>
+      <div class="arTabs">
+        <button id="arTabSlot" class="on" onclick="setArcadeTab('slot')">🎰 拉霸</button>
+        <button id="arTabPoker" onclick="setArcadeTab('poker')">🃏 德州撲克</button>
+      </div>
+      <button class="slInfoBtn" id="arInfoBtn" onclick="openSlotPay()">📖 賠率說明</button>
       <span class="slGold">💰 <b id="slGold">--</b></span>
     </div>
     <div class="slFsBanner" id="slFsBanner">✨ FREE GAME ✨ 剩餘 <span id="slFsN">0</span> 局</div>
@@ -848,6 +901,19 @@
         <button id="slBetUp" onclick="slBetAdj(1)">＋</button>
       </div>
       <button class="slSpinBtn" id="slSpinBtn" onclick="slSpin()">SPIN</button>
+    </div>
+    <!-- 德州撲克：1 人 vs 6 電腦 -->
+    <div id="pkWrap">
+      <div class="pkTable">
+        <div class="pkSeats" id="pkSeats"></div>
+        <div class="pkCenter">
+          <div class="pkPot" id="pkPot">底池 0</div>
+          <div class="pkBoard" id="pkBoard"></div>
+          <div class="pkStage" id="pkStage"></div>
+        </div>
+      </div>
+      <div class="pkLog" id="pkLog"></div>
+      <div class="pkBar" id="pkBar"></div>
     </div>
   </div>
 
@@ -1480,6 +1546,8 @@ function slLayout(){   // 依 VW()/VH()(SIM-aware) 算盤面寬與壓縮模式�
 }
 function exitSlot(){
   if(slotSpinning)return;
+  if(PK&&!PK.over){ toast("牌局進行中，請先打完這一手"); return; }
+  if(PK&&PK.over){ pkFinish(); }
   document.getElementById("scene").classList.remove("s-slot");
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
   render();
@@ -2045,6 +2113,351 @@ function renderRank(el){
   el.innerHTML='<div class="shHead"><div class="shName">🏆 本週大賽（'+wk+'）　參賽 '+rankData.length+' 人</div></div>'+
     table("real","💰 已實現損益")+table("unreal","📊 未實現損益")+
     '<p class="hint" style="padding:8px 10px">每週一自動換榜，已實現損益歸零重算。未實現損益隨行情即時變動。</p>';
+}
+/* ============================================================
+   德州撲克（No-Limit Texas Hold'em）—— 1 人 vs 6 電腦
+   ------------------------------------------------------------
+   規則依官方玩法實作（參考 Wikipedia / primedope / pokercoaching）：
+     · 莊家鈕每手向左移一位；小盲在鈕左、大盲再左
+     · 翻牌前由大盲左手邊（UTG）先行動；翻牌後由莊家鈕左手邊先行動
+     · 四輪下注：preflop / flop(3張) / turn(1張) / river(1張)
+     · 無限注：最小加注額 ＝ 上一次加注的幅度（至少一個大盲）
+     · 全下不足最小加注時，不重新開放已行動玩家的再加注權
+     · 全下產生主池與邊池，每位玩家只能贏走「自己有跟到」的部分
+     · 攤牌取 7 張中最好的 5 張；完全同牌型則平分（餘數給先到的位置）
+   ============================================================ */
+const PK_SUITS=[{s:"♠",c:"b"},{s:"♥",c:"r"},{s:"♦",c:"r"},{s:"♣",c:"b"}];
+const PK_RANKS=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+const PK_NAMES=["高牌","一對","兩對","三條","順子","同花","葫蘆","四條","同花順","皇家同花順"];
+const PK_BOTS=["阿土伯","春嬌","阿財","小美","老王","阿凱"];
+const PK_SB=25, PK_BB=50;        // 盲注
+const PK_BUYIN_MIN=2000;         // 最低入場金幣
+
+let PK=null;   // 牌局狀態
+
+function pkMakeDeck(){
+  const d=[];
+  for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push({r:r,s:s});
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=d[i];d[i]=d[j];d[j]=t;}
+  return d;
+}
+function pkCardHtml(c,big){
+  if(!c)return '<div class="pkC'+(big?' big':'')+' back">?</div>';
+  const su=PK_SUITS[c.s];
+  return '<div class="pkC'+(big?' big':'')+' '+su.c+'">'+PK_RANKS[c.r]+'<span>'+su.s+'</span></div>';
+}
+/* ---- 牌型評估：7 選 5，回傳可直接比大小的分數陣列 ---- */
+function pkRank5(cs){
+  const rs=cs.map(c=>c.r).sort((a,b)=>b-a);
+  const suits=cs.map(c=>c.s);
+  const flush=suits.every(x=>x===suits[0]);
+  const uniq=[...new Set(rs)];
+  let straight=0;
+  if(uniq.length===5){
+    if(uniq[0]-uniq[4]===4)straight=uniq[0];
+    else if(uniq[0]===12&&uniq[1]===3&&uniq[4]===0)straight=3;   // A2345，A 當 1，最高牌是 5
+  }
+  const cnt={}; rs.forEach(r=>cnt[r]=(cnt[r]||0)+1);
+  const groups=Object.keys(cnt).map(r=>({r:+r,n:cnt[r]}))
+    .sort((a,b)=>b.n-a.n||b.r-a.r);
+  if(straight&&flush)return [straight===12?9:8,straight];
+  if(groups[0].n===4)return [7,groups[0].r,groups[1].r];
+  if(groups[0].n===3&&groups[1].n===2)return [6,groups[0].r,groups[1].r];
+  if(flush)return [5].concat(rs);
+  if(straight)return [4,straight];
+  if(groups[0].n===3)return [3,groups[0].r,groups[1].r,groups[2].r];
+  if(groups[0].n===2&&groups[1].n===2)return [2,groups[0].r,groups[1].r,groups[2].r];
+  if(groups[0].n===2)return [1,groups[0].r,groups[1].r,groups[2].r,groups[3].r];
+  return [0].concat(rs);
+}
+function pkCmp(a,b){ for(let i=0;i<Math.max(a.length,b.length);i++){
+  const x=a[i]||0,y=b[i]||0; if(x!==y)return x-y; } return 0; }
+function pkBest(cards){   // 7 張取最好的 5 張
+  let best=null;
+  for(let a=0;a<cards.length-4;a++)for(let b=a+1;b<cards.length-3;b++)
+  for(let c=b+1;c<cards.length-2;c++)for(let d=c+1;d<cards.length-1;d++)
+  for(let e=d+1;e<cards.length;e++){
+    const sc=pkRank5([cards[a],cards[b],cards[c],cards[d],cards[e]]);
+    if(!best||pkCmp(sc,best)>0)best=sc;
+  }
+  return best;
+}
+function pkHandName(sc){ return PK_NAMES[sc[0]]; }
+
+/* ---- 開新牌局 ---- */
+function pkStart(buyin){
+  const seats=[];
+  seats.push({n:"你",me:true,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false});
+  PK_BOTS.forEach(function(n,i){ seats.push({n:n,me:false,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false,
+    style:[0.28,0.5,0.72,0.4,0.6,0.34][i]}); });   // style 越大越兇
+  PK={seats:seats,btn:Math.floor(Math.random()*7),deck:[],board:[],pot:0,stage:"",
+      toCall:0,lastRaise:PK_BB,turn:-1,log:[],over:true,buyin:buyin};
+  pkNewHand();
+}
+function pkLog(t){ PK.log.push(t); if(PK.log.length>60)PK.log.shift(); pkRenderLog(); }
+function pkAlive(){ return PK.seats.filter(p=>!p.out&&p.chips>0); }
+function pkInHand(){ return PK.seats.filter(p=>!p.folded&&!p.out); }
+function pkNext(i){ let n=i; for(let k=0;k<7;k++){ n=(n+1)%7;
+  const p=PK.seats[n]; if(!p.out&&!p.folded&&!p.allin&&p.chips>0)return n; } return -1; }
+function pkNextSeat(i){ let n=i; for(let k=0;k<7;k++){ n=(n+1)%7; if(!PK.seats[n].out)return n; } return i; }
+
+function pkNewHand(){
+  PK.seats.forEach(function(p){ if(p.chips<=0)p.out=true;
+    p.bet=0;p.paid=0;p.folded=p.out;p.allin=false;p.hole=[];p.acted=false;p.showdown=false;p.win=0;p.score=null; });
+  if(pkAlive().length<2){ pkFinish(); return; }
+  PK.deck=pkMakeDeck(); PK.board=[]; PK.pot=0; PK.stage="preflop"; PK.over=false;
+  PK.btn=pkNextSeat(PK.btn);
+  const sb=pkNextSeat(PK.btn), bb=pkNextSeat(sb);
+  PK.sbSeat=sb; PK.bbSeat=bb;
+  pkPost(sb,PK_SB); pkPost(bb,PK_BB);
+  PK.toCall=PK_BB; PK.lastRaise=PK_BB;
+  PK.seats.forEach(function(p){ if(!p.out){ p.hole=[PK.deck.pop(),PK.deck.pop()]; } });
+  PK.turn=pkNext(bb);   // 翻牌前由大盲左手邊先行動
+  pkLog("── 新牌局　莊家："+PK.seats[PK.btn].n+"　小盲 "+PK.seats[sb].n+" "+PK_SB+"　大盲 "+PK.seats[bb].n+" "+PK_BB);
+  pkRender(); pkStep();
+}
+function pkPost(i,amt){ const p=PK.seats[i]; const a=Math.min(amt,p.chips);
+  p.chips-=a; p.bet+=a; p.paid=(p.paid||0)+a; if(p.chips===0)p.allin=true; }
+
+/* ---- 下注動作 ---- */
+function pkAct(i,act,amt){
+  const p=PK.seats[i];
+  if(act==="fold"){ p.folded=true; pkLog(p.n+"：蓋牌"); }
+  else if(act==="check"){ pkLog(p.n+"：過牌"); }
+  else if(act==="call"){
+    const need=Math.min(PK.toCall-p.bet,p.chips);
+    p.chips-=need; p.bet+=need; p.paid=(p.paid||0)+need; if(p.chips===0){p.allin=true;pkLog(p.n+"：全下跟注 "+need);}
+    else pkLog(p.n+"：跟注 "+need);
+  }else if(act==="raise"){
+    const target=Math.min(amt,p.bet+p.chips);
+    const inc=target-PK.toCall;
+    const need=target-p.bet;
+    p.chips-=need; p.bet=target; p.paid=(p.paid||0)+need;
+    if(p.chips===0)p.allin=true;
+    // 全下但不足最小加注 → 不重開行動權（其他人不必再回應）
+    if(inc>=PK.lastRaise||!p.allin){
+      PK.lastRaise=Math.max(PK.lastRaise,inc);
+      PK.seats.forEach(function(q){ if(q!==p&&!q.folded&&!q.allin&&!q.out)q.acted=false; });
+    }
+    PK.toCall=Math.max(PK.toCall,target);
+    pkLog(p.n+"："+(p.allin?"全下":"加注到")+" "+target);
+  }
+  p.acted=true;
+  PK.turn=pkNext(i);
+  pkRender();
+  setTimeout(pkStep,80);
+}
+function pkRoundDone(){
+  const live=PK.seats.filter(p=>!p.folded&&!p.out&&!p.allin&&p.chips>0);
+  if(!live.length)return true;
+  return live.every(p=>p.acted&&p.bet===PK.toCall);
+}
+function pkStep(){
+  if(PK.over)return;
+  if(pkInHand().length<=1){ pkShowdown(); return; }
+  if(pkRoundDone()){ pkNextStage(); return; }
+  const i=PK.turn;
+  if(i<0){ pkNextStage(); return; }
+  const p=PK.seats[i];
+  if(p.me){ pkRenderBar(); return; }          // 換玩家行動 → 等按鈕
+  pkRenderBar();
+  setTimeout(function(){ if(!PK.over&&PK.turn===i)pkBotAct(i); }, 620);
+}
+function pkNextStage(){
+  PK.seats.forEach(function(p){ PK.pot+=p.bet; p.bet=0; p.acted=false; });
+  PK.toCall=0; PK.lastRaise=PK_BB;
+  if(PK.stage==="preflop"){ PK.stage="flop"; PK.deck.pop(); PK.board.push(PK.deck.pop(),PK.deck.pop(),PK.deck.pop()); pkLog("翻牌"); }
+  else if(PK.stage==="flop"){ PK.stage="turn"; PK.deck.pop(); PK.board.push(PK.deck.pop()); pkLog("轉牌"); }
+  else if(PK.stage==="turn"){ PK.stage="river"; PK.deck.pop(); PK.board.push(PK.deck.pop()); pkLog("河牌"); }
+  else { pkShowdown(); return; }
+  PK.turn=pkNext(PK.btn);   // 翻牌後由莊家鈕左手邊先行動
+  pkRender();
+  if(PK.turn<0){ setTimeout(pkNextStage,700); return; }
+  setTimeout(pkStep,700);
+}
+/* ---- 邊池結算 ---- */
+function pkPots(){
+  const cont=PK.seats.map(p=>({p:p,amt:p.paid||0}));
+  const levels=[...new Set(cont.filter(c=>c.amt>0).map(c=>c.amt))].sort((a,b)=>a-b);
+  const pots=[]; let prev=0;
+  levels.forEach(function(lv){
+    let sum=0; const elig=[];
+    cont.forEach(function(c){ if(c.amt>=lv){ sum+=(lv-prev); if(!c.p.folded&&!c.p.out)elig.push(c.p); }
+      else if(c.amt>prev){ sum+=(c.amt-prev); } });
+    if(sum>0)pots.push({amt:sum,elig:elig});
+    prev=lv;
+  });
+  return pots;
+}
+function pkShowdown(){
+  PK.over=true;
+  PK.seats.forEach(function(p){ PK.pot+=p.bet; p.bet=0; });
+  const live=pkInHand();
+  if(live.length===1){
+    live[0].chips+=PK.pot; live[0].win=PK.pot;
+    pkLog("🏆 "+live[0].n+" 贏得 "+PK.pot+"（其他人蓋牌）");
+  }else{
+    live.forEach(function(p){ p.showdown=true; p.score=pkBest(p.hole.concat(PK.board)); });
+    const pots=pkPots();
+    pots.forEach(function(pot){
+      const cands=pot.elig.filter(p=>!p.folded);
+      if(!cands.length)return;
+      let best=null; cands.forEach(function(p){ if(!best||pkCmp(p.score,best)>0)best=p.score; });
+      const ws=cands.filter(p=>pkCmp(p.score,best)===0);
+      const each=Math.floor(pot.amt/ws.length); let rem=pot.amt-each*ws.length;
+      ws.forEach(function(p){ const g=each+(rem>0?1:0); if(rem>0)rem--; p.chips+=g; p.win=(p.win||0)+g; });
+      pkLog("🏆 "+ws.map(p=>p.n).join("、")+" 以「"+pkHandName(best)+"」贏得 "+pot.amt+
+        (pots.length>1?"（"+(pot===pots[0]?"主池":"邊池")+"）":""));
+    });
+  }
+  pkRender(); pkRenderBar();
+}
+function pkFinish(){
+  PK.over=true;
+  const me=PK.seats[0];
+  const delta=me.chips-PK.buyin;
+  G.gold+=me.chips;
+  log("🃏 德州撲克結束：帶回 "+me.chips.toLocaleString()+" "+CO+"（"+(delta>=0?"+":"")+delta.toLocaleString()+"）",delta>=0?"g":"r");
+  toast(delta>=0?("🃏 贏了 "+delta.toLocaleString()):("🃏 輸了 "+Math.abs(delta).toLocaleString()));
+  PK=null; renderHUD(); saveGame(); pkRender(); pkRenderBar();
+}
+/* ---- 電腦行動 ---- */
+function pkHandStrength(p){
+  // 用當前可見牌估強度：0~1
+  const cards=p.hole.concat(PK.board);
+  if(PK.board.length===0){
+    const [a,b]=p.hole; const hi=Math.max(a.r,b.r), lo=Math.min(a.r,b.r);
+    let v=(hi+lo)/24*0.55;
+    if(a.r===b.r)v+=0.32+a.r/13*0.12;                 // 口袋對
+    if(a.s===b.s)v+=0.07;                              // 同花
+    if(Math.abs(a.r-b.r)<=2&&a.r!==b.r)v+=0.05;        // 連張
+    return Math.max(0,Math.min(1,v));
+  }
+  const sc=pkBest(cards);
+  return Math.max(0,Math.min(1,sc[0]/8*0.9+(sc[1]||0)/13*0.1));
+}
+function pkBotAct(i){
+  const p=PK.seats[i];
+  const need=PK.toCall-p.bet;
+  const st=pkHandStrength(p);
+  const aggro=p.style;
+  const potOdds=need>0?need/(PK.pot+PK.seats.reduce((a,q)=>a+q.bet,0)+need):0;
+  const r=Math.random();
+  let want=st+ (r-0.5)*0.18 + (aggro-0.5)*0.14;        // 加一點隨機與個性
+  if(need<=0){
+    if(want>0.62&&r<aggro+0.25){
+      const raise=Math.min(p.bet+p.chips, PK.toCall+Math.max(PK_BB,Math.round(PK.pot*(0.4+aggro*0.5)/PK_BB)*PK_BB));
+      if(raise>PK.toCall){ pkAct(i,"raise",raise); return; }
+    }
+    pkAct(i,"check"); return;
+  }
+  if(want<potOdds*0.85+0.12){ pkAct(i,"fold"); return; }
+  if(want>0.72&&r<aggro+0.2&&p.chips>need){
+    const raise=Math.min(p.bet+p.chips, PK.toCall+Math.max(PK.lastRaise,Math.round(PK.pot*(0.5+aggro*0.6)/PK_BB)*PK_BB));
+    if(raise>PK.toCall+need*0.1){ pkAct(i,"raise",raise); return; }
+  }
+  pkAct(i,"call");
+}
+/* ---- 玩家操作 ---- */
+function pkMeFold(){ if(PK&&!PK.over&&PK.turn===0)pkAct(0,"fold"); }
+function pkMeCheckCall(){ if(!PK||PK.over||PK.turn!==0)return;
+  pkAct(0, PK.toCall-PK.seats[0].bet<=0?"check":"call"); }
+function pkMeRaise(){ if(!PK||PK.over||PK.turn!==0)return;
+  const el=document.getElementById("pkRaiseV"); const me=PK.seats[0];
+  let v=Math.round(parseFloat(el&&el.value)||0);
+  const min=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise);
+  const max=me.bet+me.chips;
+  if(v<min)v=min; if(v>max)v=max;
+  pkAct(0,"raise",v);
+}
+function pkMeAllIn(){ if(!PK||PK.over||PK.turn!==0)return;
+  const me=PK.seats[0]; pkAct(0,"raise",me.bet+me.chips); }
+function pkNextHandBtn(){
+  if(!PK)return;
+  if(PK.seats[0].chips<=0){ pkFinish(); return; }
+  if(pkAlive().length<2){ pkFinish(); return; }
+  pkNewHand();
+}
+function pkCashOut(){ if(PK&&PK.over)pkFinish(); }
+/* ---- 撲克畫面 ---- */
+const PK_POS=[[50,90],[13,74],[6,42],[27,13],[73,13],[94,42],[87,74]];   // 我在正下方，其餘順時針
+function pkRender(){
+  const seatsEl=document.getElementById("pkSeats"); if(!seatsEl)return;
+  if(!PK){ seatsEl.innerHTML=""; document.getElementById("pkBoard").innerHTML="";
+    document.getElementById("pkPot").textContent=""; document.getElementById("pkStage").textContent=""; return; }
+  const potNow=PK.pot+PK.seats.reduce((a,p)=>a+p.bet,0);
+  document.getElementById("pkPot").textContent="底池 "+potNow.toLocaleString();
+  document.getElementById("pkStage").textContent=
+    {preflop:"翻牌前",flop:"翻牌",turn:"轉牌",river:"河牌"}[PK.stage]||"";
+  let bh=""; for(let i=0;i<5;i++)bh+=PK.board[i]?pkCardHtml(PK.board[i],true):"";
+  document.getElementById("pkBoard").innerHTML=bh;
+  seatsEl.innerHTML=PK.seats.map(function(p,i){
+    const pos=PK_POS[i];
+    const show=p.me||p.showdown||PK.over&&!p.folded&&p.showdown;
+    const cards=p.out?"":(p.hole.length?
+      '<div class="pkCards">'+p.hole.map(c=>pkCardHtml(show?c:null)).join("")+'</div>':"");
+    let st="";
+    if(p.out)st="離桌";
+    else if(p.folded)st="蓋牌";
+    else if(p.allin)st="全下";
+    else if(i===PK.btn)st="🔘 莊家";
+    if(p.showdown&&p.score)st=pkHandName(p.score);
+    if(p.win>0)st="＋"+p.win.toLocaleString();
+    return '<div class="pkSeat'+(p.me?" me":"")+(PK.turn===i&&!PK.over?" act":"")+(p.out||p.folded?" out":"")+
+      '" style="left:'+pos[0]+'%;top:'+pos[1]+'%">'+
+      '<b>'+p.n+'</b><div class="chips">'+p.chips.toLocaleString()+'</div>'+
+      '<div class="bet">'+(p.bet>0?"下注 "+p.bet.toLocaleString():"")+'</div>'+
+      cards+'<div class="st">'+st+'</div></div>';
+  }).join("");
+}
+function pkRenderLog(){ const el=document.getElementById("pkLog"); if(!el)return;
+  el.innerHTML=PK.log.map(t=>'<div>'+t+'</div>').join(""); el.scrollTop=el.scrollHeight; }
+function pkRenderBar(){
+  const bar=document.getElementById("pkBar"); if(!bar)return;
+  if(!PK){
+    const can=G.gold>=PK_BUYIN_MIN;
+    bar.innerHTML='<span style="color:#cfe8d6;font-size:12px">入場籌碼 '+PK_BUYIN_MIN.toLocaleString()+
+      ' 金幣　1 人 vs 6 電腦　盲注 '+PK_SB+'/'+PK_BB+'</span>'+
+      '<button class="pkBtn main" onclick="pkBuyIn()" '+(can?'':'disabled')+'>入座</button>';
+    return;
+  }
+  if(PK.over){
+    const me=PK.seats[0];
+    bar.innerHTML=(me.chips>0&&pkAlive().length>=2?
+      '<button class="pkBtn main" onclick="pkNextHandBtn()">下一手</button>':'')+
+      '<button class="pkBtn" onclick="pkCashOut()">離桌結算（帶回 '+me.chips.toLocaleString()+'）</button>';
+    return;
+  }
+  if(PK.turn!==0){ bar.innerHTML='<span style="color:#cfe8d6;font-size:12px">等待 '+
+    (PK.seats[PK.turn]?PK.seats[PK.turn].n:"")+' 行動…</span>'; return; }
+  const me=PK.seats[0], need=PK.toCall-me.bet;
+  const minR=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise);
+  const maxR=me.bet+me.chips;
+  bar.innerHTML='<button class="pkBtn fold" onclick="pkMeFold()">蓋牌</button>'+
+    '<button class="pkBtn call" onclick="pkMeCheckCall()">'+(need<=0?"過牌":"跟注 "+Math.min(need,me.chips).toLocaleString())+'</button>'+
+    (maxR>PK.toCall?
+      '<span class="pkRaise"><input id="pkRaiseV" type="number" value="'+minR+'" min="'+minR+'" max="'+maxR+'" step="'+PK_BB+'">'+
+      '<button class="pkBtn raise" onclick="pkMeRaise()">加注</button></span>':'')+
+    '<button class="pkBtn" onclick="pkMeAllIn()">全下 '+maxR.toLocaleString()+'</button>';
+}
+function pkBuyIn(){
+  if(G.gold<PK_BUYIN_MIN){toast("金幣不足，需 "+PK_BUYIN_MIN.toLocaleString());return;}
+  G.gold-=PK_BUYIN_MIN; renderHUD(); saveGame();
+  pkStart(PK_BUYIN_MIN);
+  log("🃏 進入德州撲克，帶入 "+PK_BUYIN_MIN.toLocaleString()+" "+CO,"b");
+}
+/* ---- 遊藝場外殼 ---- */
+let arcadeTab="slot";
+function openArcade(){ openSlot(); setArcadeTab(arcadeTab); }
+function setArcadeTab(t){
+  arcadeTab=t;
+  const sc=document.getElementById("scene"); if(sc)sc.classList.toggle("pk-on",t==="poker");
+  const a=document.getElementById("arTabSlot"), b=document.getElementById("arTabPoker");
+  if(a)a.classList.toggle("on",t==="slot"); if(b)b.classList.toggle("on",t==="poker");
+  const info=document.getElementById("arInfoBtn");
+  if(info){ info.style.display=(t==="slot")?"":"none"; }
+  if(t==="poker"){ pkRender(); pkRenderBar(); if(PK)pkRenderLog(); }
+  else slRenderUI();
 }
 /* ============ 股市 ============ */
 function updateMarket(){ mktSync(); }
