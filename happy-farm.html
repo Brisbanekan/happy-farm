@@ -386,60 +386,107 @@
   .arTabs button.on{background:#e65100;color:#fff;}
   #scene.s-slot.pk-on .slFsBanner,#scene.s-slot.pk-on .slMid,#scene.s-slot.pk-on .slBot{display:none!important;}
   #scene.s-slot:not(.pk-on) #pkWrap{display:none!important;}
+  #scene.s-slot.pk-on #slotScene{background:linear-gradient(180deg,#12241c 0%,#0d1a14 100%);}
+  #scene.s-slot.pk-on .slTop{background:#0f2018e6;border-bottom-color:#2a4a38;}
+  #scene.s-slot.pk-on .slTop .ttl{color:#ffd66e;text-shadow:none;}
+  #scene.s-slot.pk-on .arTabs button{background:#1e3a2c;color:#9dc9b0;}
+  #scene.s-slot.pk-on .arTabs button.on{background:#e0a020;color:#1a2a20;}
+  #scene.s-slot.pk-on .slGold{background:#1e3a2c;color:#ffd66e;}
+  #scene.s-slot.pk-on .stkBack{background:#1e3a2c;color:#9dc9b0;border-color:#2a4a38;}
+
   /* ===== 德州撲克 ===== */
-  #pkWrap{flex:1;display:flex;flex-direction:column;min-height:0;padding:6px 10px 8px;gap:6px;}
-  .pkTable{flex:1;min-height:0;position:relative;border-radius:18px;
-    background:radial-gradient(ellipse at 50% 45%,#2f7d4f 0%,#1f5c39 65%,#17482d 100%);
-    border:5px solid #6b4426;box-shadow:inset 0 0 40px #0006;}
+  #pkWrap{flex:1;display:flex;min-height:0;padding:8px;gap:8px;}
+  .pkLeft{flex:1;min-width:0;display:flex;}
+  .pkTable{flex:1;position:relative;min-height:0;}
+  /* 橢圓木框牌桌 */
+  .pkFelt{position:absolute;left:2%;top:3%;right:2%;bottom:3%;border-radius:50%/50%;
+    background:radial-gradient(ellipse at 50% 42%,#2e7f52 0%,#1f5f3c 58%,#164630 100%);
+    box-shadow:0 0 0 9px #6b4426,0 0 0 11px #4a2d18,inset 0 0 60px #0007;}
+  .pkFelt::after{content:"";position:absolute;inset:6%;border-radius:50%/50%;
+    border:1px solid #ffffff18;}
   .pkSeats{position:absolute;inset:0;}
-  .pkSeat{position:absolute;transform:translate(-50%,-50%);width:104px;text-align:center;
-    background:#ffffffee;border-radius:11px;padding:4px 5px;box-shadow:0 2px 6px #0004;font-size:11px;}
-  .pkSeat.me{background:#fff8d9;border:2px solid #f2b329;}
-  .pkSeat.act{outline:3px solid #ffd54f;box-shadow:0 0 14px #ffd54f;}
-  .pkSeat.out{opacity:.42;}
-  .pkSeat b{display:block;font-size:12px;color:#3e2723;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .pkSeat .chips{color:#a05a00;font-weight:800;}
-  .pkSeat .bet{color:#1565c0;font-weight:800;min-height:14px;}
-  .pkSeat .st{font-size:10px;color:#7a6a55;min-height:12px;}
-  .pkCards{display:flex;gap:2px;justify-content:center;margin-top:2px;}
-  .pkC{width:26px;height:36px;border-radius:4px;background:#fff;border:1px solid #bbb;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    font-size:13px;font-weight:900;line-height:1;box-shadow:0 1px 2px #0003;}
-  .pkC.r{color:#d32f2f;} .pkC.b{color:#1a1a1a;}
-  .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 5px,#1e4versa 5px 10px);}
-  .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 5px,#1e458a 5px 10px);color:transparent;}
-  .pkC.big{width:38px;height:53px;font-size:17px;}
-  .pkCenter{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);text-align:center;width:min(92%,420px);}
-  .pkPot{color:#ffe082;font-weight:900;font-size:15px;text-shadow:0 1px 3px #0008;}
-  .pkBoard{display:flex;gap:5px;justify-content:center;margin:7px 0;min-height:53px;}
-  .pkStage{color:#cfe8d6;font-size:12px;font-weight:700;min-height:16px;text-shadow:0 1px 2px #0008;}
-  .pkLog{height:46px;overflow:auto;background:#0b1e14cc;border-radius:8px;padding:4px 8px;
-    color:#cfe8d6;font-size:11.5px;line-height:1.5;flex-shrink:0;}
-  .pkLog div{opacity:.85;} .pkLog div:last-child{opacity:1;color:#fff;font-weight:700;}
-  .pkBar{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;flex-shrink:0;min-height:38px;
-    color:#3e2723;font-weight:700;}   /* 場景背景是淺色，文字不能用淺色 */
-  .pkBar .hint2{color:#5b4636;font-size:12px;}
-  .pkBtn{border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;
-    background:#fffef6;color:#3e2723;box-shadow:0 3px 0 #0003;}
-  .pkBtn:active{transform:translateY(2px);box-shadow:0 1px 0 #0003;}
-  .pkBtn.fold{background:#ef9a9a;} .pkBtn.call{background:#a5d6a7;} .pkBtn.raise{background:#ffd54f;}
-  .pkBtn.main{background:#ffb300;color:#fff;padding:8px 26px;}
-  .pkBtn:disabled{opacity:.4;cursor:default;}
-  .pkRaise{display:flex;align-items:center;gap:5px;background:#ffffffdd;border-radius:10px;padding:4px 8px;}
-  .pkRaise input{width:88px;padding:5px;border:2px solid #cdbb95;border-radius:7px;text-align:center;font-size:13px;}
-  body.narrow .pkSeat{width:74px;font-size:9.5px;padding:2px 3px;border-radius:8px;}
-  body.narrow .pkSeat b{font-size:10.5px;}
-  body.narrow .pkSeat .st{font-size:9px;min-height:10px;}
-  body.narrow .pkC{width:17px;height:24px;font-size:9px;border-radius:3px;}
-  body.narrow .pkC.big{width:26px;height:37px;font-size:12px;}
-  body.narrow .pkLog{height:28px;font-size:10.5px;padding:2px 6px;}
+  .pkSeat{position:absolute;transform:translate(-50%,-50%);width:120px;
+    background:#f7f4ecf2;border-radius:10px;padding:4px 6px;box-shadow:0 3px 10px #0007;
+    font-size:10.5px;color:#3a3128;}
+  .pkSeat.me{background:#fffdf2;box-shadow:0 0 0 2px #f2b329,0 3px 10px #0007;}
+  .pkSeat.act{box-shadow:0 0 0 3px #ffd54f,0 0 18px #ffd54f99;}
+  .pkSeat.out,.pkSeat.folded{opacity:.42;}
+  .pkHead{display:flex;align-items:center;gap:4px;}
+  .pkAv{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:#ddd;object-fit:cover;}
+  .pkNm{font-weight:900;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pkD{width:15px;height:15px;border-radius:50%;background:#fff;border:1.5px solid #333;
+    font-size:9px;font-weight:900;line-height:12px;text-align:center;flex-shrink:0;}
+  .pkRow{display:flex;justify-content:space-between;font-size:9.5px;color:#6b6155;}
+  .pkRow b{color:#a05a00;font-size:10.5px;}
+  .pkRow.bet b{color:#1565c0;}
+  .pkSt{font-size:9px;color:#8a7f70;min-height:11px;}
+  .pkPers{font-size:8.5px;color:#9a8f80;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pkCards{display:flex;gap:3px;justify-content:center;margin:3px 0 2px;}
+  /* 撲克牌：角落有小索引，跟一般牌面一樣 */
+  .pkC{position:relative;width:26px;height:36px;border-radius:4px;background:#fdfaf2;
+    border:1px solid #cdc5b4;box-shadow:0 1px 3px #0004;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-weight:900;}
+  .pkC .ct{position:absolute;left:2px;top:1px;font-size:8px;line-height:1;text-align:center;}
+  .pkC .cb{position:absolute;right:2px;bottom:1px;font-size:8px;line-height:1;transform:rotate(180deg);text-align:center;}
+  .pkC .cm{font-size:15px;line-height:1;}
+  .pkC.r{color:#c62828;} .pkC.b{color:#20232a;}
+  .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 6px,#1e458a 6px 12px);
+    border-color:#16336a;color:transparent;}
+  .pkC.big{width:44px;height:62px;} .pkC.big .cm{font-size:26px;} .pkC.big .ct,.pkC.big .cb{font-size:11px;}
+  .pkCenter{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+    text-align:center;width:min(88%,430px);}
+  .pkBoard{display:flex;gap:5px;justify-content:center;min-height:62px;}
+  .pkPot{display:inline-flex;align-items:center;gap:5px;margin-top:8px;
+    background:#0b1e14cc;border-radius:20px;padding:3px 12px;color:#ffe082;font-size:13px;}
+  .pkChipIco{width:15px;height:15px;border-radius:50%;background:#e0483c;
+    box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #e0483c,inset 0 0 0 5px #fff;}
+  .pkStage{color:#a9cdb8;font-size:11px;font-weight:700;margin-top:5px;}
+  .pkWinBox{display:none;background:#1a1408;border:2px solid #e0a020;border-radius:11px;
+    padding:6px 14px;margin-bottom:8px;color:#ffd66e;}
+  .pkWinBox.on{display:block;}
+  .pkWinBox small{display:block;font-size:10px;opacity:.8;}
+  .pkWinBox b{font-size:16px;}
+  /* 右側面板 */
+  .pkSide{width:238px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;min-height:0;}
+  .pkPanel{background:#132a20;border:1px solid #244635;border-radius:11px;padding:8px;flex-shrink:0;}
+  .pkGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;}
+  .pkBtn{border:1px solid #2f5a44;border-radius:8px;padding:9px 6px;font-size:13px;font-weight:800;
+    cursor:pointer;background:#1b3a2c;color:#d6ead e;color:#d6eade;}
+  .pkBtn:hover{background:#24503b;}
+  .pkBtn:active{transform:translateY(1px);}
+  .pkBtn:disabled{opacity:.35;cursor:default;}
+  .pkBtn.fold{background:#4a1f22;border-color:#7a3238;color:#ffb4b8;}
+  .pkBtn.call{background:#1d4030;border-color:#2f6a4c;color:#b6f0cd;}
+  .pkBtn.allin{background:#4a3a10;border-color:#8a6a1e;color:#ffd98a;}
+  .pkBtn.main{grid-column:span 2;background:#e0a020;border-color:#e0a020;color:#1a2a20;}
+  .pkRaiseRow{display:flex;align-items:center;gap:5px;background:#0e2118;border:1px solid #244635;
+    border-radius:8px;padding:5px 7px;}
+  .pkRaiseRow span{font-size:10.5px;color:#8fb9a2;flex:1;}
+  .pkRaiseRow input{width:74px;padding:4px;border:1px solid #2f5a44;border-radius:6px;
+    background:#0a1a13;color:#ffd66e;text-align:right;font-size:12px;font-weight:800;}
+  .pkPanel .info{font-size:10.5px;color:#8fb9a2;line-height:1.6;}
+  .pkPanel .info b{color:#ffd66e;}
+  .pkLog{flex:1;min-height:0;overflow:auto;background:#0e1f18;border:1px solid #244635;
+    border-radius:11px;padding:6px 9px;color:#9dc9b0;font-size:10.5px;line-height:1.55;}
+  .pkLog div{margin-bottom:2px;} .pkLog div:last-child{color:#fff;font-weight:700;}
+  /* 橫向手機 */
+  body.narrow #pkWrap{padding:5px;gap:5px;}
+  body.narrow .pkSide{width:168px;}
+  body.narrow .pkSeat{width:92px;font-size:9px;padding:3px 4px;border-radius:8px;}
+  body.narrow .pkNm{font-size:9.5px;} body.narrow .pkAv{width:17px;height:17px;}
+  body.narrow .pkD{width:12px;height:12px;font-size:8px;line-height:9px;}
+  body.narrow .pkRow{font-size:8.5px;} body.narrow .pkRow b{font-size:9.5px;}
+  body.narrow .pkSt{font-size:8px;min-height:9px;} body.narrow .pkPers{font-size:7.5px;}
+  body.narrow .pkC{width:19px;height:27px;} body.narrow .pkC .cm{font-size:11px;}
+  body.narrow .pkC .ct,body.narrow .pkC .cb{font-size:6px;}
+  body.narrow .pkC.big{width:30px;height:43px;} body.narrow .pkC.big .cm{font-size:18px;}
+  body.narrow .pkC.big .ct,body.narrow .pkC.big .cb{font-size:8px;}
+  body.narrow .pkBoard{min-height:43px;gap:3px;}
+  body.narrow .pkBtn{padding:6px 4px;font-size:11.5px;}
+  body.narrow .pkPot{font-size:11px;padding:2px 9px;} body.narrow .pkStage{font-size:10px;}
+  body.narrow .pkWinBox{padding:4px 9px;} body.narrow .pkWinBox b{font-size:13px;}
+  body.narrow .pkLog{font-size:9.5px;padding:4px 6px;}
   body.narrow .arTabs button{font-size:11px;padding:3px 8px;}
-  body.narrow #pkWrap{padding:4px 6px 6px;gap:4px;}
-  body.narrow .pkBtn{padding:6px 11px;font-size:12.5px;}
-  body.narrow .pkBtn.main{padding:6px 18px;}
-  body.narrow .pkRaise input{width:66px;padding:4px;font-size:12px;}
-  body.narrow .pkBoard{min-height:37px;gap:3px;margin:4px 0;}
-  body.narrow .pkPot{font-size:13px;} body.narrow .pkStage{font-size:11px;}
   /* ===== 股市交易場景（深色 UI） ===== */
   #stockScene{position:absolute;inset:0;z-index:32;display:none;flex-direction:column;background:#0b0e11;color:#eaecef;}
   #scene.s-stock #stockScene{display:flex;}
@@ -916,16 +963,22 @@
     </div>
     <!-- 德州撲克：1 人 vs 6 電腦 -->
     <div id="pkWrap">
-      <div class="pkTable">
-        <div class="pkSeats" id="pkSeats"></div>
-        <div class="pkCenter">
-          <div class="pkPot" id="pkPot">底池 0</div>
-          <div class="pkBoard" id="pkBoard"></div>
-          <div class="pkStage" id="pkStage"></div>
+      <div class="pkLeft">
+        <div class="pkTable">
+          <div class="pkFelt"></div>
+          <div class="pkSeats" id="pkSeats"></div>
+          <div class="pkCenter">
+            <div class="pkWinBox" id="pkWinBox"></div>
+            <div class="pkBoard" id="pkBoard"></div>
+            <div class="pkPot" id="pkPot"><span class="pkChipIco"></span><b>底池 0</b></div>
+            <div class="pkStage" id="pkStage"></div>
+          </div>
         </div>
       </div>
-      <div class="pkLog" id="pkLog"></div>
-      <div class="pkBar" id="pkBar"></div>
+      <div class="pkSide">
+        <div class="pkPanel" id="pkBar"></div>
+        <div class="pkLog" id="pkLog"></div>
+      </div>
     </div>
   </div>
 
@@ -2141,7 +2194,16 @@ function renderRank(el){
 const PK_SUITS=[{s:"♠",c:"b"},{s:"♥",c:"r"},{s:"♦",c:"r"},{s:"♣",c:"b"}];
 const PK_RANKS=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 const PK_NAMES=["高牌","一對","兩對","三條","順子","同花","葫蘆","四條","同花順","皇家同花順"];
-const PK_BOTS=["阿土伯","春嬌","阿財","小美","老王","阿凱"];
+/* 六個電腦對手：頭像在 poker/，個性標籤同時也是它們的打法參數 */
+const PK_BOTS=[
+  {n:"阿土伯", av:"poker/av_tuber.png",   style:0.22, pers:"石頭・緊到不行，只玩大牌"},
+  {n:"春嬌",   av:"poker/av_chunjiao.png",style:0.50, pers:"狐狸・打法平衡，看人下菜"},
+  {n:"阿財",   av:"poker/av_acai.png",    style:0.80, pers:"瘋狗・極鬆極兇，亂咬底池"},
+  {n:"小美",   av:"poker/av_meimei.png",  style:0.34, pers:"跟注站・愛看牌，很少加注"},
+  {n:"老王",   av:"poker/av_laowang.png", style:0.62, pers:"老江湖・會偷雞，位置意識強"},
+  {n:"阿凱",   av:"poker/av_akai.png",    style:0.72, pers:"莽夫・愛全下，壓迫感重"}
+];
+const PK_ME_AV="poker/av_me.png";
 const PK_SB=25, PK_BB=50;        // 盲注
 const PK_BUYIN_MIN=2000;         // 最低入場金幣
 
@@ -2154,9 +2216,12 @@ function pkMakeDeck(){
   return d;
 }
 function pkCardHtml(c,big){
-  if(!c)return '<div class="pkC'+(big?' big':'')+' back">?</div>';
-  const su=PK_SUITS[c.s];
-  return '<div class="pkC'+(big?' big':'')+' '+su.c+'">'+PK_RANKS[c.r]+'<span>'+su.s+'</span></div>';
+  const B=big?' big':'';
+  if(!c)return '<div class="pkC'+B+' back"></div>';
+  const su=PK_SUITS[c.s], r=PK_RANKS[c.r];
+  const idx=r+'<br>'+su.s;
+  return '<div class="pkC'+B+' '+su.c+'"><span class="ct">'+idx+'</span>'+
+    '<span class="cm">'+r+su.s+'</span><span class="cb">'+idx+'</span></div>';
 }
 /* ---- 牌型評估：7 選 5，回傳可直接比大小的分數陣列 ---- */
 function pkRank5(cs){
@@ -2199,9 +2264,9 @@ function pkHandName(sc){ return PK_NAMES[sc[0]]; }
 /* ---- 開新牌局 ---- */
 function pkStart(buyin){
   const seats=[];
-  seats.push({n:"你",me:true,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false});
-  PK_BOTS.forEach(function(n,i){ seats.push({n:n,me:false,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false,
-    style:[0.28,0.5,0.72,0.4,0.6,0.34][i]}); });   // style 越大越兇
+  seats.push({n:"你",av:PK_ME_AV,pers:"真人玩家",me:true,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false});
+  PK_BOTS.forEach(function(b){ seats.push({n:b.n,av:b.av,pers:b.pers,me:false,chips:buyin,bet:0,
+    folded:false,allin:false,hole:[],acted:false,out:false,style:b.style}); });
   PK={seats:seats,btn:Math.floor(Math.random()*7),deck:[],board:[],pot:0,stage:"",
       toCall:0,lastRaise:PK_BB,turn:-1,log:[],over:true,buyin:buyin};
   pkNewHand();
@@ -2395,34 +2460,48 @@ function pkCashOut(){ if(PK&&PK.over)pkFinish(); }
 /* 座位座標（% of 桌面）。範圍刻意夾在 x 13~87、y 23~79：
    橫向手機的桌面只有約 200px 高、座位 85px 高，超出範圍上下排會被桌緣切掉；
    左邊還要讓開預覽模式的假瀏海（約佔 3%）。 */
-const PK_POS=[[50,79],[19,68],[14,46],[30,25],[70,25],[86,46],[81,68]];   // 我在正下方，其餘順時針
+/* 座位座標（% of 牌桌）。照橢圓排：我在正下方，其餘順時針。
+   夾在 y 20~80 是因為橫向手機的桌面只有約 210px 高、座位約 76px，
+   超出這個範圍上下排會被桌緣切掉；左右也要留出座位半寬。 */
+const PK_POS=[[50,82],[17,66],[11,38],[32,15],[68,15],[89,38],[83,66]];
 function pkRender(){
   const seatsEl=document.getElementById("pkSeats"); if(!seatsEl)return;
-  if(!PK){ seatsEl.innerHTML=""; document.getElementById("pkBoard").innerHTML="";
-    document.getElementById("pkPot").textContent=""; document.getElementById("pkStage").textContent=""; return; }
+  const potEl=document.getElementById("pkPot"), boardEl=document.getElementById("pkBoard"),
+        stageEl=document.getElementById("pkStage"), winEl=document.getElementById("pkWinBox");
+  if(!PK){ seatsEl.innerHTML=""; boardEl.innerHTML=""; stageEl.textContent="";
+    potEl.innerHTML='<span class="pkChipIco"></span><b>底池 0</b>'; winEl.className="pkWinBox"; return; }
   const potNow=PK.pot+PK.seats.reduce((a,p)=>a+p.bet,0);
-  document.getElementById("pkPot").textContent="底池 "+potNow.toLocaleString();
-  document.getElementById("pkStage").textContent=
-    {preflop:"翻牌前",flop:"翻牌",turn:"轉牌",river:"河牌"}[PK.stage]||"";
-  let bh=""; for(let i=0;i<5;i++)bh+=PK.board[i]?pkCardHtml(PK.board[i],true):"";
-  document.getElementById("pkBoard").innerHTML=bh;
+  potEl.innerHTML='<span class="pkChipIco"></span><b>底池 '+potNow.toLocaleString()+'</b>';
+  stageEl.textContent={preflop:"翻牌前",flop:"翻牌圈",turn:"轉牌圈",river:"河牌圈"}[PK.stage]||"";
+  let bh=""; for(let i=0;i<5;i++)if(PK.board[i])bh+=pkCardHtml(PK.board[i],true);
+  boardEl.innerHTML=bh;
+  // 勝者橫幅
+  const winners=PK.over?PK.seats.filter(p=>p.win>0):[];
+  if(winners.length){ winEl.className="pkWinBox on";
+    winEl.innerHTML='<small>本局勝者</small><b>'+winners.map(p=>p.n).join("、")+'</b>'+
+      (winners[0].score?'<small>'+pkHandName(winners[0].score)+'</small>':''); }
+  else winEl.className="pkWinBox";
   seatsEl.innerHTML=PK.seats.map(function(p,i){
     const pos=PK_POS[i];
-    const show=p.me||p.showdown||PK.over&&!p.folded&&p.showdown;
+    const show=p.me||p.showdown;
     const cards=p.out?"":(p.hole.length?
       '<div class="pkCards">'+p.hole.map(c=>pkCardHtml(show?c:null)).join("")+'</div>':"");
     let st="";
-    if(p.out)st="離桌";
-    else if(p.folded)st="蓋牌";
-    else if(p.allin)st="全下";
-    else if(i===PK.btn)st="🔘 莊家";
+    if(p.out)st="淘汰";
+    else if(p.folded)st="棄牌";
+    else if(p.allin)st="All-in";
     if(p.showdown&&p.score)st=pkHandName(p.score);
-    if(p.win>0)st="＋"+p.win.toLocaleString();
-    return '<div class="pkSeat'+(p.me?" me":"")+(PK.turn===i&&!PK.over?" act":"")+(p.out||p.folded?" out":"")+
+    if(p.win>0)st="贏得 "+p.win.toLocaleString();
+    return '<div class="pkSeat'+(p.me?" me":"")+(PK.turn===i&&!PK.over?" act":"")+
+      (p.out?" out":"")+(p.folded&&!p.out?" folded":"")+
       '" style="left:'+pos[0]+'%;top:'+pos[1]+'%">'+
-      '<b>'+p.n+'</b><div class="chips">'+p.chips.toLocaleString()+'</div>'+
-      '<div class="bet">'+(p.bet>0?"下注 "+p.bet.toLocaleString():"")+'</div>'+
-      cards+'<div class="st">'+st+'</div></div>';
+      '<div class="pkHead"><img class="pkAv" src="'+(p.av||"")+'" alt=""><span class="pkNm">'+p.n+'</span>'+
+        (i===PK.btn?'<span class="pkD">D</span>':'')+'</div>'+
+      cards+
+      '<div class="pkRow"><span>籌碼</span><b>'+p.chips.toLocaleString()+'</b></div>'+
+      '<div class="pkRow bet"><span>本輪下注</span><b>'+(p.bet||0).toLocaleString()+'</b></div>'+
+      '<div class="pkSt">'+st+'</div>'+
+      '<div class="pkPers">'+(p.pers||"")+'</div></div>';
   }).join("");
 }
 function pkRenderLog(){ const el=document.getElementById("pkLog"); if(!el)return;
@@ -2431,30 +2510,49 @@ function pkRenderBar(){
   const bar=document.getElementById("pkBar"); if(!bar)return;
   if(!PK){
     const can=G.gold>=PK_BUYIN_MIN;
-    bar.innerHTML='<span class="hint2">入場籌碼 '+PK_BUYIN_MIN.toLocaleString()+
-      ' 金幣　1 人 vs 6 電腦　盲注 '+PK_SB+'/'+PK_BB+'</span>'+
-      '<button class="pkBtn main" onclick="pkBuyIn()" '+(can?'':'disabled')+'>入座</button>';
+    bar.innerHTML='<div class="info">🃏 <b>德州撲克</b>　1 人 vs 6 電腦<br>'+
+      '入場籌碼 <b>'+PK_BUYIN_MIN.toLocaleString()+'</b> 金幣　盲注 <b>'+PK_SB+' / '+PK_BB+'</b><br>'+
+      '離桌時剩餘籌碼會帶回農場。</div>'+
+      '<div class="pkGrid"><button class="pkBtn main" onclick="pkBuyIn()" '+(can?'':'disabled')+'>'+
+      (can?'入座開打':'金幣不足')+'</button></div>';
     return;
   }
+  const me=PK.seats[0];
   if(PK.over){
-    const me=PK.seats[0];
-    bar.innerHTML=(me.chips>0&&pkAlive().length>=2?
-      '<button class="pkBtn main" onclick="pkNextHandBtn()">下一手</button>':'')+
-      '<button class="pkBtn" onclick="pkCashOut()">離桌結算（帶回 '+me.chips.toLocaleString()+'）</button>';
+    const alive=pkAlive().length>=2&&me.chips>0;
+    bar.innerHTML='<div class="info">本手結束　你的籌碼 <b>'+me.chips.toLocaleString()+'</b></div>'+
+      '<div class="pkGrid">'+
+      (alive?'<button class="pkBtn main" onclick="pkNextHandBtn()">下一局</button>':'')+
+      '<button class="pkBtn'+(alive?'':' main')+'" style="grid-column:span 2" onclick="pkCashOut()">離桌結算（帶回 '+me.chips.toLocaleString()+'）</button>'+
+      '</div>';
     return;
   }
-  if(PK.turn!==0){ bar.innerHTML='<span class="hint2">等待 '+
-    (PK.seats[PK.turn]?PK.seats[PK.turn].n:"")+' 行動…</span>'; return; }
-  const me=PK.seats[0], need=PK.toCall-me.bet;
+  if(PK.turn!==0){
+    bar.innerHTML='<div class="info">等待 <b>'+(PK.seats[PK.turn]?PK.seats[PK.turn].n:"")+'</b> 行動…<br>'+
+      '你的籌碼 <b>'+me.chips.toLocaleString()+'</b>　本輪已下 <b>'+me.bet.toLocaleString()+'</b></div>';
+    return;
+  }
+  const need=Math.max(0,PK.toCall-me.bet);
   const minR=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise);
   const maxR=me.bet+me.chips;
-  bar.innerHTML='<button class="pkBtn fold" onclick="pkMeFold()">蓋牌</button>'+
-    '<button class="pkBtn call" onclick="pkMeCheckCall()">'+(need<=0?"過牌":"跟注 "+Math.min(need,me.chips).toLocaleString())+'</button>'+
-    (maxR>PK.toCall?
-      '<span class="pkRaise"><input id="pkRaiseV" type="number" value="'+minR+'" min="'+minR+'" max="'+maxR+'" step="'+PK_BB+'">'+
-      '<button class="pkBtn raise" onclick="pkMeRaise()">加注</button></span>':'')+
-    '<button class="pkBtn" onclick="pkMeAllIn()">全下 '+maxR.toLocaleString()+'</button>';
+  const pot=PK.pot+PK.seats.reduce((a,p)=>a+p.bet,0);
+  const halfPot=Math.min(maxR, Math.max(minR, PK.toCall+Math.round(pot*0.5/PK_BB)*PK_BB));
+  const canRaise=maxR>PK.toCall;
+  bar.innerHTML='<div class="info">你的籌碼 <b>'+me.chips.toLocaleString()+'</b>　底池 <b>'+pot.toLocaleString()+'</b></div>'+
+    (canRaise?'<div class="pkRaiseRow"><span>自訂加注到</span>'+
+      '<input id="pkRaiseV" type="number" value="'+minR+'" min="'+minR+'" max="'+maxR+'" step="'+PK_BB+'"></div>':'')+
+    '<div class="pkGrid">'+
+      '<button class="pkBtn fold" onclick="pkMeFold()">棄牌</button>'+
+      '<button class="pkBtn call" onclick="pkMeCheckCall()">'+(need<=0?"過牌":"跟注 "+Math.min(need,me.chips).toLocaleString())+'</button>'+
+      (canRaise?'<button class="pkBtn" onclick="pkMeRaise()">加注</button>'+
+        '<button class="pkBtn" onclick="pkMeRaiseTo('+halfPot+')">半池 '+halfPot.toLocaleString()+'</button>':'')+
+      '<button class="pkBtn allin" style="grid-column:span 2" onclick="pkMeAllIn()">All-in '+maxR.toLocaleString()+'</button>'+
+    '</div>';
 }
+function pkMeRaiseTo(v){ if(!PK||PK.over||PK.turn!==0)return;
+  const me=PK.seats[0];
+  const min=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise), max=me.bet+me.chips;
+  pkAct(0,"raise",Math.max(min,Math.min(max,v))); }
 function pkBuyIn(){
   if(G.gold<PK_BUYIN_MIN){toast("金幣不足，需 "+PK_BUYIN_MIN.toLocaleString());return;}
   G.gold-=PK_BUYIN_MIN; renderHUD(); saveGame();
