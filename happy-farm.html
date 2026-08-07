@@ -364,7 +364,7 @@
      會變成 fixed 的containing block，於是 clientX/Y 被當成場景內座標 → 提示飛到建築物外甚至畫面外。 */
   /* 玩家買的莊園裝飾。不能沿用 .deco —— #world .deco 被設成 display:none
      （背景圖本身已含樹木雲朵），套上去會整個看不見。 */
-  #world .owndeco{position:absolute;z-index:2;pointer-events:none;transform:translate(-50%,-100%);
+  #world .owndeco{position:absolute;pointer-events:none;transform:translate(-50%,-100%);
     filter:drop-shadow(0 6px 5px #00000038);}
   #world .owndeco img{display:block;width:100%;height:auto;-webkit-user-drag:none;user-drag:none;}
   .interacthint{position:absolute;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
@@ -3074,11 +3074,15 @@ function renderDecos(){
     for(let n=0;n<decoCount(d.k);n++){
       const slot=DECO_SLOTS[i%DECO_SLOTS.length];
       const ring=Math.floor(i/DECO_SLOTS.length);        // 位置用完就往旁邊錯開，不會完全重疊
+      const x=slot[0]+ring*26, y=slot[1]+ring*18;
+      // 景深：放得越遠（y 越小）畫得越小，否則遠景的東西會像浮在半空
+      const depth=Math.max(0.62,Math.min(1,0.65+0.35*(y-430)/530));
       const el=document.createElement("div");
       el.className="owndeco";
-      el.style.left=(slot[0]+ring*26)+"px";
-      el.style.top=(slot[1]+ring*18)+"px";
-      el.style.width=d.w+"px";
+      el.style.left=x+"px";
+      el.style.top=y+"px";
+      el.style.width=Math.round(d.w*depth)+"px";
+      el.style.zIndex=String(2+Math.round(y/10));   // 近的蓋住遠的
       el.innerHTML='<img src="'+d.img+'" alt="'+d.n+'">';
       w.appendChild(el); i++;
     }
