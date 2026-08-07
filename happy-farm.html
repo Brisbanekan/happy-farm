@@ -1605,7 +1605,7 @@ function slBet(){return SL_BETS[slBetIdx];}
 function openSlot(){
   slFS=G.slotFS||0;
   const bi=SL_BETS.indexOf(G.slotBet||50); slBetIdx=bi>=0?bi:0;
-  document.getElementById("scene").classList.add("s-slot");
+  document.getElementById("scene").classList.add("s-slot"); syncCanvasBg();
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";
   slBuildGrid(); slLayout(); slRenderUI();
 }
@@ -1621,7 +1621,7 @@ function exitSlot(){
   if(slotSpinning)return;
   if(PK&&!PK.over){ toast("牌局進行中，請先打完這一手"); return; }
   if(PK&&PK.over){ pkFinish(); }
-  document.getElementById("scene").classList.remove("s-slot");
+  document.getElementById("scene").classList.remove("s-slot"); syncCanvasBg();
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
   render();
 }
@@ -2607,14 +2607,14 @@ function allInst(){ return STOCKS.concat(FUTS); }
 function fmtP(v){return (Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});}
 function openStocks(){
   stockOpen=true; stockView="home";
-  document.getElementById("scene").classList.add("s-stock");
+  document.getElementById("scene").classList.add("s-stock"); syncCanvasBg();
   document.getElementById("stockScene").classList.add("home");
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="none";   // 手機預覽鈕會蓋住倉位表，股市中隱藏
   mktSync(); renderStockHome(); loadFinNews();
 }
 function exitStock(){ stockOpen=false; stockDropOpen=false;
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
-  document.getElementById("scene").classList.remove("s-stock"); render(); }
+  document.getElementById("scene").classList.remove("s-stock"); syncCanvasBg(); render(); }
 function backStockHome(){ stockView="home"; stockDropOpen=false;
   document.getElementById("stockScene").classList.add("home"); renderStockHome(); }
 function openStockTrade(t){
@@ -4442,6 +4442,34 @@ let toastT;
 function toast(t){const el=document.getElementById("toast");el.innerHTML=t;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1400);}
 
 /* ============ 場景切換（農場 / 牧場）＋ 響應式置中縮放 ============ */
+/* ============================================================
+   畫布底色同步 —— 修「四角禿出來」
+   ------------------------------------------------------------
+   html 原本沒有背景，瀏覽器就拿 body 的綠色當整頁畫布底色。
+   於是只要 #scene 沒蓋滿的地方就會露出綠色：
+     · 實機螢幕的圓角（viewport-fit=cover 下內容延伸到圓角底下）
+     · 瀏海／安全區
+     · iOS 工具列收合造成 100dvh 與實際高度短暫不一致的縫隙
+   在股市、撲克這種深色場景，露出來的綠色特別刺眼。
+   解法：把 html（與實機的 body）底色改成跟當前場景一致，
+   露出來也看不出來。預覽模式的 body 維持深色，那是刻意的手機外框。
+   ============================================================ */
+const SCENE_BG={
+  farm :"#8bca54",
+  stock:"#0b0e11",
+  slot :"linear-gradient(180deg,#bfe9ff 0%,#dff6e3 45%,#b5e3a0 100%)",
+  poker:"linear-gradient(180deg,#12241c 0%,#0d1a14 100%)"
+};
+const SCENE_THEME={farm:"#8bca54",stock:"#0b0e11",slot:"#bfe9ff",poker:"#12241c"};
+function syncCanvasBg(){
+  const sc=document.getElementById("scene"); if(!sc)return;
+  let k="farm";
+  if(sc.classList.contains("s-stock"))k="stock";
+  else if(sc.classList.contains("s-slot"))k=sc.classList.contains("pk-on")?"poker":"slot";
+  document.documentElement.style.background=SCENE_BG[k];
+  document.body.style.background=(typeof SIM!=="undefined"&&SIM)?"":SCENE_BG[k];
+  const m=document.querySelector('meta[name=theme-color]'); if(m)m.setAttribute("content",SCENE_THEME[k]);
+}
 function setScene(s){
   const nextScene=(s==="ranch")?"ranch":"farm";
   const sceneChanged=G.scene!==nextScene;
@@ -4512,7 +4540,7 @@ function applySimScale(){
 function toggleSim(){
   SIM=!SIM; document.body.classList.toggle("sim",SIM);
   const b=document.getElementById("simBtn"); if(b){b.classList.toggle("on",SIM); b.textContent=SIM?"🖥️ 結束預覽":"📱 手機預覽";}
-  applySimScale(); layout(); centerField();
+  applySimScale(); layout(); centerField(); syncCanvasBg();
 }
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
@@ -5050,6 +5078,7 @@ function initBldHit(){
 buildWorld();
 init();
 mktSync();          // 開場先把行情算好，避免首次進股市看到基準價
+syncCanvasBg();     // 畫布底色對齊當前場景，避免實機圓角露出不同顏色
 renderDecos();      // 擺出已購買的莊園裝飾
 setScene(G.scene||"farm");
 centerField();
