@@ -362,6 +362,11 @@
   @keyframes bldcue{0%,100%{translate:0 0;}50%{translate:0 -5px;}}
   /* 定位基準＝#scene（position:relative）。原本用 fixed：預覽模式下 #scene 有 transform:scale()，
      會變成 fixed 的containing block，於是 clientX/Y 被當成場景內座標 → 提示飛到建築物外甚至畫面外。 */
+  /* 玩家買的莊園裝飾。不能沿用 .deco —— #world .deco 被設成 display:none
+     （背景圖本身已含樹木雲朵），套上去會整個看不見。 */
+  #world .owndeco{position:absolute;z-index:2;pointer-events:none;transform:translate(-50%,-100%);
+    filter:drop-shadow(0 6px 5px #00000038);}
+  #world .owndeco img{display:block;width:100%;height:auto;-webkit-user-drag:none;user-drag:none;}
   .interacthint{position:absolute;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
     background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
   .interacthint.on{display:block;}
@@ -3025,18 +3030,24 @@ function openFactory(){
    同一款可重複購買，每買一次價格 ×1.6 —— 這樣它永遠花得完。
    ============================================================ */
 const DECOS=[
-  {k:"flowerbed", n:"花圃",     e:"🌷", cost:20000},
-  {k:"bench",     n:"長椅",     e:"🪑", cost:45000},
-  {k:"lamp",      n:"庭園燈",   e:"🏮", cost:90000},
-  {k:"fountain",  n:"噴水池",   e:"⛲", cost:180000},
-  {k:"windmill",  n:"風車",     e:"🎡", cost:360000},
-  {k:"statue",    n:"金牛雕像", e:"🗿", cost:720000},
-  {k:"balloon",   n:"熱氣球台", e:"🎈", cost:1400000},
-  {k:"arch",      n:"玫瑰拱門", e:"⛩️", cost:2800000},
-  {k:"pond",      n:"錦鯉池",   e:"🎏", cost:5600000},
-  {k:"castle",    n:"莊園城堡", e:"🏰", cost:12000000}
+  {k:"log",    n:"木樁",   img:"happy-farm-iso/building/d_log.png",          w:70,  cost:15000},
+  {k:"rock",   n:"岩石",   img:"happy-farm-iso/building/d_rock.png",         w:78,  cost:35000},
+  {k:"bush",   n:"灌木叢", img:"happy-farm-iso/building/d_bush.png",         w:88,  cost:80000},
+  {k:"fpink",  n:"粉花圃", img:"happy-farm-iso/building/d_flower_pink.png",  w:82,  cost:180000},
+  {k:"fwhite", n:"白花圃", img:"happy-farm-iso/building/d_flower_white.png", w:82,  cost:180000},
+  {k:"tsmall", n:"小樹",   img:"happy-farm-iso/building/d_tree_small.png",   w:100, cost:400000},
+  {k:"toak",   n:"橡樹",   img:"happy-farm-iso/building/d_tree_oak.png",     w:130, cost:900000},
+  {k:"tpine",  n:"松樹",   img:"happy-farm-iso/building/d_tree_pine.png",    w:120, cost:2000000}
 ];
 const DECO_STEP=1.6;   // 每買一次同款，下一次價格 ×1.6
+/* 擺放位置：預先挑好的空地座標（避開倉庫／農舍／狗屋／工廠與田地），
+   依購買順序填入，滿了才繞回來略微錯開 —— 隨機灑會蓋到建築物。 */
+const DECO_SLOTS=[
+  [1120,300],[1240,360],[1060,230],[1300,270],
+  [180,760],[300,820],[90,690],[420,790],
+  [470,250],[560,200],[700,240],[840,210],
+  [1180,470],[1320,520],[60,930],[520,900]
+];
 function decoCount(k){ return (G.decos&&G.decos[k])||0; }
 function decoPrice(k){ const d=DECOS.find(x=>x.k===k); if(!d)return 0;
   return Math.round(d.cost*Math.pow(DECO_STEP,decoCount(k))); }
@@ -3047,11 +3058,10 @@ function buyDeco(k){
   const c=decoPrice(k);
   if(G.gold<c){toast("金幣不足");return;}
   G.gold-=c; if(!G.decos)G.decos={}; G.decos[k]=decoCount(k)+1;
-  log("🏡 買下 "+d.e+d.n+" ×"+G.decos[k]+"（花費 "+c.toLocaleString()+" "+CO+"）","g");
-  toast(d.e+" "+d.n+" 已放進莊園");
+  log("🏡 買下 "+d.n+" ×"+G.decos[k]+"（花費 "+c.toLocaleString()+" "+CO+"）","g");
+  toast(d.n+" 已放進莊園");
   renderHUD(); saveGame(); renderDecos(); openShop("deco");
 }
-/* 把買到的裝飾擺在農場世界裡（沿用既有的 .deco 樣式，不需要新素材） */
 function renderDecos(){
   const w=document.querySelector("#world .wcontent")||document.getElementById("world");
   if(!w)return;
@@ -3059,12 +3069,14 @@ function renderDecos(){
   let i=0;
   DECOS.forEach(function(d){
     for(let n=0;n<decoCount(d.k);n++){
+      const slot=DECO_SLOTS[i%DECO_SLOTS.length];
+      const ring=Math.floor(i/DECO_SLOTS.length);        // 位置用完就往旁邊錯開，不會完全重疊
       const el=document.createElement("div");
-      el.className="deco owndeco";
-      el.textContent=d.e;
-      el.style.left=(120+((i*137)%1120))+"px";
-      el.style.top=(250+((i*211)%230))+"px";
-      el.style.fontSize=(30+((i*7)%14))+"px";
+      el.className="owndeco";
+      el.style.left=(slot[0]+ring*26)+"px";
+      el.style.top=(slot[1]+ring*18)+"px";
+      el.style.width=d.w+"px";
+      el.innerHTML='<img src="'+d.img+'" alt="'+d.n+'">';
       w.appendChild(el); i++;
     }
   });
@@ -3180,7 +3192,9 @@ function openShop(tab){
   if(tab==="deco"){
     DECOS.forEach(function(d){
       const c=decoPrice(d.k), have=decoCount(d.k), can=G.gold>=c;
-      h+='<div class="shopitem"><span class="e">'+d.e+'</span><div class="meta"><b>'+d.n+'</b>'+
+      h+='<div class="shopitem"><span class="e" style="display:flex;align-items:center;justify-content:center">'+
+        '<img src="'+d.img+'" alt="" style="max-width:36px;max-height:36px;object-fit:contain"></span>'+
+        '<div class="meta"><b>'+d.n+'</b>'+
         (have?' <span style="color:#8d7b6a">已有 ×'+have+'</span>':'')+
         '<div>下次售價 '+CO+c.toLocaleString()+(have?'（原價 '+d.cost.toLocaleString()+'）':'')+'</div></div>'+
         '<button class="pbtn gold" onclick="buyDeco(\''+d.k+'\')" '+(can?'':'disabled')+'>購買</button></div>';
