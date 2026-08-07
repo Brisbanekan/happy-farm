@@ -426,20 +426,17 @@
   .pkC{position:relative;width:26px;height:36px;border-radius:4px;background:#fdfaf2;
     border:1px solid #cdc5b4;box-shadow:0 1px 3px #0004;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;font-weight:900;}
-  /* 牌面：點數與花色一律上下堆疊，並排會在 26px 寬的牌上擠成一團 */
-  .pkC .ct,.pkC .cb{position:absolute;display:flex;flex-direction:column;align-items:center;
-    line-height:0.92;font-size:7.5px;}
-  .pkC .ct{left:2px;top:2px;}
-  .pkC .cb{right:2px;bottom:2px;transform:rotate(180deg);}
-  .pkC .cm{display:flex;flex-direction:column;align-items:center;line-height:0.9;}
-  .pkC .cm i{font-style:normal;font-size:13px;}
-  .pkC .cm em{font-style:normal;font-size:11px;margin-top:1px;}
+  /* 牌面：只放置中的「點數在上、花色在下」。
+     小牌若同時放角落索引與中央大字，兩者一定會重疊——實機截圖就是這樣糊成一團。 */
+  .pkC .cm{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    line-height:0.86;width:100%;}
+  .pkC .cm i{font-style:normal;font-size:15px;letter-spacing:-0.5px;}
+  .pkC .cm em{font-style:normal;font-size:13px;}
   .pkC.r{color:#c62828;} .pkC.b{color:#20232a;}
   .pkC.back{background:repeating-linear-gradient(45deg,#2b5aa8 0 6px,#1e458a 6px 12px);
     border-color:#16336a;color:transparent;}
-  .pkC.big{width:44px;height:62px;}
-  .pkC.big .cm i{font-size:23px;} .pkC.big .cm em{font-size:18px;}
-  .pkC.big .ct,.pkC.big .cb{font-size:10px;}
+  .pkC.big{width:46px;height:64px;}
+  .pkC.big .cm i{font-size:26px;} .pkC.big .cm em{font-size:22px;}
   .pkCenter{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
     text-align:center;width:min(88%,430px);}
   .pkBoard{display:flex;gap:5px;justify-content:center;min-height:62px;}
@@ -492,12 +489,10 @@
   body.narrow .pkCards{margin:2px 0 1px;gap:2px;}
   body.narrow .pkRow{font-size:8px;}
   body.narrow .pkRow.bet{display:none;}                 /* 下注額改顯示在狀態列 */
-  body.narrow .pkC{width:20px;height:28px;}
-  body.narrow .pkC .cm i{font-size:10px;} body.narrow .pkC .cm em{font-size:8px;margin-top:0;}
-  body.narrow .pkC .ct,body.narrow .pkC .cb{display:none;}   /* 太小，只留中央 */
-  body.narrow .pkC.big{width:32px;height:45px;}
-  body.narrow .pkC.big .cm i{font-size:16px;} body.narrow .pkC.big .cm em{font-size:13px;}
-  body.narrow .pkC.big .ct{display:flex;font-size:6.5px;left:1px;top:1px;}
+  body.narrow .pkC{width:22px;height:30px;}
+  body.narrow .pkC .cm i{font-size:11px;} body.narrow .pkC .cm em{font-size:10px;}
+  body.narrow .pkC.big{width:34px;height:47px;}
+  body.narrow .pkC.big .cm i{font-size:18px;} body.narrow .pkC.big .cm em{font-size:16px;}
   body.narrow .pkBoard{min-height:43px;gap:3px;}
   body.narrow .pkBtn{padding:6px 4px;font-size:11.5px;}
   body.narrow .pkPot{font-size:11px;padding:2px 9px;} body.narrow .pkStage{font-size:10px;}
@@ -1628,8 +1623,8 @@ function slLayout(){   // 依 VW()/VH()(SIM-aware) 算盤面寬與壓縮模式�
 }
 function exitSlot(){
   if(slotSpinning)return;
-  if(PK&&!PK.over){ toast("牌局進行中，請先打完這一手"); return; }
-  if(PK&&PK.over){ pkFinish(); }
+  // 牌局中途也能回農場：狀態存進存檔，回來接著打（不再擋人）
+  if(PK){ pkSave(); if(!PK.over)toast("牌局保留中，隨時回來接著打"); }
   document.getElementById("scene").classList.remove("s-slot"); syncCanvasBg();
   const sb=document.getElementById("simBtn"); if(sb)sb.style.display="";
   render();
@@ -2225,6 +2220,17 @@ const PK_SB=25, PK_BB=50;        // 盲注
 const PK_BUYIN_MIN=2000;         // 最低入場金幣
 
 let PK=null;   // 牌局狀態
+/* 牌局要能存檔：玩家中途回農場、甚至關掉重開，都得接得回來。
+   不存的話入場的 2,000 籌碼會憑空消失。PK 全是純資料（牌是 {r,s}），直接序列化。 */
+function pkSave(){ try{ G.pk=PK?JSON.parse(JSON.stringify(PK)):null; saveGame(); }catch(e){} }
+function pkRestore(){
+  if(!G||!G.pk||!G.pk.seats)return false;
+  PK=G.pk;
+  PK.log=PK.log||[];
+  if(!PK.over&&PK.turn>=0&&!PK.seats[PK.turn].me)setTimeout(pkStep,900);   // 換電腦行動 → 續跑
+  return true;
+}
+function pkHasGame(){ return !!(PK||(G&&G.pk&&G.pk.seats)); }
 
 function pkMakeDeck(){
   const d=[];
@@ -2236,10 +2242,8 @@ function pkCardHtml(c,big){
   const B=big?' big':'';
   if(!c)return '<div class="pkC'+B+' back"></div>';
   const su=PK_SUITS[c.s], r=PK_RANKS[c.r];
-  const idx='<i>'+r+'</i><em>'+su.s+'</em>';
-  return '<div class="pkC'+B+' '+su.c+'"><span class="ct">'+idx+'</span>'+
-    '<span class="cm"><i>'+r+'</i><em>'+su.s+'</em></span>'+
-    '<span class="cb">'+idx+'</span></div>';
+  // 只放置中的「點數在上、花色在下」。小牌同時放角落索引與中央大字會互相重疊。
+  return '<div class="pkC'+B+' '+su.c+'"><span class="cm"><i>'+r+'</i><em>'+su.s+'</em></span></div>';
 }
 /* ---- 牌型評估：7 選 5，回傳可直接比大小的分數陣列 ---- */
 function pkRank5(cs){
@@ -2308,6 +2312,7 @@ function pkNewHand(){
   PK.toCall=PK_BB; PK.lastRaise=PK_BB;
   PK.seats.forEach(function(p){ if(!p.out){ p.hole=[PK.deck.pop(),PK.deck.pop()]; } });
   PK.turn=pkNext(bb);   // 翻牌前由大盲左手邊先行動
+  pkSave();
   pkLog("── 新牌局　莊家："+PK.seats[PK.btn].n+"　小盲 "+PK.seats[sb].n+" "+PK_SB+"　大盲 "+PK.seats[bb].n+" "+PK_BB);
   pkRender(); pkStep();
 }
@@ -2339,7 +2344,7 @@ function pkAct(i,act,amt){
   }
   p.acted=true;
   PK.turn=pkNext(i);
-  pkRender();
+  pkRender(); pkSave();
   setTimeout(pkStep,80);
 }
 function pkRoundDone(){
@@ -2366,7 +2371,7 @@ function pkNextStage(){
   else if(PK.stage==="turn"){ PK.stage="river"; PK.deck.pop(); PK.board.push(PK.deck.pop()); pkLog("河牌"); }
   else { pkShowdown(); return; }
   PK.turn=pkNext(PK.btn);   // 翻牌後由莊家鈕左手邊先行動
-  pkRender();
+  pkRender(); pkSave();
   if(PK.turn<0){ setTimeout(pkNextStage,700); return; }
   setTimeout(pkStep,700);
 }
@@ -2405,7 +2410,7 @@ function pkShowdown(){
         (pots.length>1?"（"+(pot===pots[0]?"主池":"邊池")+"）":""));
     });
   }
-  pkRender(); pkRenderBar();
+  pkRender(); pkRenderBar(); pkSave();
 }
 function pkFinish(){
   PK.over=true;
@@ -2414,7 +2419,7 @@ function pkFinish(){
   G.gold+=me.chips;
   log("🃏 德州撲克結束：帶回 "+me.chips.toLocaleString()+" "+CO+"（"+(delta>=0?"+":"")+delta.toLocaleString()+"）",delta>=0?"g":"r");
   toast(delta>=0?("🃏 贏了 "+delta.toLocaleString()):("🃏 輸了 "+Math.abs(delta).toLocaleString()));
-  PK=null; renderHUD(); saveGame(); pkRender(); pkRenderBar();
+  PK=null; G.pk=null; renderHUD(); saveGame(); pkRender(); pkRenderBar();
 }
 /* ---- 電腦行動 ---- */
 function pkHandStrength(p){
@@ -2580,7 +2585,7 @@ function pkBuyIn(){
 }
 /* ---- 遊藝場外殼 ---- */
 let arcadeTab="slot";
-function openArcade(){ openSlot(); setArcadeTab(arcadeTab); }
+function openArcade(){ if(!PK)pkRestore(); openSlot(); setArcadeTab(arcadeTab); }
 function setArcadeTab(t){
   arcadeTab=t;
   const sc=document.getElementById("scene"); if(sc)sc.classList.toggle("pk-on",t==="poker");
@@ -5089,6 +5094,7 @@ buildWorld();
 init();
 mktSync();          // 開場先把行情算好，避免首次進股市看到基準價
 syncCanvasBg();     // 畫布底色對齊當前場景，避免實機圓角露出不同顏色
+pkRestore();        // 還原未打完的牌局（中途回農場或重整都接得回來）
 renderDecos();      // 擺出已購買的莊園裝飾
 setScene(G.scene||"farm");
 centerField();
