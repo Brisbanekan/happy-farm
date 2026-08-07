@@ -387,6 +387,14 @@
   #scene.s-slot.pk-on .slFsBanner,#scene.s-slot.pk-on .slMid,#scene.s-slot.pk-on .slBot{display:none!important;}
   #scene.s-slot:not(.pk-on) #pkWrap{display:none!important;}
   #scene.s-slot.pk-on #slotScene{background:linear-gradient(180deg,#12241c 0%,#0d1a14 100%);}
+  /* 全螢幕場景要連 #scene 自己的底色一起換掉。
+     #stockScene / #slotScene 是 inset:0 的「方形」子元素，蓋不到 #scene 被
+     border-radius 切出來的圓角；那一圈會露出 #scene 自己的背景 ——
+     也就是農場的 background3.png，而它的上緣是天空白雲，
+     所以實機與預覽的角落會出現白色缺角。 */
+  #scene.s-stock{background:#0b0e11;}
+  #scene.s-slot{background:linear-gradient(180deg,#bfe9ff 0%,#dff6e3 45%,#b5e3a0 100%);}
+  #scene.s-slot.pk-on{background:linear-gradient(180deg,#12241c 0%,#0d1a14 100%);}
   #scene.s-slot.pk-on .slTop{background:#0f2018e6;border-bottom-color:#2a4a38;}
   #scene.s-slot.pk-on .slTop .ttl{color:#ffd66e;text-shadow:none;}
   #scene.s-slot.pk-on .arTabs button{background:#1e3a2c;color:#9dc9b0;}
