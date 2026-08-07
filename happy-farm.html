@@ -2422,8 +2422,31 @@ function pkFinish(){
   PK=null; G.pk=null; renderHUD(); saveGame(); pkRender(); pkRenderBar();
 }
 /* ---- 電腦行動 ---- */
+/* ============================================================
+   電腦的牌力評估與決策
+   ------------------------------------------------------------
+   舊版把牌型直接線性映射（sc[0]/8），結果一對只有 0.20、兩對 0.32，
+   比棄牌門檻（約 0.25~0.38）還低 —— 電腦翻牌後既不下注也不跟注，
+   整局變成「翻牌前一堆人棄牌，之後 check 到攤牌」。
+   現在改成依實際強弱校準的對照表，並考慮三件事：
+     · 公共牌本身就成手時，那個牌型大家都有，不算你的優勢
+     · 一對要分頂對還是底對，差很多
+     · 還沒發完的街，聽牌有額外價值
+   ============================================================ */
+const PK_CATV=[0.10,0.34,0.58,0.74,0.84,0.90,0.95,0.985,0.995,1.0];
+/* 聽牌：還有牌要發時，四張同花或開放兩頭順也值得跟 */
+function pkDrawBonus(cards){
+  if(PK.board.length>=5)return 0;
+  const left=5-PK.board.length;
+  const sc={};
+  cards.forEach(c=>sc[c.s]=(sc[c.s]||0)+1);
+  let b=0;
+  if(Math.max.apply(null,Object.keys(sc).map(k=>sc[k]))===4)b=Math.max(b,left>1?0.26:0.16);
+  const rs=[...new Set(cards.map(c=>c.r))].sort((x,y)=>x-y);
+  for(let i=0;i<rs.length-3;i++)if(rs[i+3]-rs[i]===3)b=Math.max(b,left>1?0.20:0.12);
+  return b;
+}
 function pkHandStrength(p){
-  // 用當前可見牌估強度：0~1
   const cards=p.hole.concat(PK.board);
   if(PK.board.length===0){
     const [a,b]=p.hole; const hi=Math.max(a.r,b.r), lo=Math.min(a.r,b.r);
@@ -2434,27 +2457,59 @@ function pkHandStrength(p){
     return Math.max(0,Math.min(1,v));
   }
   const sc=pkBest(cards);
-  return Math.max(0,Math.min(1,sc[0]/8*0.9+(sc[1]||0)/13*0.1));
+  let v=PK_CATV[sc[0]]+((sc[1]||0)/12)*0.05;
+  // 公牌自己就有的對子／三條，是所有人共有的，不算你的優勢
+  const bc={}; PK.board.forEach(c=>bc[c.r]=(bc[c.r]||0)+1);
+  const shared=(sc[0]===1&&bc[sc[1]]>=2)||(sc[0]===3&&bc[sc[1]]>=3);
+  if(sc[0]===1){                                       // 一對：頂對與底對差很多
+    const top=Math.max.apply(null,PK.board.map(c=>c.r));
+    if(shared)v=Math.min(v,0.26);                      // 公牌對，人人有份
+    else v+=(sc[1]>=top)?0.08:-0.11;
+  }else if(shared)v=Math.min(v,0.40);
+  if(PK.board.length>=5){                              // 五張公牌就能直接比：完全沒改善就是共有牌
+    const b5=pkRank5(PK.board);
+    if(pkCmp(sc,b5)===0)v=Math.min(v,0.24);
+    else if(sc[0]===b5[0])v-=0.10;
+  }
+  // 聽牌加成只給「還沒成手」的牌 —— 已經是順子還加聽牌價值是重複計算
+  if(sc[0]<=1)v+=pkDrawBonus(cards);
+  return Math.max(0,Math.min(1,v));
 }
 function pkBotAct(i){
   const p=PK.seats[i];
   const need=PK.toCall-p.bet;
   const st=pkHandStrength(p);
   const aggro=p.style;
-  const potOdds=need>0?need/(PK.pot+PK.seats.reduce((a,q)=>a+q.bet,0)+need):0;
+  const pot=PK.pot+PK.seats.reduce((a,q)=>a+q.bet,0);
+  const potOdds=need>0?need/(pot+need):0;
   const r=Math.random();
-  let want=st+ (r-0.5)*0.18 + (aggro-0.5)*0.14;        // 加一點隨機與個性
+  const want=st+(r-0.5)*0.16+(aggro-0.5)*0.16;
+  const pre=(PK.board.length===0);
+  function raiseTo(frac){
+    const inc=Math.max(PK.lastRaise,Math.round(pot*frac/PK_BB)*PK_BB);
+    return Math.min(p.bet+p.chips, PK.toCall+inc);
+  }
   if(need<=0){
-    if(want>0.62&&r<aggro+0.25){
-      const raise=Math.min(p.bet+p.chips, PK.toCall+Math.max(PK_BB,Math.round(PK.pot*(0.4+aggro*0.5)/PK_BB)*PK_BB));
-      if(raise>PK.toCall){ pkAct(i,"raise",raise); return; }
+    // 沒人下注：主動下注的門檻拉低到 0.45，否則整場只會 check 到攤牌
+    const betAt=pre?0.60:0.45;
+    if(want>betAt&&r<aggro+0.30){
+      const t=raiseTo(0.45+aggro*0.45);
+      if(t>PK.toCall){ pkAct(i,"raise",t); return; }
+    }
+    // 偶爾偷雞：底池沒人要，牌爛也搶一下
+    if(!pre&&want<0.30&&r<aggro*0.16){
+      const t=raiseTo(0.4);
+      if(t>PK.toCall){ pkAct(i,"raise",t); return; }
     }
     pkAct(i,"check"); return;
   }
-  if(want<potOdds*0.85+0.12){ pkAct(i,"fold"); return; }
-  if(want>0.72&&r<aggro+0.2&&p.chips>need){
-    const raise=Math.min(p.bet+p.chips, PK.toCall+Math.max(PK.lastRaise,Math.round(PK.pot*(0.5+aggro*0.6)/PK_BB)*PK_BB));
-    if(raise>PK.toCall+need*0.1){ pkAct(i,"raise",raise); return; }
+  // 面對下注：門檻貼著底池賠率，不再額外加 0.12 的保守稅
+  const foldAt=potOdds*0.95+(pre?0.06:0.02);
+  if(want<foldAt){ pkAct(i,"fold"); return; }
+  const raiseAt=pre?0.68:0.62;
+  if(want>raiseAt&&r<aggro+0.25&&p.chips>need){
+    const t=raiseTo(0.55+aggro*0.55);
+    if(t>PK.toCall+need*0.1){ pkAct(i,"raise",t); return; }
   }
   pkAct(i,"call");
 }
