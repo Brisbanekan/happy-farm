@@ -2318,12 +2318,11 @@ function loadFinNews(){
   const evs=nEventsOfDay(day,kNow).slice().reverse();           // 新的在上
   let h='';
   // 明日農產展望：只給方向性預期，不給數字。時價在倉庫／商店看，判斷交給玩家
+  // 不標「看漲／看跌」——方向藏在文字裡，讓玩家自己讀出來
   const cn=cropNewsFor(day+1);
-  if(cn.length){ const ar=["看平","看漲","強漲"], dr=["看平","看跌","重跌"];
+  if(cn.length){
     h+='<div class="nItem" style="background:#f2f7ef"><span><b>🌾 明日農產展望</b></span><div class="nt">'+
-    cn.map(function(x){ const lbl=(x.dir==="up"?ar:dr)[x.lv];
-      const col=x.lv===0?"#8d7b6a":(x.dir==="up"?"#d32f2f":"#2e7d32");
-      return x.title+' <b style="color:'+col+'">'+lbl+'</b>'; }).join('<br>')+
+    cn.map(function(x){ return x.title; }).join('<br>')+
     '<div style="margin-top:4px;opacity:.7">※ 展望僅供參考，不保證準確</div></div>'; }
   if(!evs.length&&!cn.length)h+='<div class="nt" style="padding:10px">今日尚無重大消息。</div>';
   h+=evs.map(function(e){
