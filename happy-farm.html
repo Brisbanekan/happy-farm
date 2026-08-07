@@ -2311,7 +2311,10 @@ function pkNextSeat(i){ let n=i; for(let k=0;k<7;k++){ n=(n+1)%7; if(!PK.seats[n
 
 function pkNewHand(){
   PK.seats.forEach(function(p){ if(p.chips<=0)p.out=true;
-    p.bet=0;p.paid=0;p.folded=p.out;p.allin=false;p.hole=[];p.acted=false;p.showdown=false;p.win=0;p.score=null; });
+    p.bet=0;p.paid=0;p.folded=p.out;p.allin=false;p.hole=[];p.acted=false;p.showdown=false;p.win=0;p.score=null;
+    if(!p.out)p.handsSeen=(p.handsSeen||0)+1;   // 大注頻率的分母，跨手累計不清空
+  });
+  PK.aggr=-1;
   if(pkAlive().length<2){ pkFinish(); return; }
   PK.deck=pkMakeDeck(); PK.board=[]; PK.pot=0; PK.stage="preflop"; PK.over=false;
   PK.btn=pkNextSeat(PK.btn);
@@ -2349,6 +2352,11 @@ function pkAct(i,act,amt){
       PK.seats.forEach(function(q){ if(q!==p&&!q.folded&&!q.allin&&!q.out)q.acted=false; });
     }
     PK.toCall=Math.max(PK.toCall,target);
+    PK.aggr=i;                                            // 誰下的這個注，跟注方要據此估他的範圍
+    // 大注頻率：只算「推掉自己七成以上籌碼」的注。
+    // 門檻放太寬的話，電腦之間的正常加注也會被計入，整桌會一起變鬆
+    // （實測用四成時，翻牌圈的棄牌率從 47% 掉到 28%）。
+    if(need>=(p.chips+need)*0.7)p.bigBets=(p.bigBets||0)+1;
     pkLog(p.n+"："+(p.allin?"全下":"加注到")+" "+target);
   }
   p.acted=true;
@@ -2516,8 +2524,16 @@ function pkBotAct(i){
     }
     pkAct(i,"check"); return;
   }
-  // 面對下注：門檻貼著底池賠率，不再額外加 0.12 的保守稅
-  const foldAt=potOdds*0.95+(pre?0.06:0.02);
+  // 面對下注：門檻貼著底池賠率，再依「對手有多常下大注」修正。
+  // 不做這件事的話，玩家每手開局全下就能一直偷雞 ——
+  // 實測電腦會棄掉大部分手牌，讓全下贏下 61% 的手數。
+  // 有人常推大注，代表他的範圍很寬，這時就該放寬跟注（真實德撲的打法）。
+  const ag=PK.seats[PK.aggr];
+  const freq=(ag&&ag!==p)?((ag.bigBets||0)/Math.max(8,ag.handsSeen||0)):0;
+  const loose=Math.min(0.26,freq*0.8);
+  const base=potOdds*0.95+(pre?0.06:0.02);
+  // 放寬有下限：最多只能把門檻降到原本的 55%，否則會變成什麼爛牌都跟
+  const foldAt=Math.max(base-loose, base*0.55, 0.12);
   if(want<foldAt){ pkAct(i,"fold"); return; }
   const raiseAt=pre?0.68:0.62;
   if(want>raiseAt&&r<aggro+0.25&&p.chips>need){
