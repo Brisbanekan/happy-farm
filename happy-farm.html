@@ -446,9 +446,9 @@
   .pkChipIco{width:15px;height:15px;border-radius:50%;background:#e0483c;
     box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #e0483c,inset 0 0 0 5px #fff;}
   .pkStage{color:#a9cdb8;font-size:11px;font-weight:700;margin-top:5px;}
-  .pkWinBox{display:none;background:#1a1408;border:2px solid #e0a020;border-radius:11px;
-    padding:6px 14px;margin-bottom:8px;color:#ffd66e;}
-  .pkWinBox.on{display:block;}
+  .pkWinBox{display:none;background:#1a1408f2;border:2px solid #e0a020;border-radius:11px;
+    padding:5px 16px;margin:0 auto 6px;color:#ffd66e;width:fit-content;max-width:100%;}
+  .pkWinBox.on{display:inline-block;}
   .pkWinBox small{display:block;font-size:10px;opacity:.8;}
   .pkWinBox b{font-size:16px;}
   .pkWinCards{display:flex;gap:4px;justify-content:center;margin:5px 0 3px;}
@@ -2391,6 +2391,7 @@ function pkPots(){
   return pots;
 }
 function pkShowdown(){
+  if(PK.over)return;   // 防重入：沒擋的話被呼叫幾次就派發幾次底池，籌碼會憑空增生
   PK.over=true;
   PK.seats.forEach(function(p){ PK.pot+=p.bet; p.bet=0; });
   const live=pkInHand();
