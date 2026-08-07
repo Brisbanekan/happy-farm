@@ -367,6 +367,14 @@
   #world .owndeco{position:absolute;pointer-events:none;transform:translate(-50%,-100%);
     filter:drop-shadow(0 6px 5px #00000038);}
   #world .owndeco img{display:block;width:100%;height:auto;-webkit-user-drag:none;user-drag:none;}
+  /* 擺設模式：可拖曳，並顯示收起鈕 */
+  #world .owndeco.decomove{pointer-events:auto;cursor:move;touch-action:none;
+    outline:2px dashed #ff9800;outline-offset:3px;border-radius:6px;}
+  #world .owndeco.decomove:hover{outline-color:#ffc107;}
+  #world .owndeco .decodel{position:absolute;right:-10px;top:-10px;width:22px;height:22px;
+    border-radius:50%;border:2px solid #fff;background:#e53935;color:#fff;font-size:14px;
+    font-weight:900;line-height:1;cursor:pointer;padding:0;box-shadow:0 2px 4px #0005;}
+  body.decomode .bld[data-act]{pointer-events:none;}   /* 擺設中不要誤開建築面板 */
   .interacthint{position:absolute;left:0;top:0;z-index:45;display:none;transform:translate(-50%,-115%);pointer-events:none;
     background:#3e2b1eea;color:#fff8d6;border:2px solid #ffd66e;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 4px 10px #0004;}
   .interacthint.on{display:block;}
@@ -813,6 +821,7 @@
       <div class="leftbar" id="leftbar">
         <div class="lbtn lbtoggle" onclick="toggleLeftbar()">🎯<small>功能</small></div>
         <div class="lbitems" id="lbItems">
+          <div class="lbtn" id="decoBtn" onclick="toggleDecoMode();closeLeftbar()">🏡<small>擺設</small></div>
           <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
           <div class="lbtn" onclick="openSlot();closeLeftbar()">🎰<small>拉霸</small></div>
           <div class="lbtn" onclick="openStocks();closeLeftbar()">📈<small>股市</small></div>
@@ -1273,7 +1282,7 @@ function normalizeState(){
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
   G.stockOrders=G.stockOrders.filter(o=>allInst().some(s=>s.t===o.t));   // 移除下架標的掛單
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
-  if(!G.decos||typeof G.decos!=="object")G.decos={};   // 莊園裝飾
+  if(!Array.isArray(G.decoItems)&&!(G.decos&&typeof G.decos==="object"))G.decoItems=[];   // 莊園裝飾（實例陣列）
   if(typeof G.upDebt!=="number")G.upDebt=0;             // 維護費欠款
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
@@ -3029,15 +3038,30 @@ function openFactory(){
    而且完全不會破壞平衡的 sink。價格刻意訂得高，因為它要吸收後期的金幣。
    同一款可重複購買，每買一次價格 ×1.6 —— 這樣它永遠花得完。
    ============================================================ */
+/* ┌──────────────────────────────────────────────────────────┐
+   │  裝飾素材設定 —— 要改圖或加新款，只動這一段就好           │
+   ├──────────────────────────────────────────────────────────┤
+   │  換圖：直接覆蓋 deco/ 底下同名的 PNG（透明背景、直立正面） │
+   │  加款：複製一行改 k / n / img / w / cost 即可              │
+   │  調價：改 cost。同款重複購買會 ×DECO_STEP 遞增             │
+   │  調大小：改 w（畫面上的寬度 px，高度自動等比）            │
+   │  排序：陣列順序就是商店裡的顯示順序                        │
+   │  詳細說明見 deco/README.md                                 │
+   └──────────────────────────────────────────────────────────┘
+   k    內部代號，存檔用，訂了就不要再改（改了等於玩家的舊裝飾消失）
+   n    商店與紀錄裡顯示的名稱
+   img  圖檔路徑
+   w    畫在農場上的寬度（px）；實際還會依遠近縮放 0.65~1.0 倍
+   cost 首次售價 */
 const DECOS=[
-  {k:"log",    n:"木樁",   img:"happy-farm-iso/building/d_log.png",          w:70,  cost:15000},
-  {k:"rock",   n:"岩石",   img:"happy-farm-iso/building/d_rock.png",         w:78,  cost:35000},
-  {k:"bush",   n:"灌木叢", img:"happy-farm-iso/building/d_bush.png",         w:88,  cost:80000},
-  {k:"fpink",  n:"粉花圃", img:"happy-farm-iso/building/d_flower_pink.png",  w:82,  cost:180000},
-  {k:"fwhite", n:"白花圃", img:"happy-farm-iso/building/d_flower_white.png", w:82,  cost:180000},
-  {k:"tsmall", n:"小樹",   img:"happy-farm-iso/building/d_tree_small.png",   w:100, cost:400000},
-  {k:"toak",   n:"橡樹",   img:"happy-farm-iso/building/d_tree_oak.png",     w:130, cost:900000},
-  {k:"tpine",  n:"松樹",   img:"happy-farm-iso/building/d_tree_pine.png",    w:120, cost:2000000}
+  {k:"log",    n:"木樁",   img:"deco/log.png",          w:70,  cost:15000},
+  {k:"rock",   n:"岩石",   img:"deco/rock.png",         w:78,  cost:35000},
+  {k:"bush",   n:"灌木叢", img:"deco/bush.png",         w:88,  cost:80000},
+  {k:"fpink",  n:"粉花圃", img:"deco/flower_pink.png",  w:82,  cost:180000},
+  {k:"fwhite", n:"白花圃", img:"deco/flower_white.png", w:82,  cost:180000},
+  {k:"tsmall", n:"小樹",   img:"deco/tree_small.png",   w:100, cost:400000},
+  {k:"toak",   n:"橡樹",   img:"deco/tree_oak.png",     w:130, cost:900000},
+  {k:"tpine",  n:"松樹",   img:"deco/tree_pine.png",    w:120, cost:2000000}
 ];
 const DECO_STEP=1.6;   // 每買一次同款，下一次價格 ×1.6
 /* 擺放位置：預先挑好的空地座標（避開倉庫／農舍／狗屋／工廠與田地），
@@ -3051,42 +3075,109 @@ const DECO_SLOTS=[
      641 個候選點中以最遠點取樣挑 16 個，分布才不會擠在一起。 */
   [520,430],[1160,430],[1320,430],[1070,480],[440,490],[1180,530],[520,550],[1100,580],[1260,580],[520,680],[540,800],[570,920],[80,960],[200,960],[330,960],[450,960]
 ];
-function decoCount(k){ return (G.decos&&G.decos[k])||0; }
+/* 每一件裝飾都是獨立實例，各自記著自己的位置 —— 玩家買了就該能自己擺。
+   舊存檔的 G.decos 是「款式→數量」，載入時自動轉成實例並套用預設位置。 */
+function decoItems(){ if(!Array.isArray(G.decoItems))G.decoItems=[]; return G.decoItems; }
+function decoCount(k){ return decoItems().filter(function(it){return it.k===k;}).length; }
 function decoPrice(k){ const d=DECOS.find(x=>x.k===k); if(!d)return 0;
   return Math.round(d.cost*Math.pow(DECO_STEP,decoCount(k))); }
-function decoTotal(){ let n=0; DECOS.forEach(d=>n+=decoCount(d.k)); return n; }
+function decoTotal(){ return decoItems().length; }
 function decoSpent(){ let g=0; DECOS.forEach(d=>{ for(let i=0;i<decoCount(d.k);i++)g+=Math.round(d.cost*Math.pow(DECO_STEP,i)); }); return g; }
+function decoDefaultPos(n){
+  const slot=DECO_SLOTS[n%DECO_SLOTS.length], ring=Math.floor(n/DECO_SLOTS.length);
+  return {x:slot[0]+ring*26, y:slot[1]+ring*18};
+}
+/* 舊存檔轉換：{log:2} → [{k:"log",...},{k:"log",...}] */
+function decoMigrate(){
+  if(Array.isArray(G.decoItems))return;
+  const items=[]; let n=0;
+  if(G.decos&&typeof G.decos==="object")
+    DECOS.forEach(function(d){ const c=G.decos[d.k]||0;
+      for(let i=0;i<c;i++){ const p=decoDefaultPos(n++); items.push({k:d.k,x:p.x,y:p.y}); } });
+  G.decoItems=items; delete G.decos;
+}
 function buyDeco(k){
   const d=DECOS.find(x=>x.k===k); if(!d)return;
   const c=decoPrice(k);
   if(G.gold<c){toast("金幣不足");return;}
-  G.gold-=c; if(!G.decos)G.decos={}; G.decos[k]=decoCount(k)+1;
-  log("🏡 買下 "+d.n+" ×"+G.decos[k]+"（花費 "+c.toLocaleString()+" "+CO+"）","g");
-  toast(d.n+" 已放進莊園");
+  G.gold-=c;
+  const p=decoDefaultPos(decoItems().length);
+  decoItems().push({k:k,x:p.x,y:p.y});
+  log("🏡 買下 "+d.n+"（花費 "+c.toLocaleString()+" "+CO+"）　可在「🏡 擺設」模式拖曳調位置","g");
+  toast(d.n+" 已放進莊園，可拖曳調位置");
   renderHUD(); saveGame(); renderDecos(); openShop("deco");
 }
+function decoRemove(idx){
+  const it=decoItems()[idx]; if(!it)return;
+  const d=DECOS.find(x=>x.k===it.k);
+  decoItems().splice(idx,1);
+  log("🏡 收起 "+(d?d.n:"裝飾"),"b"); toast("已收進倉庫（可重新購買）");
+  saveGame(); renderDecos();
+}
+/* 景深：放得越遠（y 越小）畫得越小，否則遠景的東西會像浮在半空 */
+function decoDepth(y){ return Math.max(0.62,Math.min(1,0.65+0.35*(y-430)/530)); }
 function renderDecos(){
   const w=document.querySelector("#world .wcontent")||document.getElementById("world");
   if(!w)return;
+  decoMigrate();
   w.querySelectorAll(".owndeco").forEach(function(el){el.remove();});
-  let i=0;
-  DECOS.forEach(function(d){
-    for(let n=0;n<decoCount(d.k);n++){
-      const slot=DECO_SLOTS[i%DECO_SLOTS.length];
-      const ring=Math.floor(i/DECO_SLOTS.length);        // 位置用完就往旁邊錯開，不會完全重疊
-      const x=slot[0]+ring*26, y=slot[1]+ring*18;
-      // 景深：放得越遠（y 越小）畫得越小，否則遠景的東西會像浮在半空
-      const depth=Math.max(0.62,Math.min(1,0.65+0.35*(y-430)/530));
-      const el=document.createElement("div");
-      el.className="owndeco";
-      el.style.left=x+"px";
-      el.style.top=y+"px";
-      el.style.width=Math.round(d.w*depth)+"px";
-      el.style.zIndex=String(2+Math.round(y/10));   // 近的蓋住遠的
-      el.innerHTML='<img src="'+d.img+'" alt="'+d.n+'">';
-      w.appendChild(el); i++;
-    }
+  decoItems().forEach(function(it,idx){
+    const d=DECOS.find(x=>x.k===it.k); if(!d)return;
+    const depth=decoDepth(it.y);
+    const el=document.createElement("div");
+    el.className="owndeco"+(decoMode?" decomove":"");
+    el.dataset.idx=idx;
+    el.style.left=it.x+"px"; el.style.top=it.y+"px";
+    el.style.width=Math.round(d.w*depth)+"px";
+    el.style.zIndex=String(2+Math.round(it.y/10));   // 近的蓋住遠的
+    el.innerHTML='<img src="'+d.img+'" alt="'+d.n+'">'+
+      (decoMode?'<button class="decodel" title="收起">×</button>':'');
+    if(decoMode)decoBindDrag(el,idx);
+    w.appendChild(el);
   });
+}
+/* ---- 擺設模式：拖曳調位置 ---- */
+let decoMode=false;
+function toggleDecoMode(){
+  if(typeof editOn!=="undefined"&&editOn){toast("請先關閉佈局編輯模式");return;}
+  decoMode=!decoMode;
+  document.body.classList.toggle("decomode",decoMode);
+  const b=document.getElementById("decoBtn"); if(b)b.classList.toggle("on",decoMode);
+  renderDecos();
+  toast(decoMode?"🏡 擺設模式：拖曳裝飾調位置，× 可收起":"✅ 擺設完成，位置已存檔");
+  if(!decoMode)saveGame();
+}
+function decoBindDrag(el,idx){
+  const del=el.querySelector(".decodel");
+  if(del)del.addEventListener("click",function(ev){ev.stopPropagation();decoRemove(idx);});
+  function down(e){
+    if(!decoMode)return;
+    if(e.target&&e.target.classList&&e.target.classList.contains("decodel"))return;
+    e.stopPropagation(); if(e.cancelable)e.preventDefault();   // 擋掉世界平移
+    const it=decoItems()[idx]; if(!it)return;
+    const p=e.touches?e.touches[0]:e;
+    const st={x:p.clientX,y:p.clientY,l:it.x,t:it.y};
+    function mv(ev){
+      const q=ev.touches?ev.touches[0]:ev;
+      const k=(worldScale||1)*((typeof SIM!=="undefined"&&SIM)?simScale:1);   // 螢幕位移 → 世界座標
+      it.x=Math.round(Math.max(30,Math.min(1370,st.l+(q.clientX-st.x)/k)));
+      it.y=Math.round(Math.max(260,Math.min(990,st.t+(q.clientY-st.y)/k)));
+      const d=DECOS.find(x=>x.k===it.k), depth=decoDepth(it.y);
+      el.style.left=it.x+"px"; el.style.top=it.y+"px";
+      el.style.width=Math.round(d.w*depth)+"px";
+      el.style.zIndex=String(2+Math.round(it.y/10));
+      if(ev.cancelable)ev.preventDefault();
+    }
+    function up(){
+      window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);
+      window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);
+      saveGame();
+    }
+    window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
+    window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
+  }
+  el.addEventListener("mousedown",down);
+  el.addEventListener("touchstart",down,{passive:false});
 }
 
 /* ============================================================
@@ -4037,6 +4128,7 @@ function panDown(e){
   const m=document.getElementById("mask"); if(m&&m.classList.contains("on"))return;
   if(e.touches&&e.touches.length>=2){ pinchActive=true; dragActive=false; pinchDist=tDist(e); return; }  // 雙指=縮放
   // 觸碰到 UI 時不啟動拖曳，讓選單可正常滑動/點擊
+  if(decoMode&&e.target&&e.target.closest&&e.target.closest('.owndeco'))return;   // 擺設模式：拖裝飾不要拖到世界
   if(e.target&&e.target.closest&&e.target.closest('.dock,.leftbar,.topmenu,.tools,.hud,.sceneswitch,.ranchui,.logpanel,.logbtn,#simBtn,#stockScene,#slotScene,.visitbar'))return;
   const _bld=e.target&&e.target.closest&&e.target.closest('#world .bld[data-act]');   // 描圖判斷：只有壓在建築實體(不透明像素)才擋平移；矩形框內的透明草地照舊可拖
   if(_bld){ const _img=_bld.querySelector('img'); const _p=e.touches?e.touches[0]:e;
