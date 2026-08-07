@@ -1672,7 +1672,7 @@ function openProfile(tab){
     '<div class="pgrid">'+
     '<div class="pbox"><small>💰 金幣</small><b>'+Math.floor(G.gold).toLocaleString()+'</b></div>'+
     '<div class="pbox"><small>💎 鑽石</small><b>'+G.credit+'</b></div>'+
-    '<div class="pbox"><small>❤️ 魅力</small><b>'+G.charm+'</b></div>'+
+    '<div class="pbox"><small>❤️ 魅力</small><b>'+charmAll()+(decoCharm()?'<span style="font-size:11px;color:#8d7b6a">（含裝飾 +'+decoCharm()+'）</span>':'')+'</b></div>'+
     '<div class="pbox"><small>🌾 農地</small><b>'+unlocked+'/'+G.plots.length+' 塊</b></div>'+
     '<div class="pbox"><small>🎒 倉庫作物</small><b>'+crops+'</b></div>'+
     '<div class="pbox"><small>🌱 種子</small><b>'+seeds+'</b></div>'+
@@ -2809,7 +2809,7 @@ function sellAnimal(i){
 function renderHUD(){
   document.getElementById("goldChip").innerHTML='<span class=coinico></span> '+G.gold;
   document.getElementById("creditChip").textContent="💎 "+G.credit;
-  document.getElementById("charmChip").textContent="❤️ "+G.charm;
+  document.getElementById("charmChip").textContent="❤️ "+charmAll();
   document.getElementById("lvBadge").textContent=G.level;
   const need=XP_NEED(G.level);
   document.getElementById("xpFill").style.width=Math.min(100,G.xp/need*100)+"%";
@@ -2959,13 +2959,14 @@ function fSlots(){const lv=fLv();return 1+(lv>=4?1:0)+(lv>=7?1:0);}
 function fSellBonus(){const lv=fLv();return 1+(lv>=10?0.15:lv>=8?0.12:lv>=5?0.05:0);}   // 全域賣價（作物＋加工品）
 function fGrowB(){const lv=fLv();return lv>=6?0.10:lv>=2?0.05:0;}     // 全作物成長加成
 function fAnimB(){const lv=fLv();return lv>=7?0.10:lv>=3?0.05:0;}     // 牧場動物生產加成
-function fHazM(){const lv=fLv();return lv>=9?0.6:lv>=8?0.7:lv>=4?0.8:1;}   // 田地異常發生率倍率
+function fHazM(){const lv=fLv();const base=lv>=9?0.6:lv>=8?0.7:lv>=4?0.8:1;
+  return base*(1-decoHazCut());}   // 田地異常發生率倍率（含莊園裝飾）
 function fQtyB(){return 0;}   // 原本 Lv8 給 +1 顆收成，那讓高階玩家產出再多 20%，已移除
-function fXpB(){return fLv()>=10?0.10:0;}                              // 全經驗加成
+function fXpB(){return (fLv()>=10?0.10:0)+decoXpB();}                  // 全經驗加成（含莊園裝飾）
 function buffOn(k){const b=G.buffs||{};const t=Date.now();return !!((b[k]&&b[k]>t)||(b.all&&b.all>t));}
 function upFactory(){
   const nl=G.factory.lv+1, c=FLV[nl]; if(!c){toast("工廠已滿級");return;}
-  if(G.charm<c.charm){toast("魅力不足（需 ❤️"+c.charm+"）");return;}
+  if(charmAll()<c.charm){toast("魅力不足（需 ❤️"+c.charm+"）");return;}
   if(G.gold<c.gold){toast("金幣不足");return;}
   G.gold-=c.gold; G.factory.lv=nl;
   log("🏭 工廠升級 Lv."+nl+"！"+c.fx,"g"); toast("🏭 工廠 Lv."+nl);
@@ -3003,7 +3004,7 @@ function openFactory(){
   const c=FLV[f.lv+1];
   if(c){const can=G.gold>=c.gold&&G.charm>=c.charm;
     h+='<div style="background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px">'+
-      '<b>升級 Lv.'+(f.lv+1)+'</b>：'+c.fx+'<br>需 <span class=coinico></span>'+c.gold.toLocaleString()+'＋魅力門檻 ❤️'+c.charm+'（目前 ❤️'+G.charm+'）'+
+      '<b>升級 Lv.'+(f.lv+1)+'</b>：'+c.fx+'<br>需 <span class=coinico></span>'+c.gold.toLocaleString()+'＋魅力門檻 ❤️'+c.charm+'（目前 ❤️'+charmAll()+'）'+
       '<button class="pbtn gold" style="float:right;margin-top:-18px" onclick="upFactory()" '+(can?'':'disabled')+'>升級</button><div style="clear:both"></div></div>';}
   else h+='<p class="hint">🎉 已達最高等級 Lv.10</p>';
   h+='<p class="hint" style="margin:2px 0 8px">佇列 '+f.q.length+'/'+fSlots()+'｜加工時間 ×'+fSpeed().toFixed(1)+
@@ -3053,17 +3054,36 @@ function openFactory(){
    img  圖檔路徑
    w    畫在農場上的寬度（px）；實際還會依遠近縮放 0.65~1.0 倍
    cost 首次售價 */
+/* ┌──────────────────────────────────────────────────────────┐
+   │  裝飾素材設定 —— 要改圖、改價、改加成，只動這一段就好      │
+   ├──────────────────────────────────────────────────────────┤
+   │  換圖：直接覆蓋 deco/ 底下同名的 PNG（透明背景、直立正面） │
+   │  加款：複製一行改 k / n / img / w / cost / charm 即可      │
+   │  詳細說明見 deco/README.md                                 │
+   └──────────────────────────────────────────────────────────┘
+   k     內部代號，存檔用，訂了就不要再改（改了等於玩家的舊裝飾消失）
+   n     商店與紀錄裡顯示的名稱
+   img   圖檔路徑
+   w     畫在農場上的寬度（px）；實際還會依遠近縮放 0.65~1.0 倍
+   cost  首次售價（同款重複購買會 ×DECO_STEP 遞增）
+   charm 擁有期間持續提供的魅力值
+
+   為什麼加成只給魅力／經驗／異常率，不給金幣類：
+     成長速度、賣價、收成量、動物產出都會直接放大金幣產出，
+     那會把好不容易壓下來的產出再吹回去。
+     魅力是工廠升級與高階作物的門檻、本身不產金；
+     經驗只加速解鎖；異常率是體驗改善。三者都不會讓錢變多。 */
 const DECOS=[
-  {k:"log",    n:"木樁",   img:"deco/log.png",          w:70,  cost:15000},
-  {k:"rock",   n:"岩石",   img:"deco/rock.png",         w:78,  cost:35000},
-  {k:"bush",   n:"灌木叢", img:"deco/bush.png",         w:88,  cost:80000},
-  {k:"fpink",  n:"粉花圃", img:"deco/flower_pink.png",  w:82,  cost:180000},
-  {k:"fwhite", n:"白花圃", img:"deco/flower_white.png", w:82,  cost:180000},
-  {k:"tsmall", n:"小樹",   img:"deco/tree_small.png",   w:100, cost:400000},
-  {k:"toak",   n:"橡樹",   img:"deco/tree_oak.png",     w:130, cost:900000},
-  {k:"tpine",  n:"松樹",   img:"deco/tree_pine.png",    w:120, cost:2000000}
+  {k:"log",    n:"木樁",   img:"deco/log.png",          w:70,  cost:3000,   charm:1},
+  {k:"rock",   n:"岩石",   img:"deco/rock.png",         w:78,  cost:6000,   charm:2},
+  {k:"bush",   n:"灌木叢", img:"deco/bush.png",         w:88,  cost:12000,  charm:3},
+  {k:"fpink",  n:"粉花圃", img:"deco/flower_pink.png",  w:82,  cost:25000,  charm:5},
+  {k:"fwhite", n:"白花圃", img:"deco/flower_white.png", w:82,  cost:25000,  charm:5},
+  {k:"tsmall", n:"小樹",   img:"deco/tree_small.png",   w:100, cost:50000,  charm:8},
+  {k:"toak",   n:"橡樹",   img:"deco/tree_oak.png",     w:130, cost:120000, charm:12},
+  {k:"tpine",  n:"松樹",   img:"deco/tree_pine.png",    w:120, cost:250000, charm:18}
 ];
-const DECO_STEP=1.6;   // 每買一次同款，下一次價格 ×1.6
+const DECO_STEP=1.35;   // 每買一次同款，下一次價格 ×1.35
 /* 擺放位置：預先挑好的空地座標（避開倉庫／農舍／狗屋／工廠與田地），
    依購買順序填入，滿了才繞回來略微錯開 —— 隨機灑會蓋到建築物。 */
 const DECO_SLOTS=[
@@ -3114,6 +3134,16 @@ function decoRemove(idx){
   log("🏡 收起 "+(d?d.n:"裝飾"),"b"); toast("已收進倉庫（可重新購買）");
   saveGame(); renderDecos();
 }
+/* ---- 莊園氣派：裝飾提供的加成 ----
+   一律走「不產金」的參數。上限存在的理由是避免無限堆疊變成必買。 */
+function decoCharm(){ let c=0;
+  decoItems().forEach(function(it){ const d=DECOS.find(x=>x.k===it.k); if(d)c+=d.charm||0; });
+  return c; }
+function decoXpB(){ return Math.min(0.15,decoCharm()*0.002); }    // 經驗最多 +15%（75 魅力封頂）
+function decoHazCut(){ return Math.min(0.25,decoCharm()*0.003); } // 田地異常最多 -25%（84 魅力封頂）
+/* 魅力總值＝自己累積的＋裝飾提供的。所有門檻判定都要用這個，不能直接用 G.charm */
+function charmAll(){ return Math.floor((G.charm||0)+decoCharm()); }
+
 /* 景深：放得越遠（y 越小）畫得越小，否則遠景的東西會像浮在半空 */
 function decoDepth(y){ return Math.max(0.62,Math.min(1,0.65+0.35*(y-430)/530)); }
 function renderDecos(){
@@ -3282,7 +3312,11 @@ function openShop(tab){
   }else if(tab==="fert"){
     desc='<p class="hint"><span class=coinico></span>金幣買一般肥料；💎藍幣買高級肥料與大蟲殺蟲劑。</p>';
   }else if(tab==="deco"){
-    desc='<p class="hint">🏡 裝飾不影響任何數值，純粹擺著好看。同一款可重複買，每買一次價格 ×'+DECO_STEP+'。<br>目前擁有 '+decoTotal()+' 件，累計投入 '+CO+decoSpent().toLocaleString()+'。</p>';
+    desc='<p class="hint">🏡 裝飾提供 <b>❤️ 魅力</b>（工廠升級與高階作物的門檻），'+
+      '累積魅力還會換成 <b>⭐ 經驗加成</b>與<b>🚿 田地異常率下降</b>。<br>'+
+      '目前 '+decoTotal()+' 件｜魅力 +'+decoCharm()+'｜經驗 +'+(decoXpB()*100).toFixed(1)+'%（上限 15%）'+
+      '｜異常 -'+(decoHazCut()*100).toFixed(1)+'%（上限 25%）<br>'+
+      '同款可重複買，每次價格 ×'+DECO_STEP+'。買了可在左下「🏡 擺設」拖曳調位置。</p>';
   }else{
     desc='<p class="hint">🌱 買種子種到田裡，成長後收成可賣錢或加工。</p>';
   }
@@ -3294,7 +3328,7 @@ function openShop(tab){
         '<img src="'+d.img+'" alt="" style="max-width:36px;max-height:36px;object-fit:contain"></span>'+
         '<div class="meta"><b>'+d.n+'</b>'+
         (have?' <span style="color:#8d7b6a">已有 ×'+have+'</span>':'')+
-        '<div>下次售價 '+CO+c.toLocaleString()+(have?'（原價 '+d.cost.toLocaleString()+'）':'')+'</div></div>'+
+        '<div>❤️ 魅力 +'+d.charm+'　｜　下次售價 '+CO+c.toLocaleString()+(have?'（原價 '+d.cost.toLocaleString()+'）':'')+'</div></div>'+
         '<button class="pbtn gold" onclick="buyDeco(\''+d.k+'\')" '+(can?'':'disabled')+'>購買</button></div>';
     });
     h+='</div>';showM(h);return;
@@ -3325,8 +3359,8 @@ function openShop(tab){
       h+='<div class="shopitem"><span class="e">'+f.emoji+'</span><div class="meta"><b>'+f.name+'</b><div>'+f.desc+'</div></div><button class="pbtn '+(f.cur==="blue"?"blue":"gold")+'" onclick="buyFert(\''+k+'\')" '+(can?'':'disabled')+'>'+cur+f.cost+'</button></div>';});
   }else{
     let cropOpen="",cropLocked="",cropLockedCount=0;
-    keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||G.charm<cr;
-      let req=[];if(G.level<c.lvl)req.push("Lv."+c.lvl);if(G.charm<cr)req.push("❤️"+cr);
+    keys.filter(k=>CROPS[k].type===tab).forEach(k=>{const c=CROPS[k];const cr=c.charmReq||0;const locked=G.level<c.lvl||charmAll()<cr;
+      let req=[];if(G.level<c.lvl)req.push("Lv."+c.lvl);if(charmAll()<cr)req.push("❤️"+cr);
       let btn;
       if(locked){ btn='<button class="pbtn gold" disabled>'+CO+c.cost+'</button>'; }
       else { btn='<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end">'+
@@ -3342,10 +3376,10 @@ function openShop(tab){
   }
   h+='</div>';showM(h);
 }
-function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();saveGame();openShop(c.type);}
+function buySeed(k){const c=CROPS[k];if(G.level<c.lvl||charmAll()<(c.charmReq||0)||G.gold<c.cost)return;G.gold-=c.cost;G.seeds[k]=(G.seeds[k]||0)+1;toast("買了 "+c.name+" 種子");renderHUD();saveGame();openShop(c.type);}
 function bqClamp(k){const el=document.getElementById("bq_"+k);if(!el)return;let n=parseInt(el.value)||1;if(n<1)n=1;el.value=n;}
 function bqStep(k,d){const el=document.getElementById("bq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;if(n<1)n=1;el.value=n;}
-function buySeedQty(k){const c=CROPS[k];if(G.level<c.lvl||G.charm<(c.charmReq||0)){toast("尚未解鎖");return;}const el=document.getElementById("bq_"+k);let n=Math.max(1,parseInt(el&&el.value)||1);const maxAfford=Math.floor(G.gold/c.cost);if(maxAfford<1){toast("金幣不足");return;}if(n>maxAfford){n=maxAfford;toast("金幣只夠買 "+n+" 個");}G.gold-=c.cost*n;G.seeds[k]=(G.seeds[k]||0)+n;toast("買了 "+c.name+" 種子 ×"+n);renderHUD();saveGame();openShop(c.type);}
+function buySeedQty(k){const c=CROPS[k];if(G.level<c.lvl||charmAll()<(c.charmReq||0)){toast("尚未解鎖");return;}const el=document.getElementById("bq_"+k);let n=Math.max(1,parseInt(el&&el.value)||1);const maxAfford=Math.floor(G.gold/c.cost);if(maxAfford<1){toast("金幣不足");return;}if(n>maxAfford){n=maxAfford;toast("金幣只夠買 "+n+" 個");}G.gold-=c.cost*n;G.seeds[k]=(G.seeds[k]||0)+n;toast("買了 "+c.name+" 種子 ×"+n);renderHUD();saveGame();openShop(c.type);}
 function buyFert(k){const f=FERTS[k];if(f.cur==="blue"){if(G.credit<f.cost)return;G.credit-=f.cost;}else{if(G.gold<f.cost)return;G.gold-=f.cost;}G.ferts[k]=(G.ferts[k]||0)+1;toast("買了 "+f.name);renderHUD();openShop("fert");}
 
 /* ============ 倉庫 / 種子 ============ */
