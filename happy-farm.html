@@ -948,26 +948,26 @@
 <script>
 /* ============ 資料設定 ============ */
 const CROPS = {
-  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:10,  sell:20,  grow:24, xp:6},
-  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:16,  sell:32,  grow:34, xp:8},
-  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:28,  sell:55,  grow:44, xp:11},
-  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:45,  sell:92,  grow:56, xp:15},
-  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:70,  sell:150, grow:70, xp:20},
-  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:110, sell:240, grow:86, xp:28},
-  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:140, sell:310, grow:96, xp:34},
-  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:180, sell:420, grow:108,xp:42},
-  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:230, sell:550, grow:120,xp:50},
-  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:300, sell:720, grow:132,xp:60},
-  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:420, sell:1050,grow:150,xp:78},
-  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:600, sell:1600,grow:170,xp:100},
-  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:850, sell:2400,grow:190,xp:128},
-  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:1200,sell:3600,grow:215,xp:165},
-  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:40,  sell:70,  grow:52, xp:14, charm:1},
-  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:90,  sell:170, grow:74, xp:24, charm:2},
-  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:160, sell:300, grow:92, xp:32, charm:3},
-  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:280, sell:540, grow:115,xp:48, charm:4},
-  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:450, sell:900, grow:140,xp:70, charm:6},
-  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:170,xp:100,charm:8},
+  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:10,  sell:20,  grow:25, xp:6},
+  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:16,  sell:32,  grow:35, xp:8},
+  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:28,  sell:55,  grow:50, xp:11},
+  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:45,  sell:92,  grow:80, xp:15},
+  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:70,  sell:150, grow:115, xp:20},
+  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:110, sell:240, grow:165, xp:28},
+  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:140, sell:310, grow:190, xp:34},
+  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:180, sell:420, grow:230,xp:42},
+  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:230, sell:550, grow:270,xp:50},
+  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:300, sell:720, grow:315,xp:60},
+  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:420, sell:1050,grow:410,xp:78},
+  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:600, sell:1600,grow:560,xp:100},
+  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:850, sell:2400,grow:755,xp:128},
+  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:1200,sell:3600,grow:1015,xp:165},
+  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:40,  sell:70,  grow:65, xp:14, charm:1},
+  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:90,  sell:170, grow:130, xp:24, charm:2},
+  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:160, sell:300, grow:185, xp:32, charm:3},
+  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:280, sell:540, grow:265,xp:48, charm:4},
+  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:450, sell:900, grow:360,xp:70, charm:6},
+  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:495,xp:100,charm:8},
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
@@ -1268,6 +1268,8 @@ function normalizeState(){
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
   G.stockOrders=G.stockOrders.filter(o=>allInst().some(s=>s.t===o.t));   // 移除下架標的掛單
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
+  if(!G.decos||typeof G.decos!=="object")G.decos={};   // 莊園裝飾
+  if(typeof G.upDebt!=="number")G.upDebt=0;             // 維護費欠款
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
   if(typeof G.factory.lv!=="number"||G.factory.lv<1)G.factory.lv=1;
@@ -1400,6 +1402,7 @@ function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toI
 function dailyCheck(){
   const today=todayStr();
   if(G.lastMarketDate!==today){ updateMarket(); G.lastMarketDate=today; }
+  upkeepCheck();
   if(G.lastClaim!==today){ toast("🎁 每日登入獎勵可領取！"); log("🎁 今日登入獎勵可領取（點底部 🎁 每日）","b"); }
 }
 function rewardText(r){let a=[];if(r.g)a.push("<span class=coinico></span>"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+seedName(k)+"×"+n));return a.join(" ");}
@@ -1641,6 +1644,17 @@ function openProfile(tab){
     const need=XP_NEED(G.level);
     body=
     '<div class="pcard"><div class="pav">🧑‍🌾</div><div style="flex:1"><b>'+farmLabel()+'</b><br><small>Lv.'+G.level+'（XP '+G.xp+'/'+need+'）</small></div><button class="pbtn" style="padding:5px 10px;flex-shrink:0" onclick="renameFarm()">✏️ 改名</button></div>'+
+    // 維護費：每天扣一次，欠款會讓收成打折，所以要放在顯眼的地方
+    (function(){ const per=upkeepDaily(), debt=upkeepDebt();
+      if(!per&&!debt)return "";
+      return '<div style="background:'+(debt?'#ffe3e3':'#eef4ff')+';border:2px solid '+(debt?'#e98a8a':'#b8cbe8')+
+        ';border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px">'+
+        '<b>🧾 每日維護費</b>　'+CO+per.toLocaleString()+' / 天'+
+        '<div style="font-size:12px;color:#6b5a45;margin-top:2px">田地與動物越多，維護費越高。</div>'+
+        (debt?('<div style="margin-top:6px;color:#a23b3b;font-weight:800">積欠 '+CO+debt.toLocaleString()+
+          '　收成 -'+Math.round(UPKEEP_DEBT_PENALTY*100)+'%</div>'+
+          '<button class="pbtn gold" style="margin-top:6px" onclick="upkeepPay()">立即結清</button>'):'')+
+        '</div>'; })()+
     '<div class="pgrid">'+
     '<div class="pbox"><small>💰 金幣</small><b>'+Math.floor(G.gold).toLocaleString()+'</b></div>'+
     '<div class="pbox"><small>💎 鑽石</small><b>'+G.credit+'</b></div>'+
@@ -2875,7 +2889,9 @@ function doPlant(i,key){
 }
 function harvest(i){
   const p=G.plots[i];const c=CROPS[p.crop];
-  let qty=4-p.stolen;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty+=fQtyB();qty=Math.max(1,qty);   // 工廠Lv8：收成+1
+  let qty=4-p.stolen;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty+=fQtyB();
+  if(upkeepDebt()>0)qty=Math.round(qty*upkeepMul());   // 積欠維護費：收成打折
+  qty=Math.max(1,qty);
   G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;achStat("harv");gainXp(c.xp);
   if(c.type==="flower"){G.charm+=c.charm;log("收成 "+c.emoji+c.name+" ×"+qty+"，魅力 +"+c.charm+" ❤️","b");}
   else log("收成 "+c.emoji+c.name+" ×"+qty+"！記得到倉庫賣錢","g");
@@ -2919,18 +2935,18 @@ const FLV=[null,null,   // FLV[n]＝升到 n 級的需求；魅力為門檻不�
   {gold:35000, charm:70,  fx:"💰 全域賣價 +5%（作物＋加工品）"},
   {gold:60000, charm:100, fx:"🌱 成長加成升至 +10%、加工速度 -20%"},
   {gold:100000,charm:140, fx:"🐮 生產加成升至 +10%、加工佇列 +1"},
-  {gold:160000,charm:190, fx:"🧺 收成產量 +1 顆、賣價升至 +10%"},
+  {gold:160000,charm:190, fx:"💰 全域賣價升至 +12%、🚿 異常發生率 -30%"},
   {gold:240000,charm:250, fx:"🚿 異常發生率 -40%、加工速度 -30%"},
   {gold:350000,charm:320, fx:"⭐ 全經驗 +10%、賣價升至 +15%（解鎖滿漢農宴禮盒）"}
 ];
 function fLv(){return (G&&G.factory&&G.factory.lv)||1;}
 function fSpeed(){const lv=fLv();return lv>=9?0.7:lv>=6?0.8:lv>=3?0.9:1;}
 function fSlots(){const lv=fLv();return 1+(lv>=4?1:0)+(lv>=7?1:0);}
-function fSellBonus(){const lv=fLv();return 1+(lv>=10?0.15:lv>=8?0.10:lv>=5?0.05:0);}   // 全域賣價（作物＋加工品）
+function fSellBonus(){const lv=fLv();return 1+(lv>=10?0.15:lv>=8?0.12:lv>=5?0.05:0);}   // 全域賣價（作物＋加工品）
 function fGrowB(){const lv=fLv();return lv>=6?0.10:lv>=2?0.05:0;}     // 全作物成長加成
 function fAnimB(){const lv=fLv();return lv>=7?0.10:lv>=3?0.05:0;}     // 牧場動物生產加成
-function fHazM(){const lv=fLv();return lv>=9?0.6:lv>=4?0.8:1;}        // 田地異常發生率倍率
-function fQtyB(){return fLv()>=8?1:0;}                                 // 收成產量 +1
+function fHazM(){const lv=fLv();return lv>=9?0.6:lv>=8?0.7:lv>=4?0.8:1;}   // 田地異常發生率倍率
+function fQtyB(){return 0;}   // 原本 Lv8 給 +1 顆收成，那讓高階玩家產出再多 20%，已移除
 function fXpB(){return fLv()>=10?0.10:0;}                              // 全經驗加成
 function buffOn(k){const b=G.buffs||{};const t=Date.now();return !!((b[k]&&b[k]>t)||(b.all&&b.all>t));}
 function upFactory(){
@@ -2978,7 +2994,7 @@ function openFactory(){
   else h+='<p class="hint">🎉 已達最高等級 Lv.10</p>';
   h+='<p class="hint" style="margin:2px 0 8px">佇列 '+f.q.length+'/'+fSlots()+'｜加工時間 ×'+fSpeed().toFixed(1)+
     '｜🌱成長+'+Math.round(fGrowB()*100)+'%｜🐮生產+'+Math.round(fAnimB()*100)+'%｜🚿異常-'+Math.round((1-fHazM())*100)+'%'+
-    '｜💰賣價+'+Math.round((fSellBonus()-1)*100)+'%'+(fQtyB()?'｜🧺收成+1':'')+(fXpB()?'｜⭐經驗+10%':'')+'</p>';
+    '｜💰賣價+'+Math.round((fSellBonus()-1)*100)+'%'+(fXpB()?'｜⭐經驗+10%':'')+'</p>';
   const bn={grow:"🌱成長+20%",sell:"💰賣價+15%",animal:"🐮生產+20%",xp:"⭐經驗+30%"};
   const act=Object.keys(bn).filter(b=>buffOn(b));
   if(act.length)h+='<div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:8px">加乘中：'+act.map(b=>{const u=Math.max(G.buffs[b]||0,G.buffs.all||0);return bn[b]+"（剩"+Math.ceil((u-now)/60000)+"分）";}).join('、')+'</div>';
@@ -2999,6 +3015,116 @@ function openFactory(){
       '<button class="pbtn gold" onclick="fCraft(\''+k+'\')" '+(ok?'':'disabled')+'>加工</button></div>';});
   h+='<p class="hint">升級需同時滿足金幣與魅力值門檻（魅力不會被扣除）。加工離線也會繼續倒數。</p></div>';
   showM(h);
+}
+
+/* ============================================================
+   莊園裝飾 —— 純消費型的金幣出口
+   ------------------------------------------------------------
+   裝飾不影響任何數值，就是拿來擺著看的。這是玩家最願意花錢、
+   而且完全不會破壞平衡的 sink。價格刻意訂得高，因為它要吸收後期的金幣。
+   同一款可重複購買，每買一次價格 ×1.6 —— 這樣它永遠花得完。
+   ============================================================ */
+const DECOS=[
+  {k:"flowerbed", n:"花圃",     e:"🌷", cost:20000},
+  {k:"bench",     n:"長椅",     e:"🪑", cost:45000},
+  {k:"lamp",      n:"庭園燈",   e:"🏮", cost:90000},
+  {k:"fountain",  n:"噴水池",   e:"⛲", cost:180000},
+  {k:"windmill",  n:"風車",     e:"🎡", cost:360000},
+  {k:"statue",    n:"金牛雕像", e:"🗿", cost:720000},
+  {k:"balloon",   n:"熱氣球台", e:"🎈", cost:1400000},
+  {k:"arch",      n:"玫瑰拱門", e:"⛩️", cost:2800000},
+  {k:"pond",      n:"錦鯉池",   e:"🎏", cost:5600000},
+  {k:"castle",    n:"莊園城堡", e:"🏰", cost:12000000}
+];
+const DECO_STEP=1.6;   // 每買一次同款，下一次價格 ×1.6
+function decoCount(k){ return (G.decos&&G.decos[k])||0; }
+function decoPrice(k){ const d=DECOS.find(x=>x.k===k); if(!d)return 0;
+  return Math.round(d.cost*Math.pow(DECO_STEP,decoCount(k))); }
+function decoTotal(){ let n=0; DECOS.forEach(d=>n+=decoCount(d.k)); return n; }
+function decoSpent(){ let g=0; DECOS.forEach(d=>{ for(let i=0;i<decoCount(d.k);i++)g+=Math.round(d.cost*Math.pow(DECO_STEP,i)); }); return g; }
+function buyDeco(k){
+  const d=DECOS.find(x=>x.k===k); if(!d)return;
+  const c=decoPrice(k);
+  if(G.gold<c){toast("金幣不足");return;}
+  G.gold-=c; if(!G.decos)G.decos={}; G.decos[k]=decoCount(k)+1;
+  log("🏡 買下 "+d.e+d.n+" ×"+G.decos[k]+"（花費 "+c.toLocaleString()+" "+CO+"）","g");
+  toast(d.e+" "+d.n+" 已放進莊園");
+  renderHUD(); saveGame(); renderDecos(); openShop("deco");
+}
+/* 把買到的裝飾擺在農場世界裡（沿用既有的 .deco 樣式，不需要新素材） */
+function renderDecos(){
+  const w=document.querySelector("#world .wcontent")||document.getElementById("world");
+  if(!w)return;
+  w.querySelectorAll(".owndeco").forEach(function(el){el.remove();});
+  let i=0;
+  DECOS.forEach(function(d){
+    for(let n=0;n<decoCount(d.k);n++){
+      const el=document.createElement("div");
+      el.className="deco owndeco";
+      el.textContent=d.e;
+      el.style.left=(120+((i*137)%1120))+"px";
+      el.style.top=(250+((i*211)%230))+"px";
+      el.style.fontSize=(30+((i*7)%14))+"px";
+      w.appendChild(el); i++;
+    }
+  });
+}
+
+/* ============================================================
+   每日維護費 —— 持續性的金幣出口
+   ------------------------------------------------------------
+   為什麼需要：原本遊戲裡所有能買的東西（土地 215 萬＋工廠升級 97 萬＋動物 7 萬）
+   合計約 320 萬，而滿田酪梨一小時就能賺到，之後金幣就只是一個往上跳的數字。
+   一次性 sink 一定會被吃完，只有「隨規模成長的支出」才能長期平衡。
+
+   設計原則：
+     · 依「擁有的資產」計費，不是依收入 —— 擴張才有代價，這才叫維護費
+     · 付不出來不會沒收資產，只會累積欠款並降低收成，隨時可以補繳
+     · 免費的前 6 塊田收得很輕，主要壓力放在後面買的地
+   ============================================================ */
+const UPKEEP_FREE=800;        // 初始免費田每塊每日
+const UPKEEP_RATE=0.03;       // 付費田：每日收購地價的 3%
+const UPKEEP_ANIMAL=0.10;     // 動物飼料：每日收購買價的 10%
+const UPKEEP_DEBT_PENALTY=0.30;   // 欠款期間收成扣減
+function upkeepDaily(){
+  let sum=0;
+  (G.plots||[]).forEach(function(p,i){ if(!p||!p.unlocked)return;
+    const L=LANDS[i]; sum+=(L&&L.price>0)?Math.round(L.price*UPKEEP_RATE):UPKEEP_FREE; });
+  (G.ranch||[]).forEach(function(a){ if(!a||!a.k)return;
+    const A=ANIMALS[a.k]; if(A)sum+=Math.round(A.cost*UPKEEP_ANIMAL); });
+  return sum;
+}
+function upkeepDebt(){ return Math.max(0,Math.round(G.upDebt||0)); }
+/* 欠款時收成打折 —— 不沒收資產，但拖著不繳會愈來愈痛 */
+function upkeepMul(){ return upkeepDebt()>0?(1-UPKEEP_DEBT_PENALTY):1; }
+function upkeepPay(n){
+  const d=upkeepDebt(); if(d<=0){toast("目前沒有欠款");return;}
+  const amt=Math.min(d,n||d,G.gold);
+  if(amt<=0){toast("金幣不足");return;}
+  G.gold-=amt; G.upDebt=d-amt;
+  log("🧾 繳納維護費 "+amt.toLocaleString()+" "+CO+(G.upDebt>0?("，尚欠 "+G.upDebt.toLocaleString()):"，已結清"),"b");
+  toast(G.upDebt>0?("已繳 "+amt.toLocaleString()+"，尚欠 "+G.upDebt.toLocaleString()):"✅ 維護費已結清");
+  renderHUD(); saveGame(); renderGrid();
+}
+/* 每日 09:00 之後第一次進遊戲時結算（沿用行情的日界，時區固定 UTC+8）*/
+function upkeepCheck(){
+  if(!G||!Array.isArray(G.plots))return;
+  const now=Date.now(), day=mktDay(now);
+  if(mktMin(now)<0)return;
+  if(G.upDay==null){ G.upDay=day; return; }      // 第一次只記日期，不補收歷史
+  if(G.upDay>=day)return;
+  let days=Math.min(7,day-G.upDay);              // 久沒玩最多補收 7 天，不讓人一回來就破產
+  G.upDay=day;
+  const per=upkeepDaily(); const bill=per*days;
+  if(bill<=0)return;
+  const pay=Math.min(G.gold,bill);
+  G.gold-=pay;
+  const owe=bill-pay;
+  if(owe>0)G.upDebt=(G.upDebt||0)+owe;
+  log("🧾 維護費結算："+days+" 天 × "+per.toLocaleString()+" ＝ "+bill.toLocaleString()+" "+CO+
+      (owe>0?("（金幣不足，欠款 "+owe.toLocaleString()+"，收成暫時 -"+Math.round(UPKEEP_DEBT_PENALTY*100)+"%）"):""),owe>0?"r":"b");
+  toast(owe>0?("⚠️ 維護費欠款 "+owe.toLocaleString()):("🧾 維護費 -"+bill.toLocaleString()));
+  renderHUD(); saveGame();
 }
 
 /* ============ 經驗 / 升級 ============ */
@@ -3036,7 +3162,8 @@ function openShop(tab){
     '<button class="'+(tab==='crop'?'on':'')+'" onclick="openShop(\'crop\')">🌾 農作物</button>'+
     '<button class="'+(tab==='flower'?'on':'')+'" onclick="openShop(\'flower\')">🌸 花卉</button>'+
     '<button class="'+(tab==='fert'?'on':'')+'" onclick="openShop(\'fert\')">🧴 道具/肥料</button>'+
-    '<button class="'+(tab==='animal'?'on':'')+'" onclick="openShop(\'animal\')">🐮 動物</button></div>';
+    '<button class="'+(tab==='animal'?'on':'')+'" onclick="openShop(\'animal\')">🐮 動物</button>'+
+    '<button class="'+(tab==='deco'?'on':'')+'" onclick="openShop(\'deco\')">🏡 裝飾</button></div>';
   let desc;   // 各分類說明（隨分類凍結在表頭）
   if(tab==="animal"){ const capLeft=Math.max(0,cap-G.ranch.length);
     desc='<div style="font-size:13px;font-weight:800;background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:6px 10px;margin:6px 0 0">'+
@@ -3044,10 +3171,22 @@ function openShop(tab){
       (G.ranch.length>=cap?'　<span class="locktag">已滿，升級增容</span>':'')+'</div>';
   }else if(tab==="fert"){
     desc='<p class="hint"><span class=coinico></span>金幣買一般肥料；💎藍幣買高級肥料與大蟲殺蟲劑。</p>';
+  }else if(tab==="deco"){
+    desc='<p class="hint">🏡 裝飾不影響任何數值，純粹擺著好看。同一款可重複買，每買一次價格 ×'+DECO_STEP+'。<br>目前擁有 '+decoTotal()+' 件，累計投入 '+CO+decoSpent().toLocaleString()+'。</p>';
   }else{
     desc='<p class="hint">🌱 買種子種到田裡，成長後收成可賣錢或加工。</p>';
   }
   let h='<h2>🛒 商店 <button class="x" onclick="closeM()">×</button></h2><div class="mhead">'+tabsHtml+desc+'</div><div class="body">';
+  if(tab==="deco"){
+    DECOS.forEach(function(d){
+      const c=decoPrice(d.k), have=decoCount(d.k), can=G.gold>=c;
+      h+='<div class="shopitem"><span class="e">'+d.e+'</span><div class="meta"><b>'+d.n+'</b>'+
+        (have?' <span style="color:#8d7b6a">已有 ×'+have+'</span>':'')+
+        '<div>下次售價 '+CO+c.toLocaleString()+(have?'（原價 '+d.cost.toLocaleString()+'）':'')+'</div></div>'+
+        '<button class="pbtn gold" onclick="buyDeco(\''+d.k+'\')" '+(can?'':'disabled')+'>購買</button></div>';
+    });
+    h+='</div>';showM(h);return;
+  }
   if(tab==="animal"){
     let animalOpen="",animalLocked="",animalLockedCount=0;
     Object.entries(ANIMALS).forEach(([k,a])=>{
@@ -4229,6 +4368,7 @@ function initBldHit(){
 buildWorld();
 init();
 mktSync();          // 開場先把行情算好，避免首次進股市看到基準價
+renderDecos();      // 擺出已購買的莊園裝飾
 setScene(G.scene||"farm");
 centerField();
 initPan();
