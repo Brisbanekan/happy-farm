@@ -1231,7 +1231,7 @@ const SL_LINES=[
  [1,1,3,1,1],[2,2,0,2,2],[0,3,3,3,0],[3,0,0,0,3],
  [1,3,3,3,1],[2,0,0,0,2]
 ];
-const SL_BETS=[50,100,500,1000];   // 可調押注檔位
+const SL_BETS=[20,50,100,500,1000];   // 可調押注檔位（20 是給剛開局、只有幾塊蘿蔔田的玩家）
 const SL_FS_AWARD=10;              // SCATTER ×3+ 送 10 局
 const SL_WILD_DROP=0.14;           // 免費局灑 WILD 機率(模擬 80 萬轉:觸發率≈10%、總RTP≈97%)
 // 股市：真實標的（皆為美股/台股ADR——TradingView 免費嵌入不含 TWSE 授權，改用 ADR 圖表報價都完整；y = Yahoo 報價代碼）
@@ -1249,14 +1249,14 @@ const SL_WILD_DROP=0.14;           // 免費局灑 WILD 機率(模擬 80 萬轉:
    seed  行情種子——決定這支股票的走勢路徑，改了就是另一條線
    ============================================================ */
 const STOCKS=[
-  {t:"2330", n:"農積電", base:72, volD:.013, volM:.00090, drift:.0008, seed:733001},   // 龍頭：波動最低、緩漲，存股用
-  {t:"2454", n:"農發科", base:60, volD:.020, volM:.00140, drift:.0006, seed:733002},   // 高價科技：中高波動
-  {t:"2308", n:"農達電", base:38, volD:.018, volM:.00125, drift:.0005, seed:733003},   // 中高價
-  {t:"2317", n:"農海",   base:26, volD:.015, volM:.00105, drift:.0004, seed:733004},   // 大型製造：中低波動
-  {t:"2881", n:"農邦金", base:18, volD:.010, volM:.00070, drift:.0003, seed:733005},   // 金融：最牛皮
-  {t:"2610", n:"農航",   base:8,  volD:.030, volM:.00210, drift:.0000, seed:733006},   // 景氣循環：高波動
-  {t:"2002", n:"農鋼",   base:6,  volD:.012, volM:.00085, drift:.0002, seed:733007},   // 牛皮低價股
-  {t:"3481", n:"農創",   base:4,  volD:.035, volM:.00245, drift:.0000, seed:733008}    // 低價高波動：散戶最愛
+  {t:"2330", n:"農積電", base:15, volD:.013, volM:.00090, drift:.0008, seed:733001},   // 龍頭：波動最低、緩漲，存股用
+  {t:"2454", n:"農發科", base:12, volD:.020, volM:.00140, drift:.0006, seed:733002},   // 高價科技：中高波動
+  {t:"2308", n:"農達電", base:8, volD:.018, volM:.00125, drift:.0005, seed:733003},   // 中高價
+  {t:"2317", n:"農海",   base:5.2, volD:.015, volM:.00105, drift:.0004, seed:733004},   // 大型製造：中低波動
+  {t:"2881", n:"農邦金", base:3.6, volD:.010, volM:.00070, drift:.0003, seed:733005},   // 金融：最牛皮
+  {t:"2610", n:"農航",   base:1.6,  volD:.030, volM:.00210, drift:.0000, seed:733006},   // 景氣循環：高波動
+  {t:"2002", n:"農鋼",   base:1.2,  volD:.012, volM:.00085, drift:.0002, seed:733007},   // 牛皮低價股
+  {t:"3481", n:"農創",   base:0.8,  volD:.035, volM:.00245, drift:.0000, seed:733008}    // 低價高波動：散戶最愛
 ];
 // 已下架標的：讀檔時以最後價格結算持倉返還金幣
 // 後 7 支為 2026-08 收斂標的時下架（農達/農月光投控/農華電/農泰金/農信金/農達光/農金寶-DR）
@@ -1456,17 +1456,25 @@ function normalizeState(){
      不能只把成本價等比縮小 —— 那樣損益百分比雖然不變，但玩家的「絕對財富」會蒸發 15 倍
      （2000 股農積電從 210 萬變成 14 萬）。金幣本身沒有改尺度，所以正確做法是
      把所有持股以「改版前的價格」結算成金幣、清掉融資與掛單，總財富完全不變，再讓玩家重新進場。 */
-  if(!G.mktV||G.mktV<2){
+  /* v3（2026-08 第二次）：作物經濟砍到 1/5，但 STOCKS 的 base 是寫死常數沒跟著動，
+     一張農積電 72,000 從「6 分鐘的滿田收入」變成「34 分鐘」—— 比同事當初嫌貴時還貴。
+     股價同樣除以 5，遷移邏輯與 v2 完全相同。 */
+  if(!G.mktV||G.mktV<3){
+    const oldV=G.mktV||1;
     STOCKS.forEach(s=>{const st=G.stocks[s.t]; if(!st)return;
       const sh=st.shares||0;
       if(sh!==0){ const px=(typeof st.price==="number"?st.price:st.avg)||0, av=st.avg||px;
-        const refund=sh>0?(Math.round(px*sh)-(st.debt||0)):Math.round((2*av-px)*(-sh));
+        /* 多單：市值 − 融資負債。空單：保證金 + 未實現損益
+           （v2 時空單是全額擔保，用 2×均價−現價 推回；現在改保證金制，直接用 mgn） */
+        const refund=sh>0?(Math.round(px*sh)-(st.debt||0))
+                         :Math.round((st.mgn||av*(-sh))+(av-px)*(-sh));
         G.gold+=Math.max(0,refund);
         log("📐 股市改版："+s.n+" 持倉以舊價 "+fmtP(px)+" 結算，返還 "+Math.max(0,refund).toLocaleString()+" "+CO,"b"); }
-      st.shares=0; st.avg=0; st.debt=0; st.price=s.base; st.prev=s.base;});
+      st.shares=0; st.avg=0; st.debt=0; st.mgn=0; st.price=s.base; st.prev=s.base;});
     if((G.stockOrders||[]).length)log("📐 股市改版：原有掛單已取消（價格尺度不同）","b");
     G.stockOrders=[];
-    G.mktV=2;
+    if(oldV>=2)log("📐 股價尺度配合作物經濟同步下修 5 倍，1 張農積電從 72,000 變成 15,000","b");
+    G.mktV=3;
   }
   if(!Array.isArray(G.stockOrders))G.stockOrders=[];
   G.stockOrders=G.stockOrders.filter(o=>allInst().some(s=>s.t===o.t));   // 移除下架標的掛單
@@ -2267,8 +2275,19 @@ const PK_BOTS=[
   {n:"阿凱",   av:"poker/av_akai.png",    style:0.72, pers:"莽夫・愛全下，壓迫感重"}
 ];
 const PK_ME_AV="poker/av_me.png";
-const PK_SB=25, PK_BB=50;        // 盲注
-const PK_BUYIN_MIN=2000;         // 最低入場金幣
+/* 兩張桌。作物經濟砍到 1/5 之後，2,000 的買入對「6 塊蘿蔔田」的新玩家
+   要打三分半鐘的田才湊得出來，等於把新手擋在門外；但對滿田玩家只是 56 秒，
+   降價反而會讓賭桌重新變成沒份量的東西。所以不動大桌，只補一張小桌。 */
+const PK_TABLES=[
+  {k:"lo", n:"小桌", sb:5,  bb:10, buyin:500},
+  {k:"hi", n:"大桌", sb:25, bb:50, buyin:2000}
+];
+let pkTbl=1;                     // 目前選的桌（預設大桌，維持舊行為）
+const PK_BUYIN_MIN=PK_TABLES[0].buyin;   // 進得了任何一張桌的門檻
+/* 盲注一律走這兩個函式讀：開打後以 PK 上記錄的為準（存檔／回來接得回），
+   還沒入座時才看選桌。直接用常數會讓小桌沿用大桌盲注。 */
+function pkSB(){ return (PK&&PK.sb)||PK_TABLES[pkTbl].sb; }
+function pkBB(){ return (PK&&PK.bb)||PK_TABLES[pkTbl].bb; }
 
 let PK=null;   // 牌局狀態
 /* 牌局要能存檔：玩家中途回農場、甚至關掉重開，都得接得回來。
@@ -2374,8 +2393,10 @@ function pkStart(buyin){
   seats.push({n:"你",av:PK_ME_AV,pers:"真人玩家",me:true,chips:buyin,bet:0,folded:false,allin:false,hole:[],acted:false,out:false});
   PK_BOTS.forEach(function(b){ seats.push({n:b.n,av:b.av,pers:b.pers,me:false,chips:buyin,bet:0,
     folded:false,allin:false,hole:[],acted:false,out:false,style:b.style}); });
+  const T=PK_TABLES[pkTbl];
   PK={seats:seats,btn:Math.floor(Math.random()*7),deck:[],board:[],pot:0,stage:"",
-      toCall:0,lastRaise:PK_BB,turn:-1,log:[],over:true,buyin:buyin};
+      toCall:0,lastRaise:T.bb,turn:-1,log:[],over:true,buyin:buyin,
+      tbl:T.k,sb:T.sb,bb:T.bb};   // 盲注跟著牌局走，中途離開再回來不會變成另一張桌的注碼
   pkNewHand();
 }
 function pkLog(t){ PK.log.push(t); if(PK.log.length>60)PK.log.shift(); pkRenderLog(); }
@@ -2396,12 +2417,12 @@ function pkNewHand(){
   PK.btn=pkNextSeat(PK.btn);
   const sb=pkNextSeat(PK.btn), bb=pkNextSeat(sb);
   PK.sbSeat=sb; PK.bbSeat=bb;
-  pkPost(sb,PK_SB); pkPost(bb,PK_BB);
-  PK.toCall=PK_BB; PK.lastRaise=PK_BB;
+  pkPost(sb,pkSB()); pkPost(bb,pkBB());
+  PK.toCall=pkBB(); PK.lastRaise=pkBB();
   PK.seats.forEach(function(p){ if(!p.out){ p.hole=[PK.deck.pop(),PK.deck.pop()]; } });
   PK.turn=pkNext(bb);   // 翻牌前由大盲左手邊先行動
   pkSave();
-  pkLog("── 新牌局　莊家："+PK.seats[PK.btn].n+"　小盲 "+PK.seats[sb].n+" "+PK_SB+"　大盲 "+PK.seats[bb].n+" "+PK_BB);
+  pkLog("── 新牌局　莊家："+PK.seats[PK.btn].n+"　小盲 "+PK.seats[sb].n+" "+pkSB()+"　大盲 "+PK.seats[bb].n+" "+pkBB());
   pkRender(); pkStep();
 }
 function pkPost(i,amt){ const p=PK.seats[i]; const a=Math.min(amt,p.chips);
@@ -2458,7 +2479,7 @@ function pkStep(){
 }
 function pkNextStage(){
   PK.seats.forEach(function(p){ PK.pot+=p.bet; p.bet=0; p.acted=false; });
-  PK.toCall=0; PK.lastRaise=PK_BB;
+  PK.toCall=0; PK.lastRaise=pkBB();
   if(PK.stage==="preflop"){ PK.stage="flop"; PK.deck.pop(); PK.board.push(PK.deck.pop(),PK.deck.pop(),PK.deck.pop()); pkLog("翻牌"); }
   else if(PK.stage==="flop"){ PK.stage="turn"; PK.deck.pop(); PK.board.push(PK.deck.pop()); pkLog("轉牌"); }
   else if(PK.stage==="turn"){ PK.stage="river"; PK.deck.pop(); PK.board.push(PK.deck.pop()); pkLog("河牌"); }
@@ -2583,7 +2604,7 @@ function pkBotAct(i){
   const want=st+(r-0.5)*0.16+(aggro-0.5)*0.16;
   const pre=(PK.board.length===0);
   function raiseTo(frac){
-    const inc=Math.max(PK.lastRaise,Math.round(pot*frac/PK_BB)*PK_BB);
+    const inc=Math.max(PK.lastRaise,Math.round(pot*frac/pkBB())*pkBB());
     return Math.min(p.bet+p.chips, PK.toCall+inc);
   }
   if(need<=0){
@@ -2698,9 +2719,16 @@ function pkRenderLog(){ const el=document.getElementById("pkLog"); if(!el)return
 function pkRenderBar(){
   const bar=document.getElementById("pkBar"); if(!bar)return;
   if(!PK){
-    const can=G.gold>=PK_BUYIN_MIN;
+    // 選桌：金幣不夠的那張直接停用，不要讓人按了才被拒絕
+    if(G.gold<PK_TABLES[pkTbl].buyin){ const i=PK_TABLES.findIndex(t=>G.gold>=t.buyin); if(i>=0)pkTbl=i; }
+    const T=PK_TABLES[pkTbl], can=G.gold>=T.buyin;
     bar.innerHTML='<div class="info">🃏 <b>德州撲克</b>　1 人 vs 6 電腦<br>'+
-      '入場籌碼 <b>'+PK_BUYIN_MIN.toLocaleString()+'</b> 金幣　盲注 <b>'+PK_SB+' / '+PK_BB+'</b><br>'+
+      '<span style="display:inline-flex;gap:6px;margin:4px 0">'+
+      PK_TABLES.map(function(t,i){ const afford=G.gold>=t.buyin;
+        return '<button class="pkBtn'+(i===pkTbl?' main':'')+'" style="padding:4px 10px;font-size:12px"'+
+          (afford?'':' disabled')+' onclick="pkPickTbl('+i+')">'+t.n+' '+t.buyin.toLocaleString()+'</button>'; }).join("")+
+      '</span><br>'+
+      '入場籌碼 <b>'+T.buyin.toLocaleString()+'</b> 金幣　盲注 <b>'+T.sb+' / '+T.bb+'</b><br>'+
       '離桌時剩餘籌碼會帶回農場。</div>'+
       '<div class="pkGrid"><button class="pkBtn main" onclick="pkBuyIn()" '+(can?'':'disabled')+'>'+
       (can?'入座開打':'金幣不足')+'</button></div>';
@@ -2725,11 +2753,11 @@ function pkRenderBar(){
   const minR=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise);
   const maxR=me.bet+me.chips;
   const pot=PK.pot+PK.seats.reduce((a,p)=>a+p.bet,0);
-  const halfPot=Math.min(maxR, Math.max(minR, PK.toCall+Math.round(pot*0.5/PK_BB)*PK_BB));
+  const halfPot=Math.min(maxR, Math.max(minR, PK.toCall+Math.round(pot*0.5/pkBB())*pkBB()));
   const canRaise=maxR>PK.toCall;
   bar.innerHTML='<div class="info">你的籌碼 <b>'+me.chips.toLocaleString()+'</b>　底池 <b>'+pot.toLocaleString()+'</b></div>'+
     (canRaise?'<div class="pkRaiseRow"><span>自訂加注到</span>'+
-      '<input id="pkRaiseV" type="number" value="'+minR+'" min="'+minR+'" max="'+maxR+'" step="'+PK_BB+'"></div>':'')+
+      '<input id="pkRaiseV" type="number" value="'+minR+'" min="'+minR+'" max="'+maxR+'" step="'+pkBB()+'"></div>':'')+
     '<div class="pkGrid">'+
       '<button class="pkBtn fold" onclick="pkMeFold()">棄牌</button>'+
       '<button class="pkBtn call" onclick="pkMeCheckCall()">'+(need<=0?"過牌":"跟注 "+Math.min(need,me.chips).toLocaleString())+'</button>'+
@@ -2742,11 +2770,13 @@ function pkMeRaiseTo(v){ if(!PK||PK.over||PK.turn!==0)return;
   const me=PK.seats[0];
   const min=Math.min(me.bet+me.chips, PK.toCall+PK.lastRaise), max=me.bet+me.chips;
   pkAct(0,"raise",Math.max(min,Math.min(max,v))); }
+function pkPickTbl(i){ if(PK)return; pkTbl=Math.max(0,Math.min(PK_TABLES.length-1,i)); pkRenderBar(); }
 function pkBuyIn(){
-  if(G.gold<PK_BUYIN_MIN){toast("金幣不足，需 "+PK_BUYIN_MIN.toLocaleString());return;}
-  G.gold-=PK_BUYIN_MIN; renderHUD(); saveGame();
-  pkStart(PK_BUYIN_MIN);
-  log("🃏 進入德州撲克，帶入 "+PK_BUYIN_MIN.toLocaleString()+" "+CO,"b");
+  const T=PK_TABLES[pkTbl];
+  if(G.gold<T.buyin){toast("金幣不足，需 "+T.buyin.toLocaleString());return;}
+  G.gold-=T.buyin; renderHUD(); saveGame();
+  pkStart(T.buyin);
+  log("🃏 進入德州撲克（"+T.n+"），帶入 "+T.buyin.toLocaleString()+" "+CO,"b");
 }
 /* ---- 玩法說明 ---- */
 function openPokerHelp(){
@@ -2757,7 +2787,7 @@ function openPokerHelp(){
       '<td style="color:#6b6155">'+ex+'</td></tr>';
   }).join("");
   showM('<h2>🃏 德州撲克玩法 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
-    '<p class="hint">你 vs 6 位電腦。入場帶 '+PK_BUYIN_MIN.toLocaleString()+' 籌碼，離桌時剩多少就帶回多少金幣。</p>'+
+    '<p class="hint">你 vs 6 位電腦。'+PK_TABLES.map(function(t){return t.n+'：入場 '+t.buyin.toLocaleString()+'、盲注 '+t.sb+'/'+t.bb;}).join('　｜　')+'。離桌時剩多少就帶回多少金幣。</p>'+
     '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">一手牌怎麼進行</div>'+
     '<p class="hint" style="line-height:1.9">'+
       '每人先發 <b>2 張底牌</b>（只有自己看得到），桌面再陸續翻出 <b>5 張公共牌</b>。<br>'+
@@ -2767,8 +2797,8 @@ function openPokerHelp(){
     '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">位置與盲注</div>'+
     '<p class="hint" style="line-height:1.9">'+
       '<span class="pkD" style="display:inline-block">D</span> 莊家鈕，每手往左移一位。<br>'+
-      '<span class="pkD sb" style="display:inline-block">SB</span> 小盲注 '+PK_SB+'　'+
-      '<span class="pkD bb" style="display:inline-block">BB</span> 大盲注 '+PK_BB+
+      '<span class="pkD sb" style="display:inline-block">SB</span> 小盲注 '+pkSB()+'　'+
+      '<span class="pkD bb" style="display:inline-block">BB</span> 大盲注 '+pkBB()+
       ' —— 這兩位在拿到牌之前就要先下注。<br>'+
       '翻牌前由大盲的左手邊先行動；翻牌後改由莊家鈕的左手邊先行動。'+
     '</p>'+
@@ -2777,7 +2807,7 @@ function openPokerHelp(){
       '<b>棄牌</b>　放棄這手，已下注的收不回來<br>'+
       '<b>過牌</b>　沒人下注時免費看下一張<br>'+
       '<b>跟注</b>　補到跟當前最高注一樣<br>'+
-      '<b>加注</b>　最少要加「上一次加注的幅度」（至少一個大盲 '+PK_BB+'）<br>'+
+      '<b>加注</b>　最少要加「上一次加注的幅度」（至少一個大盲 '+pkBB()+'）<br>'+
       '<b>All-in</b>　把籌碼全推。籌碼比別人少時，你只能贏走「有跟到」的那部分，多的錢會另外分成邊池'+
     '</p>'+
     '<div style="font-size:13px;font-weight:800;margin:10px 0 4px">牌型大小（由大到小）</div>'+
