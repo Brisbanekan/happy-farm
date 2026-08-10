@@ -1113,46 +1113,60 @@
 
 <script>
 /* ============ 資料設定 ============ */
-/* 種子價（cost）的定價規則 —— 2026-08 調整
+/* 作物定價 —— 2026-08 全面重訂
    一次收成 5 顆（harvest() 的 qty），但種子是「一顆一顆買」，
    所以真正的利潤率是 (5×sell − cost) / cost，不是 sell/cost。
-   舊表的 sell/cost 只有 2~3 倍，看起來合理，實際利潤率卻是 900%～1400%
-   —— 而且越高階越誇張（酪梨 1400% vs 蘿蔔 900%），滾雪球滾太快。
+   舊表的 sell/cost 只有 2~3 倍，看起來合理，實際利潤率卻是 900%～1400%。
 
-   新規則：利潤率壓到 300%（蘿蔔）→ 200%（酪梨），梯度改成遞減。
-   公式 cost ≈ 5×sell / (1+目標利潤率)，再取整數。
+   ★ 這一版的重點：先決定「要發多少金幣」，再回推價格。
+     上一版只拉高 cost 把利潤率壓到 200~300%，數字好看，
+     但總產出只降了 29% —— 金幣水龍頭其實沒關到。這是本末倒置。
+     這版反過來，先訂目標產出，再解出 cost 與 sell。
 
-   為什麼動 cost 不動 sell：sell 是期貨合約基準價（FUTS 的 base）
-   與工廠加工品售價的來源，改它會連帶動到那兩個系統的所有數字。
-   cost 只有商店買種子用得到，是乾淨的旋鈕。
+   目標：
+   1. 酪梨一次收成淨利 ≈ 3,000（原本 16,800，砍約 8 成）
+   2. 金/秒 梯度壓到 2 倍以內（1.52 → 2.96），高階作物贏在「不用常來收」
+      而不是「賺更多」—— 適合只能偶爾開一下的上班族玩家
+   3. 利潤率仍維持 200~320%
 
-   副作用（刻意保留）：
-   - 金/秒 從 3.60~16.55 降到 3.00~11.82（總產出約 −29%），梯度 4.6→3.9 倍
-   - 種子變成前期資本門檻（12 塊酪梨田要先付 72,000），本身就是金幣出口
-   - 作物行情 ±15% 的影響被放大：酪梨行情差時利潤率剩 155%，好時 245%，
-     倉庫「等好價再賣」從錦上添花變成真的要做的決策
-   - 田地被偷光（qty 2）或欠維護費打折時可能小虧，疏於照顧會真的痛 */
+   解法：目標金/秒 g 依等比從 1.55 遞增到 2.95，
+        淨利 = g × grow，再用目標利潤率 r（300%→200%）解出
+        cost = 5×sell/(1+r)、sell = (cost+淨利)/5，最後取整。
+
+   ★ 連動改的東西（sell 一動就必須跟著改，否則會失衡）：
+   - 工廠加工品售價：本來是照舊 sell 算的固定值，已全部重算成
+     「原料新總賣價 ×(1+15~20%)」，維持原本的加工利潤區間
+   - 動物產出：作物砍 8 成而動物不動的話，動物會變成主要金幣來源。
+     已同步壓到 0.80~2.00 金/秒（原本 2.40~9.75）——
+     比作物低是刻意的，因為動物買下去就不用再投種子錢
+   - FUTS 的 volM 用 sell/900 正規化（900 ＝ 新的最高作物價，原本是 3600）
+
+   刻意不動的東西：
+   - 土地價、工廠升級、裝飾價這些「出口」全部維持原價。
+     收入砍 8 成而出口不變，等於這些出口的實質價格變成 5 倍 ——
+     這正是目的（原本的抱怨就是金幣沒地方花）
+   - 舊存檔的金幣不做任何縮放，讓它自然稀釋 */
 const CROPS = {
-  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:25,  sell:20,  grow:25, xp:6},
-  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:40,  sell:32,  grow:35, xp:8},
-  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:70,  sell:55,  grow:50, xp:11},
-  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:120,  sell:92,  grow:80, xp:15},
-  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:200,  sell:150, grow:115, xp:20},
-  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:330, sell:240, grow:165, xp:28},
-  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:450, sell:310, grow:190, xp:34},
-  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:600, sell:420, grow:230,xp:42},
-  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:800, sell:550, grow:270,xp:50},
-  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:1100, sell:720, grow:315,xp:60},
-  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:1600, sell:1050,grow:410,xp:78},
-  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:2500, sell:1600,grow:560,xp:100},
-  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:3900, sell:2400,grow:755,xp:128},
-  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:6000,sell:3600,grow:1015,xp:165},
-  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:90,  sell:70,  grow:65, xp:14, charm:1},
-  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:230,  sell:170, grow:130, xp:24, charm:2},
-  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:425, sell:300, grow:185, xp:32, charm:3},
-  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:775, sell:540, grow:265,xp:48, charm:4},
-  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:1350, sell:900, grow:360,xp:70, charm:6},
-  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:2400, sell:1550,grow:495,xp:100,charm:8},
+  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:12,  sell:10,  grow:25, xp:6},
+  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:20,  sell:15,  grow:35, xp:8},
+  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:30,  sell:25,  grow:50, xp:11},
+  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:55,  sell:40,  grow:80, xp:15},
+  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:80,  sell:60, grow:115, xp:20},
+  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:120, sell:90, grow:165, xp:28},
+  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:160, sell:110, grow:190, xp:34},
+  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:200, sell:140, grow:230,xp:42},
+  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:270, sell:180, grow:270,xp:50},
+  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:330, sell:220, grow:315,xp:60},
+  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:460, sell:300,grow:410,xp:78},
+  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:700, sell:440,grow:560,xp:100},
+  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:1000, sell:630,grow:755,xp:128},
+  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:1500,sell:900,grow:1015,xp:165},
+  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:30,  sell:25,  grow:65, xp:14, charm:1},
+  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:75,  sell:55, grow:130, xp:24, charm:2},
+  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:130, sell:90, grow:185, xp:32, charm:3},
+  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:220, sell:150, grow:265,xp:48, charm:4},
+  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:370, sell:240, grow:360,xp:70, charm:6},
+  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:610, sell:380,grow:495,xp:100,charm:8},
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
@@ -1164,11 +1178,11 @@ const LANDS = [
   {price:320000,lvl:23},{price:400000,lvl:25},{price:500000,lvl:27}
 ];
 const ANIMALS = {
-  chick:{name:"小雞", emoji:"🐔", prod:"🥚", cost:200,  time:20, yield:48,  xp:4,  lvl:1},
-  cow:  {name:"乳牛", emoji:"🐄", prod:"🥛", cost:800,  time:35, yield:135, xp:10, lvl:3},
-  sheep:{name:"綿羊", emoji:"🐑", prod:"🧶", cost:1600, time:50, yield:270, xp:16, lvl:5},
-  pig:  {name:"小豬", emoji:"🐖", prod:"🥓", cost:3200, time:65, yield:440, xp:24, lvl:8},
-  bee:  {name:"蜜蜂", emoji:"🐝", prod:"🍯", cost:6000, time:80, yield:780, xp:36, lvl:11},
+  chick:{name:"小雞", emoji:"🐔", prod:"🥚", cost:200,  time:20, yield:14,  xp:4,  lvl:1},
+  cow:  {name:"乳牛", emoji:"🐄", prod:"🥛", cost:800,  time:35, yield:32, xp:10, lvl:3},
+  sheep:{name:"綿羊", emoji:"🐑", prod:"🧶", cost:1600, time:50, yield:58, xp:16, lvl:5},
+  pig:  {name:"小豬", emoji:"🐖", prod:"🥓", cost:3200, time:65, yield:91, xp:24, lvl:8},
+  bee:  {name:"蜜蜂", emoji:"🐝", prod:"🍯", cost:6000, time:80, yield:136, xp:36, lvl:11},
 };
 const RANCH_REQ=[1,1,3,5,8,11]; // 每個牧場欄位的解鎖等級
 // 動物圖像（內嵌 data URI，由使用者提供的圖檔縮圖而成）＋ 顯示高度(px)
@@ -2123,7 +2137,12 @@ function cropIdxOfDay(k,d){
 }
 function cropIdx(k,ts){ return cropIdxOfDay(k,cropDay(ts)); }
 function cropPriceOfDay(k,d){ const x=cropIdxOfDay(k,d); return x==null?null:Math.max(1,Math.round(CROPS[k].sell*x)); }
-function cropPrice(k,ts){ const x=cropIdx(k,ts); return x==null?CROPS[k].sell:Math.max(1,Math.round(CROPS[k].sell*x)); }
+/* 保留一位小數。作物價全面下修後（最高 900、蘿蔔只有 10），
+   取整數的誤差在低價作物上高達 ±5%，會讓期貨避險對不起來
+   —— 48 顆的實體損失與空單獲利可以差到 15%，避險就失去意義了。
+   賣出的路徑（sellQty/sellAll/sellEverything）都是「先乘總量再 Math.round」，
+   所以這裡帶小數不會產生非整數金幣。 */
+function cropPrice(k,ts){ const x=cropIdx(k,ts); return x==null?CROPS[k].sell:Math.max(1,Math.round(CROPS[k].sell*x*10)/10); }
 function cropChg(k,ts){ const x=cropIdx(k,ts); return x==null?0:(x-1)*100; }
 /* 行情標籤：台股慣例紅漲綠跌 */
 function cropTag(k){ const c=cropChg(k);
@@ -2809,7 +2828,7 @@ const SHORT_MARGIN=0.25, SHORT_MAINT=0.15;
 const FUTS=Object.keys(CROPS).map(function(k){ return {
   t:"C:"+k, k:k, n:CROPS[k].name, emoji:CROPS[k].emoji, fut:true,
   base:CROPS[k].sell, volD:0, drift:0,
-  volM:0.0016+Math.min(0.0016,CROPS[k].sell/3600*0.0012),   // 高價作物波動略大
+  volM:0.0016+Math.min(0.0016,CROPS[k].sell/900*0.0012),   // 高價作物波動略大
   seed:(cropSeed(k)^0x1f7c9)|0 }; });
 const FUTMAP={}; FUTS.forEach(function(f){FUTMAP[f.t]=f;});
 function isFut(t){ return typeof t==="string"&&t.charCodeAt(0)===67&&t.charCodeAt(1)===58; }
@@ -3714,7 +3733,7 @@ function harvest(i){
    ┌─────────┬───────────┬────────┬────────┐
    │ 加工品   │ 原料總賣價 │ 新售價 │ 利潤率 │
    ├─────────┼───────────┼────────┼────────┤
-   │ 蔬菜沙拉 │      260 │    300 │ 15.4% │
+   （下表為舊尺度，僅供對照；現行數字見 FGOODS）
    │ 番茄醬   │      440 │    510 │ 15.9% │
    │ 玉米濃湯 │      632 │    730 │ 15.5% │
    │ 草莓果醬 │    1,920 │  2,240 │ 16.7% │
@@ -3726,16 +3745,16 @@ function harvest(i){
    │ 滿漢農宴 │   16,540 │ 19,840 │ 20.0% │
    └─────────┴───────────┴────────┴────────┘ */
 const FGOODS={
-  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:300,   need:{radish:5,cucumber:5}},
-  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:510,   need:{tomato:8}},
-  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:730,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
-  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:2240,  need:{strawberry:8}},
-  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:3160,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
-  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:4090,  need:{pumpkin:6,strawberry:4}},
-  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:3880,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
-  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:10240, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
-  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:15280, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
-  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:19840, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
+  salad:   {name:"蔬菜沙拉",   emoji:"🥗", lv:1,  time:60,  sell:145,   need:{radish:5,cucumber:5}},
+  ketchup: {name:"番茄醬",     emoji:"🥫", lv:1,  time:90,  sell:230,   need:{tomato:8}},
+  cornsoup:{name:"玉米濃湯",   emoji:"🍲", lv:2,  time:120, sell:325,   need:{corn:6,radish:4},        buff:{k:"grow",min:10,desc:"🌱 作物成長+20%（10分）"}},
+  sjam:    {name:"草莓果醬",   emoji:"🍓", lv:3,  time:150, sell:835,  need:{strawberry:8}},
+  chsauce: {name:"辣椒醬",     emoji:"🌶️", lv:4,  time:180, sell:1140,  need:{chili:8,tomato:4},       buff:{k:"sell",min:10,desc:"💰 賣價+15%（10分）"}},
+  ppie:    {name:"南瓜派",     emoji:"🥧", lv:5,  time:210, sell:1410,  need:{pumpkin:6,strawberry:4}},
+  wjuice:  {name:"西瓜汁",     emoji:"🧃", lv:5,  time:150, sell:1270,  need:{watermelon:6},           buff:{k:"animal",min:10,desc:"🐮 動物生產+20%（10分）"}},
+  wine:    {name:"葡萄酒",     emoji:"🍷", lv:7,  time:300, sell:3120, need:{grape:12},               buff:{k:"xp",min:30,desc:"⭐ 經驗+30%（30分）"}},
+  fruitbox:{name:"綜合果盤",   emoji:"🍉", lv:8,  time:240, sell:4470, need:{pineapple:4,melon:3,grape:4,strawberry:4}},
+  feast:   {name:"滿漢農宴禮盒",emoji:"🎁", lv:10, time:360, sell:6000, need:{pumpkin:6,watermelon:6,melon:4,grape:6}, buff:{k:"all",min:10,desc:"✨ 全效果加乘（10分）"}}
 };
 const FLV=[null,null,   // FLV[n]＝升到 n 級的需求；魅力為門檻不消耗；效果涵蓋農場/牧場全域
   {gold:3000,  charm:10,  fx:"🌱 全作物成長 +5%（含解鎖玉米濃湯）"},
