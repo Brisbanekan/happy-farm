@@ -2771,7 +2771,13 @@ let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit
    跟股票同一套引擎，只是開盤價不走日線鏈而是貼著現貨。
    合約成本落在 400~72,000 金幣，與股票的 4,000~72,000 對得上。
    ============================================================ */
-const FUT_UNIT=20;
+/* 一口 ＝ 一顆作物。
+   期貨在這個遊戲裡的用途是避險——鎖住你「將來要賣的那批作物」的價格。
+   合約單位就該對齊實際收成的顆數，避險比例才會是 1:1：
+   「這批要收 48 顆番茄」→「賣出 48 單位番茄期」，不用心算換算。
+   （初版設成 20，是為了讓最貴的酪梨一口剛好等於農積電一張，
+     那是拿交易介面的美觀當設計依據，跟這個工具要解決的問題無關。）*/
+const FUT_UNIT=1;
 const FUTS=Object.keys(CROPS).map(function(k){ return {
   t:"C:"+k, k:k, n:CROPS[k].name, emoji:CROPS[k].emoji, fut:true,
   base:CROPS[k].sell, volD:0, drift:0,
@@ -2799,8 +2805,9 @@ function backStockHome(){ stockView="home"; stockDropOpen=false;
 function openStockTrade(t){
   curStock=t; stockView="trade";
   document.getElementById("stockScene").classList.remove("home");
-  const b=document.getElementById("odUnit");   // 股票是「張」、期貨是「口」，切標的要同步
-  if(b)b.textContent=(odUnit==="s"?subName(t)+" ▾":unitName(t)+" ▾");
+  const b=document.getElementById("odUnit");   // 股票分「張／股」；期貨 1 口就是 1 單位，不需要切換
+  if(b){ b.textContent=(odUnit==="s"?subName(t)+" ▾":unitName(t)+" ▾");
+    b.style.pointerEvents=isFut(t)?"none":""; b.style.opacity=isFut(t)?"0.6":""; }
   loadChart(); setOrderType(orderType); odUseCur(); renderStockUI();
 }
 /* ---- 股市首頁清單 ---- */
@@ -2835,9 +2842,9 @@ function renderStockHome(){
     if(sp&&st&&st.prev>0)sp.forEach(v=>{const p=Math.abs((v-st.prev)/st.prev*100);if(p>gmax)gmax=p;});});
   const isF=(homeTab==="fut");
   const head='<div class="shHead"><div class="hIcon"></div><div class="shName">'+
-    (isF?'標的（1 口 = '+FUT_UNIT+' 單位）':'標的（名稱／代號）')+'</div>'+
+    (isF?'標的（1 單位 ＝ 1 顆，用來鎖價）':'標的（名稱／代號）')+'</div>'+
     '<div class="shSpark">當日走勢（虛線＝今日開盤，±'+gmax.toFixed(1)+'%同比例）</div>'+
-    '<div class="shPx" style="align-items:flex-end">'+(isF?'每口｜漲跌幅':'價格｜漲跌幅')+'</div></div>';
+    '<div class="shPx" style="align-items:flex-end">'+(isF?'每單位｜漲跌幅':'價格｜漲跌幅')+'</div></div>';
   el.innerHTML=head+list.map(s=>{const st=G.stocks[s.t];const c=st.prev?((st.price-st.prev)/st.prev*100):0;const up=c>=0;
     const lot=isF?Math.round(st.price*FUT_UNIT):0;
     return '<div class="shRow" onclick="openStockTrade(\''+s.t+'\')">'+
@@ -3170,7 +3177,7 @@ function odPriceNow(){ const st=G.stocks[curStock];
   return parseFloat((document.getElementById("odPrice")||{}).value)||st.price; }
 let odUnit="l";   // 數量單位：l=張（預設，1張=1000股）、s=股
 function unitSize(t){ return isFut(t)?FUT_UNIT:1000; }
-function unitName(t){ return isFut(t)?"口":"張"; }
+function unitName(t){ return isFut(t)?"單位":"張"; }
 function subName(t){ return isFut(t)?"單位":"股"; }
 function toggleOdUnit(){ odUnit=(odUnit==="s"?"l":"s");
   const b=document.getElementById("odUnit");
@@ -3199,7 +3206,20 @@ function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
     liq="　｜　預估強平價 <span style='color:#f6465d'>"+fmtP(1.3*nd/ns)+"</span>"; }   // 維持率130%＝市值/融資 → 強平價=1.3×融資/股數
   el.innerHTML=(levB>0?("自備款 "+CO+" "+self.toLocaleString()+"（融資 "+(total-self).toLocaleString()+"）")
                       :("預估成本 "+CO+" "+total.toLocaleString()))
-    +(odUnit==="l"&&qty?("　＝"+qty.toLocaleString()+subName(curStock)):"")+"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq; }
+    +(odUnit==="l"&&qty&&unitSize(curStock)>1?("　＝"+qty.toLocaleString()+subName(curStock)):"")
+    +"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq+futHedgeHint(); }
+/* 避險提示：告訴玩家手上與田裡有多少顆，賣出同樣數量就等於把價格鎖住 */
+function futHedgeHint(){
+  if(!isFut(curStock))return "";
+  const k=stockOf(curStock).k;
+  const inv=(G.harvest&&G.harvest[k])||0;
+  let growing=0;
+  (G.plots||[]).forEach(function(p){ if(p&&p.unlocked&&p.state==="planted"&&p.crop===k)growing+=4; });
+  const tot=inv+growing;
+  if(!tot)return "";
+  return '<br><span style="color:#8fb9a2">🌾 倉庫 '+inv+' 顆'+(growing?'＋田裡約 '+growing+' 顆':'')+
+    '　賣出 '+tot+' 單位即可把這批的價格鎖在現價</span>';
+}
 function placeOrder(side){
   // 行情中斷時禁止交易：若允許用最後已知價下單，等於留一個「斷網就能撿便宜」的後門
   if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
