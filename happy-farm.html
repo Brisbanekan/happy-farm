@@ -2231,12 +2231,46 @@ const PK_BUYIN_MIN=2000;         // 最低入場金幣
 let PK=null;   // 牌局狀態
 /* 牌局要能存檔：玩家中途回農場、甚至關掉重開，都得接得回來。
    不存的話入場的 2,000 籌碼會憑空消失。PK 全是純資料（牌是 {r,s}），直接序列化。 */
-function pkSave(){ try{ G.pk=PK?JSON.parse(JSON.stringify(PK)):null; saveGame(); }catch(e){} }
+const PK_SAVE_V=2;
+function pkSave(){ try{
+  if(!PK){ G.pk=null; saveGame(); return; }
+  PK.v=PK_SAVE_V;
+  G.pk=JSON.parse(JSON.stringify(PK)); saveGame();
+}catch(e){} }
+/* 還原前一定要驗證。存檔會同步到 Firebase 跨裝置，只要有一份是舊版或不完整的，
+   直接信任它就會把整個撲克頁面弄爛 —— 實際發生過：存檔少了 board 欄位，
+   pkRender 讀 PK.board[i] 直接丟例外，桌面整個空白。 */
+function pkValid(o){
+  if(!o||typeof o!=="object")return false;
+  if(!Array.isArray(o.seats)||o.seats.length!==7)return false;
+  if(!Array.isArray(o.board)||!Array.isArray(o.deck)||!Array.isArray(o.log))return false;
+  if(typeof o.pot!=="number"||typeof o.turn!=="number"||typeof o.toCall!=="number")return false;
+  if(typeof o.btn!=="number"||typeof o.sbSeat!=="number"||typeof o.bbSeat!=="number")return false;
+  for(let i=0;i<o.seats.length;i++){ const p=o.seats[i];
+    if(!p||typeof p.chips!=="number"||typeof p.bet!=="number")return false;
+    if(!Array.isArray(p.hole))return false;
+    if(!o.over&&!p.out&&!p.folded&&p.hole.length!==2)return false;   // 牌局進行中卻沒發到牌 ＝ 壞檔
+  }
+  return true;
+}
+function pkDropBroken(reason){
+  let back=0;
+  try{ const s=G.pk&&G.pk.seats&&G.pk.seats[0];
+    back=Math.max(0,Math.round((s&&+s.chips)||+G.pk.buyin||0)); }catch(e){}
+  if(back>0){ G.gold+=back;
+    log("🃏 上一局牌局資料不完整（"+reason+"），已把桌上的 "+back.toLocaleString()+" "+CO+" 退回","r");
+    toast("牌局資料異常，籌碼已退回 "+back.toLocaleString());
+  }
+  G.pk=null; PK=null; try{ renderHUD(); saveGame(); }catch(e){}
+}
 function pkRestore(){
-  if(!G||!G.pk||!G.pk.seats)return false;
+  if(!G||!G.pk)return false;
+  if(!pkValid(G.pk)){ pkDropBroken(G.pk.v?"版本不符":"缺少欄位"); return false; }
   PK=G.pk;
-  PK.log=PK.log||[];
-  if(!PK.over&&PK.turn>=0&&!PK.seats[PK.turn].me)setTimeout(pkStep,900);   // 換電腦行動 → 續跑
+  PK.log=PK.log||[]; if(typeof PK.aggr!=="number")PK.aggr=-1;
+  PK.seats.forEach(function(p){ if(typeof p.bigBets!=="number")p.bigBets=0;
+    if(typeof p.handsSeen!=="number")p.handsSeen=0; });
+  if(!PK.over&&PK.turn>=0&&PK.seats[PK.turn]&&!PK.seats[PK.turn].me)setTimeout(pkStep,900);
   return true;
 }
 function pkHasGame(){ return !!(PK||(G&&G.pk&&G.pk.seats)); }
@@ -2577,7 +2611,9 @@ function pkRender(){
         stageEl=document.getElementById("pkStage"), winEl=document.getElementById("pkWinBox");
   if(!PK){ seatsEl.innerHTML=""; boardEl.innerHTML=""; stageEl.textContent="";
     potEl.innerHTML='<span class="pkChipIco"></span><b>底池 0</b>'; winEl.className="pkWinBox"; return; }
-  const potNow=PK.pot+PK.seats.reduce((a,p)=>a+p.bet,0);
+  if(!Array.isArray(PK.board))PK.board=[];       // 保險：壞檔也不要讓畫面整個掛掉
+  if(!Array.isArray(PK.seats)){ seatsEl.innerHTML=""; return; }
+  const potNow=PK.pot+PK.seats.reduce((a,p)=>a+(p.bet||0),0);
   potEl.innerHTML='<span class="pkChipIco"></span><b>底池 '+potNow.toLocaleString()+'</b>';
   stageEl.textContent={preflop:"翻牌前",flop:"翻牌圈",turn:"轉牌圈",river:"河牌圈"}[PK.stage]||"";
   let bh=""; for(let i=0;i<5;i++)if(PK.board[i])bh+=pkCardHtml(PK.board[i],true);
@@ -2591,7 +2627,7 @@ function pkRender(){
       (w0.score?'<small>'+pkHandName(w0.score)+'</small>':''); }
   else winEl.className="pkWinBox";
   seatsEl.innerHTML=PK.seats.map(function(p,i){
-    const pos=PK_POS[i];
+    const pos=PK_POS[i]||PK_POS[0];
     const show=p.me||p.showdown;
     const cards=p.out?"":(p.hole.length?
       '<div class="pkCards">'+p.hole.map(c=>pkCardHtml(show?c:null)).join("")+'</div>':"");
