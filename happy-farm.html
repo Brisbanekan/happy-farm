@@ -3990,23 +3990,30 @@ function charmAll(){ return Math.floor((G.charm||0)+decoCharm()); }
 
 /* 景深：放得越遠（y 越小）畫得越小，否則遠景的東西會像浮在半空 */
 function decoDepth(y){ return Math.max(0.62,Math.min(1,0.65+0.35*(y-430)/530)); }
+/* 裝飾要跟著「現在站在誰的農場」走。
+   原本這裡固定讀 G.decoItems，而拜訪好友時只換掉田地（VISIT.plots）、
+   沒有重畫裝飾 —— 於是自己的松樹、花圃會原封不動留在每個好友的農場上，
+   看起來就像大家的裝飾都同步了。 */
+function visiting(){ return !!(typeof VISIT!=="undefined"&&VISIT&&VISIT.on); }
 function renderDecos(){
   const w=document.querySelector("#world .wcontent")||document.getElementById("world");
   if(!w)return;
   decoMigrate();
   w.querySelectorAll(".owndeco").forEach(function(el){el.remove();});
-  decoItems().forEach(function(it,idx){
+  const vis=visiting();
+  const list=vis?(Array.isArray(VISIT.decos)?VISIT.decos:[]):decoItems();
+  list.forEach(function(it,idx){
     const d=DECOS.find(x=>x.k===it.k); if(!d)return;
     const depth=decoDepth(it.y);
     const el=document.createElement("div");
-    el.className="owndeco"+(decoMode?" decomove":"");
+    el.className="owndeco"+((decoMode&&!vis)?" decomove":"");   // 別人的農場不能拖、不能收起
     el.dataset.idx=idx;
     el.style.left=it.x+"px"; el.style.top=it.y+"px";
     el.style.width=Math.round(d.w*depth)+"px";
     el.style.zIndex=String(2+Math.round(it.y/10));   // 近的蓋住遠的
     el.innerHTML='<img src="'+d.img+'" alt="'+d.n+'">'+
-      (decoMode?'<button class="decodel" title="收起">×</button>':'');
-    if(decoMode)decoBindDrag(el,idx);
+      ((decoMode&&!vis)?'<button class="decodel" title="收起">×</button>':'');
+    if(decoMode&&!vis)decoBindDrag(el,idx);
     w.appendChild(el);
   });
 }
@@ -4396,7 +4403,7 @@ function openFriends(){
 }
 
 /* ====== 拜訪好友農場（直接進入遊戲場景；真實好友與電腦好友共用） ====== */
-let VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null};
+let VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null,decos:[]};
 function visitPlotsFromNpc(f){
   const arr=[];
   for(let i=0;i<LANDS.length;i++){
@@ -4410,7 +4417,7 @@ function visitPlotsFromNpc(f){
 }
 function enterVisitNpc(i){
   const f=G.friends[i]; if(!f)return;
-  VISIT={on:true,uid:null,npc:i,plots:visitPlotsFromNpc(f),name:f.av+" "+f.name,dog:null};
+  VISIT={on:true,uid:null,npc:i,plots:visitPlotsFromNpc(f),name:f.av+" "+f.name,dog:null,decos:[]};   // NPC 沒有裝飾
   startVisit();
 }
 function enterVisitPal(uid){
@@ -4421,6 +4428,7 @@ function enterVisitPal(uid){
     if(!d||!Array.isArray(d.plots)){alert("讀不到好友的農場資料（對方可能還沒上線存檔過）。");return;}
     const f=G.pals[uid]||{name:"農友"};
     VISIT={on:true,uid:uid,npc:-1,name:"🧑‍🌾 "+f.name+"（Lv."+(d.level||1)+"）",dog:d.dog||null,
+      decos:Array.isArray(d.decoItems)?d.decoItems:[],   // 看到的是對方買的裝飾
       plots:d.plots.map(function(p){return (p&&typeof p==="object")?p:{unlocked:false,state:"empty",crop:null};})};
     advancePlotsOffline(VISIT.plots, d.ts);   // 補算到現在，顯示好友作物的即時生長階段
     startVisit();
@@ -4431,13 +4439,13 @@ function startVisit(){
   const sc=document.getElementById("scene"); if(sc)sc.classList.add("visiting");
   const vn=document.getElementById("visitName"); if(vn)vn.textContent=VISIT.name+" 的農場";
   if(G.tool!=="hand"&&G.tool!=="care")G.tool="hand";
-  render(); centerField();
+  render(); renderDecos(); centerField();
   toast("✋ 偷成熟作物｜🚿 幫忙照顧"+((VISIT.dog&&VISIT.dog.fedUntil&&VISIT.dog.fedUntil>Date.now())?"（⚠️ 小心他的看門狗）":""));
 }
 function leaveVisit(){
-  VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null};
+  VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null,decos:[]};
   const sc=document.getElementById("scene"); if(sc)sc.classList.remove("visiting");
-  render(); centerField(); toast("回到自己的農場 🏡");
+  render(); renderDecos(); centerField(); toast("回到自己的農場 🏡");
 }
 
 /* ====== 拜訪中點田地：✋偷菜 / 🚿照顧 ====== */
