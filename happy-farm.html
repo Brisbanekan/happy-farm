@@ -1414,7 +1414,11 @@ function normalizeState(){
     delete G.stocks[k];});
   allInst().forEach(s=>{let st=G.stocks[s.t]; if(!st||typeof st.price!=="number")st=G.stocks[s.t]={price:s.base,prev:s.base,shares:0,avg:0};
     if(typeof st.avg!=="number")st.avg=(st.shares&&st.cost)?st.cost/st.shares:0;
-    if(typeof st.debt!=="number")st.debt=0;});   // 融資負債欄位
+    if(typeof st.debt!=="number")st.debt=0;      // 融資負債欄位
+    /* 空單保證金欄位。2026-08 之前做空是壓全額擔保，舊存檔沒有 mgn。
+       若留成 0，平倉時退不回擔保品、追繳檢查也會馬上判斷權益不足而斷頭 ——
+       等於改版直接沒收舊玩家的錢。所以補回當初實際押的全額。 */
+    if(typeof st.mgn!=="number")st.mgn=(st.shares<0)?Math.round(st.avg*Math.abs(st.shares)):0;});
   /* 2026-08 價格尺度改版：舊存檔的持倉是舊尺度（農積電 1050），新尺度是 72。
      不能只把成本價等比縮小 —— 那樣損益百分比雖然不變，但玩家的「絕對財富」會蒸發 15 倍
      （2000 股農積電從 210 萬變成 14 萬）。金幣本身沒有改尺度，所以正確做法是
@@ -2778,6 +2782,11 @@ let curStock=STOCKS[0].t, stockOpen=false, stockDropOpen=false, orderType="limit
    （初版設成 20，是為了讓最貴的酪梨一口剛好等於農積電一張，
      那是拿交易介面的美觀當設計依據，跟這個工具要解決的問題無關。）*/
 const FUT_UNIT=1;
+/* 做空保證金：原本要壓上全額名目金額，避險一批酪梨得先押 21 萬，門檻高到沒人會用。
+   改成只收 25% 原始保證金，維持保證金 15%（都以「當下市值」計）。
+   低於維持水位時先從金幣自動追繳，金幣也不夠才強制回補 ——
+   這樣避險部位不會因為一天的正常波動就被洗掉。 */
+const SHORT_MARGIN=0.25, SHORT_MAINT=0.15;
 const FUTS=Object.keys(CROPS).map(function(k){ return {
   t:"C:"+k, k:k, n:CROPS[k].name, emoji:CROPS[k].emoji, fut:true,
   base:CROPS[k].sell, volD:0, drift:0,
@@ -3204,8 +3213,9 @@ function updOdCost(){ const el=document.getElementById("odCost"); if(!el)return;
   if(levB>0&&qty>0){ const st=G.stocks[curStock]||{}; const sh=Math.max(0,st.shares||0);
     const nd=(sh>0?(st.debt||0):0)+total*levB, ns=sh+qty;
     liq="　｜　預估強平價 <span style='color:#f6465d'>"+fmtP(1.3*nd/ns)+"</span>"; }   // 維持率130%＝市值/融資 → 強平價=1.3×融資/股數
+  const shortMgn=Math.round(total*SHORT_MARGIN);
   el.innerHTML=(levB>0?("自備款 "+CO+" "+self.toLocaleString()+"（融資 "+(total-self).toLocaleString()+"）")
-                      :("預估成本 "+CO+" "+total.toLocaleString()))
+                      :("買進成本 "+CO+" "+total.toLocaleString()+"　｜　賣出保證金 "+CO+" "+shortMgn.toLocaleString()))
     +(odUnit==="l"&&qty&&unitSize(curStock)>1?("　＝"+qty.toLocaleString()+subName(curStock)):"")
     +"　｜　可用 "+CO+" "+G.gold.toLocaleString()+liq+futHedgeHint(); }
 /* 避險提示：告訴玩家手上與田裡有多少顆，賣出同樣數量就等於把價格鎖住 */
@@ -3241,27 +3251,39 @@ function execTrade(t,side,qty,price,lev){
   if(closeQ>0){
     const dir=pos>0?1:-1;
     const pnl=Math.round((price-st.avg)*dir*closeQ);
-    let repay=0;
-    if(dir>0&&(st.debt||0)>0){ repay=(closeQ>=pos)?st.debt:Math.round(st.debt*closeQ/pos); st.debt-=repay; }   // 平多按比例償還融資
-    G.gold=Math.max(0,Math.round(G.gold+st.avg*closeQ)+pnl-repay);
+    let repay=0, back=0;
+    if(dir>0){
+      if((st.debt||0)>0){ repay=(closeQ>=pos)?st.debt:Math.round(st.debt*closeQ/pos); st.debt-=repay; }   // 平多按比例償還融資
+      G.gold=Math.max(0,Math.round(G.gold+st.avg*closeQ)+pnl-repay);
+    }else{
+      // 平空：退回這批對應的保證金（按比例），再結算損益。名目價值不是玩家的錢，不能退。
+      const absPos=Math.abs(pos);
+      back=(closeQ>=absPos)?Math.round(st.mgn||0):Math.round((st.mgn||0)*closeQ/absPos);
+      st.mgn=Math.max(0,(st.mgn||0)-back);
+      G.gold=Math.max(0,Math.round(G.gold+back+pnl));
+    }
     const _wk=rankWeekKey(); if(G.pnlWk!==_wk){G.pnlWk=_wk;G.pnlReal=0;}   // 跨週歸零
     G.pnlReal=(G.pnlReal||0)+pnl;                                          // 累計本週已實現損益
-    st.shares=pos-dir*closeQ; if(st.shares===0){st.avg=0;st.debt=0;}
-    log((dir>0?"平多 ":"平空 ")+stockName(t)+" ×"+closeQ+" @ "+fmtP(price)+"，損益 "+(pnl>=0?"+":"")+pnl+" "+CO+(repay?("（償還融資 "+repay.toLocaleString()+"）"):""),(pnl>=0?"g":"r"));
+    st.shares=pos-dir*closeQ; if(st.shares===0){st.avg=0;st.debt=0;st.mgn=0;}
+    log((dir>0?"平多 ":"平空 ")+stockName(t)+" ×"+closeQ+" @ "+fmtP(price)+"，損益 "+(pnl>=0?"+":"")+pnl+" "+CO+(repay?("（償還融資 "+repay.toLocaleString()+"）"):"")+(back?("（退回保證金 "+back.toLocaleString()+"）"):""),(pnl>=0?"g":"r"));
     toast(pnl>=0?("💰 獲利 +"+pnl):("虧損 "+pnl));
   }
   if(openQ>0){
     const total=Math.round(price*openQ);
     const b=(side>0&&lev)?lev:0;                    // 融資只適用買進/做多
-    const cost=Math.round(total*(1-b));             // 自備款
-    if(G.gold<cost){ toast(closeQ?"金幣不足，僅完成平倉":(b?"自備款不足":"金幣不足")); }
+    const cost=(side>0)?Math.round(total*(1-b))     // 做多：自備款
+                       :Math.round(total*SHORT_MARGIN);   // 做空：原始保證金
+    if(G.gold<cost){ toast(closeQ?"金幣不足，僅完成平倉":(side<0?"保證金不足":(b?"自備款不足":"金幣不足"))); }
     else{
       G.gold-=cost;
       if(b>0)st.debt=Math.round((st.debt||0)+total*b);
+      if(side<0)st.mgn=(st.mgn||0)+cost;
       const cur=Math.abs(st.shares);
       st.avg=cur?((st.avg*cur+price*openQ)/(cur+openQ)):price;
       st.shares+=side*openQ;
-      log((side>0?"開多 ":"開空 ")+stockName(t)+" ×"+openQ+" @ "+fmtP(price)+(b?("（融資"+(b*10)+"成，借 "+Math.round(total*b).toLocaleString()+"）"):""),"b");
+      log((side>0?"開多 ":"開空 ")+stockName(t)+" ×"+openQ+" @ "+fmtP(price)+
+        (b?("（融資"+(b*10)+"成，借 "+Math.round(total*b).toLocaleString()+"）"):"")+
+        (side<0?("（保證金 "+cost.toLocaleString()+"）"):""),"b");
     }
   }
   renderHUD();saveGame();renderStockUI();
@@ -3286,6 +3308,21 @@ function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單
       if(st&&(st.debt||0)>0&&st.shares>0){
         const mr=st.price*st.shares/st.debt;
         if(mr<1.3){ log("💥 "+x.n+" 融資維持率 "+Math.round(mr*100)+"%＜130%，遭強制斷頭平倉","r"); toast("💥 融資斷頭："+x.n); execTrade(x.t,-1,st.shares,st.price); }
+      }});
+    // 空單：權益（保證金＋未實現損益）低於維持水位 → 先從金幣追繳，不夠才強制回補
+    allInst().forEach(function(x){const st=G.stocks[x.t];
+      if(!st||!(st.shares<0))return;
+      const q=Math.abs(st.shares);
+      const equity=(st.mgn||0)+(st.avg-st.price)*q;
+      const need=st.price*q*SHORT_MAINT;
+      if(equity>=need)return;
+      const gap=Math.ceil(need-equity);
+      if(G.gold>=gap){ G.gold-=gap; st.mgn=(st.mgn||0)+gap;
+        log("📢 "+x.n+" 空單保證金不足，自動追繳 "+gap.toLocaleString()+" "+CO,"r");
+        toast("📢 空單追繳 "+gap.toLocaleString()); renderHUD();
+      }else{
+        log("💥 "+x.n+" 空單保證金不足且金幣不夠追繳，遭強制回補","r");
+        toast("💥 空單斷頭："+x.n); execTrade(x.t,1,q,st.price);
       }});
   }
   // 新聞只在「換段」時重畫（每 10 分鐘），不必每 1.5 秒重建整份清單
@@ -3341,6 +3378,11 @@ function renderStockUI(){
       const pnl=(xs.price-xs.avg)*xs.shares;
       const roi=xs.avg?(pnl/(xs.avg*Math.abs(xs.shares))*100):0;
       let fin='—', liq='—';
+      if(!lg&&(xs.mgn||0)>0){                    // 空單：顯示保證金與強平價
+        const q=Math.abs(xs.shares);
+        fin='保證金 '+Math.round(xs.mgn).toLocaleString();
+        liq='<span class="dn">'+fmtP((xs.mgn+xs.avg*q)/(q*(1+SHORT_MAINT)))+'</span>';
+      }
       if(lg&&(xs.debt||0)>0){const mr=xs.price*xs.shares/xs.debt*100;
         fin=Math.round(xs.debt).toLocaleString()+'（<span class="'+(mr<140?'dn':'up')+'">'+Math.round(mr)+'%</span>）';
         liq='<span class="dn">'+fmtP(1.3*xs.debt/xs.shares)+'</span>';}   // 跌到此價維持率=130%
