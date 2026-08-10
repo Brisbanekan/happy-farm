@@ -4726,8 +4726,15 @@ function syncCanvasBg(){
   let k="farm";
   if(sc.classList.contains("s-stock"))k="stock";
   else if(sc.classList.contains("s-slot"))k=sc.classList.contains("pk-on")?"poker":"slot";
-  document.documentElement.style.background=SCENE_BG[k];
-  document.body.style.background=(typeof SIM!=="undefined"&&SIM)?"":SCENE_BG[k];
+  /* 手機預覽時，<html> 不能跟著換成場景色。
+     場景色有淺的（遊藝場是 #bfe9ff 淡藍、農場是 #8bca54 綠），
+     而模擬器的頁面底色是深灰 #262b36 —— 兩者由 body 蓋住 html 來決定誰可見。
+     body 只要有任何一點蓋不滿（瀏覽器縮放不是 100%、devicePixelRatio 非整數、
+     捲軸出現），html 的淺色就會從邊緣或圓角外緣透出來，看起來就是「邊角多出白色/灰色塊」。
+     預覽模式下讓 html 維持跟 body 同一個深灰，就沒有誰透出來的問題。 */
+  const simOn=(typeof SIM!=="undefined"&&SIM);
+  document.documentElement.style.background=simOn?"#262b36":SCENE_BG[k];
+  document.body.style.background=simOn?"":SCENE_BG[k];
   const m=document.querySelector('meta[name=theme-color]'); if(m)m.setAttribute("content",SCENE_THEME[k]);
 }
 function setScene(s){
