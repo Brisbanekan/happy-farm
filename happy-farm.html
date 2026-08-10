@@ -1113,27 +1113,46 @@
 
 <script>
 /* ============ 資料設定 ============ */
+/* 種子價（cost）的定價規則 —— 2026-08 調整
+   一次收成 5 顆（harvest() 的 qty），但種子是「一顆一顆買」，
+   所以真正的利潤率是 (5×sell − cost) / cost，不是 sell/cost。
+   舊表的 sell/cost 只有 2~3 倍，看起來合理，實際利潤率卻是 900%～1400%
+   —— 而且越高階越誇張（酪梨 1400% vs 蘿蔔 900%），滾雪球滾太快。
+
+   新規則：利潤率壓到 300%（蘿蔔）→ 200%（酪梨），梯度改成遞減。
+   公式 cost ≈ 5×sell / (1+目標利潤率)，再取整數。
+
+   為什麼動 cost 不動 sell：sell 是期貨合約基準價（FUTS 的 base）
+   與工廠加工品售價的來源，改它會連帶動到那兩個系統的所有數字。
+   cost 只有商店買種子用得到，是乾淨的旋鈕。
+
+   副作用（刻意保留）：
+   - 金/秒 從 3.60~16.55 降到 3.00~11.82（總產出約 −29%），梯度 4.6→3.9 倍
+   - 種子變成前期資本門檻（12 塊酪梨田要先付 72,000），本身就是金幣出口
+   - 作物行情 ±15% 的影響被放大：酪梨行情差時利潤率剩 155%，好時 245%，
+     倉庫「等好價再賣」從錦上添花變成真的要做的決策
+   - 田地被偷光（qty 2）或欠維護費打折時可能小虧，疏於照顧會真的痛 */
 const CROPS = {
-  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:10,  sell:20,  grow:25, xp:6},
-  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:16,  sell:32,  grow:35, xp:8},
-  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:28,  sell:55,  grow:50, xp:11},
-  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:45,  sell:92,  grow:80, xp:15},
-  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:70,  sell:150, grow:115, xp:20},
-  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:110, sell:240, grow:165, xp:28},
-  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:140, sell:310, grow:190, xp:34},
-  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:180, sell:420, grow:230,xp:42},
-  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:230, sell:550, grow:270,xp:50},
-  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:300, sell:720, grow:315,xp:60},
-  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:420, sell:1050,grow:410,xp:78},
-  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:600, sell:1600,grow:560,xp:100},
-  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:850, sell:2400,grow:755,xp:128},
-  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:1200,sell:3600,grow:1015,xp:165},
-  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:40,  sell:70,  grow:65, xp:14, charm:1},
-  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:90,  sell:170, grow:130, xp:24, charm:2},
-  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:160, sell:300, grow:185, xp:32, charm:3},
-  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:280, sell:540, grow:265,xp:48, charm:4},
-  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:450, sell:900, grow:360,xp:70, charm:6},
-  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:750, sell:1550,grow:495,xp:100,charm:8},
+  radish:   {name:"蘿蔔",   emoji:"🥕", grown:"🥕", type:"crop",  lvl:1, charmReq:0,  cost:25,  sell:20,  grow:25, xp:6},
+  cucumber: {name:"小黃瓜", emoji:"🥒", grown:"🥒", type:"crop",  lvl:1, charmReq:0,  cost:40,  sell:32,  grow:35, xp:8},
+  tomato:   {name:"番茄",   emoji:"🍅", grown:"🍅", type:"crop",  lvl:2, charmReq:3,  cost:70,  sell:55,  grow:50, xp:11},
+  corn:     {name:"玉米",   emoji:"🌽", grown:"🌽", type:"crop",  lvl:3, charmReq:8,  cost:120,  sell:92,  grow:80, xp:15},
+  eggplant: {name:"茄子",   emoji:"🍆", grown:"🍆", type:"crop",  lvl:4, charmReq:15, cost:200,  sell:150, grow:115, xp:20},
+  strawberry:{name:"草莓",  emoji:"🍓", grown:"🍓", type:"crop",  lvl:5, charmReq:25, cost:330, sell:240, grow:165, xp:28},
+  chili:    {name:"辣椒",   emoji:"🌶️", grown:"🌶️", type:"crop",  lvl:6, charmReq:30, cost:450, sell:310, grow:190, xp:34},
+  pumpkin:  {name:"南瓜",   emoji:"🎃", grown:"🎃", type:"crop",  lvl:7, charmReq:40, cost:600, sell:420, grow:230,xp:42},
+  watermelon:{name:"西瓜",  emoji:"🍉", grown:"🍉", type:"crop",  lvl:8, charmReq:50, cost:800, sell:550, grow:270,xp:50},
+  grape:    {name:"葡萄",   emoji:"🍇", grown:"🍇", type:"crop",  lvl:9, charmReq:60, cost:1100, sell:720, grow:315,xp:60},
+  pineapple:{name:"鳳梨",   emoji:"🍍", grown:"🍍", type:"crop",  lvl:11,charmReq:75, cost:1600, sell:1050,grow:410,xp:78},
+  melon:    {name:"哈密瓜", emoji:"🍈", grown:"🍈", type:"crop",  lvl:13,charmReq:95, cost:2500, sell:1600,grow:560,xp:100},
+  peach:    {name:"水蜜桃", emoji:"🍑", grown:"🍑", type:"crop",  lvl:15,charmReq:120,cost:3900, sell:2400,grow:755,xp:128},
+  avocado:  {name:"酪梨",   emoji:"🥑", grown:"🥑", type:"crop",  lvl:18,charmReq:150,cost:6000,sell:3600,grow:1015,xp:165},
+  carnation:{name:"康乃馨", emoji:"🌸", grown:"🌸", type:"flower",lvl:2, charmReq:0,  cost:90,  sell:70,  grow:65, xp:14, charm:1},
+  tulip:    {name:"鬱金香", emoji:"🌷", grown:"🌷", type:"flower",lvl:4, charmReq:2,  cost:230,  sell:170, grow:130, xp:24, charm:2},
+  sunflower:{name:"向日葵", emoji:"🌻", grown:"🌻", type:"flower",lvl:6, charmReq:5,  cost:425, sell:300, grow:185, xp:32, charm:3},
+  rose:     {name:"玫瑰",   emoji:"🌹", grown:"🌹", type:"flower",lvl:9, charmReq:10, cost:775, sell:540, grow:265,xp:48, charm:4},
+  hibiscus: {name:"扶桑花", emoji:"🌺", grown:"🌺", type:"flower",lvl:12,charmReq:20, cost:1350, sell:900, grow:360,xp:70, charm:6},
+  lotus:    {name:"蓮花",   emoji:"🏵️", grown:"🏵️", type:"flower",lvl:16,charmReq:35, cost:2400, sell:1550,grow:495,xp:100,charm:8},
 };
 /* 三階段生長：種子(0～45%) → 幼苗(45～100%) → 成熟可收成。STAGE 對應前兩個階段的外觀 */
 const STAGE = ["🌰","🌱"];
