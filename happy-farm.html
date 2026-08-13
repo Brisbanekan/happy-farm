@@ -30,6 +30,12 @@
     font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#3e2723;
     background:#88c057;-webkit-user-select:none;user-select:none;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;
   }
+  /* 商店／倉庫的數量欄：只留左右的 − ＋ 鈕。
+     type 維持 number 是為了手機會跳數字鍵盤，但瀏覽器原生的上下箭頭
+     跟旁邊的 − ＋ 是兩套一樣的東西，在 42px 寬的欄位裡還會擠掉數字。 */
+  .qtyin::-webkit-outer-spin-button,
+  .qtyin::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0;}
+  .qtyin{-moz-appearance:textfield;appearance:textfield;}
   #scene{
     position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;touch-action:none;
     background:#8bca54 url(background/background3.png) center/cover no-repeat;   /* 全景外圍以同張寬背景填滿，無縫 */
@@ -4216,7 +4222,7 @@ function openShop(tab){
       if(locked){ btn='<button class="pbtn gold" disabled>'+CO+c.cost+'</button>'; }
       else { btn='<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',-1)">−</button>'+
-        '<input type="number" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
+        '<input type="number" class="qtyin" id="bq_'+k+'" value="1" min="1" oninput="bqClamp(\''+k+'\')" style="width:42px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
         '<button class="pbtn" style="padding:5px 8px" onclick="bqStep(\''+k+'\',1)">＋</button>'+
         '<button class="pbtn gold" onclick="buySeedQty(\''+k+'\')">買（'+CO+c.cost+'/個）</button></div>'; }
       // 顯示今日行情而非基準價：種什麼要看現在什麼價，這是浮動行情的重點
@@ -4247,7 +4253,7 @@ function openInv(tab){
         '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">今日 '+CO+cropPrice(k)+' '+cropTag(k)+' <span style="opacity:.65">（平時 '+c.sell+'）</span></div></div>'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
           '<button class="pbtn" style="padding:5px 9px" onclick="sqStep(\''+k+'\',-1)">−</button>'+
-          '<input type="number" id="sq_'+k+'" value="1" min="1" max="'+cnt+'" oninput="sqClamp(\''+k+'\')" style="width:48px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
+          '<input type="number" class="qtyin" id="sq_'+k+'" value="1" min="1" max="'+cnt+'" oninput="sqClamp(\''+k+'\')" style="width:48px;padding:5px;border:2px solid #cdbb95;border-radius:8px;text-align:center;font-size:14px">'+
           '<button class="pbtn" style="padding:5px 9px" onclick="sqStep(\''+k+'\',1)">＋</button>'+
           '<button class="pbtn gold" onclick="sellQtyInput(\''+k+'\')">賣出</button>'+
           '<button class="pbtn" onclick="sellAll(\''+k+'\')">全賣</button>'+
