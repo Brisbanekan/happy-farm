@@ -1587,6 +1587,7 @@ function normalizeState(){
   ["giftSent","giftGot","helpGot"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object"||Array.isArray(G[k]))G[k]={}; });
   if(typeof G.helpN!=="number")G.helpN=0;
   if(typeof G.npcStealN!=="number")G.npcStealN=0;
+  ["careGot","biteGot","stealSeen"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object"||Array.isArray(G[k]))G[k]={}; });
   if(typeof G.tut!=="number")G.tut=(G.level>1||achSt("harv")>0)?99:0;   // 舊玩家不跳新手引導
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
@@ -3929,7 +3930,7 @@ function openSeedPick(i,avail){
 }
 function doPlant(i,key){
   const p=G.plots[i];G.seeds[key]--;if(G.seeds[key]<=0)delete G.seeds[key];
-  Object.assign(p,{state:"planted",crop:key,grow:0,ripe:false,stolen:0,dry:false,weed:false,bug:0,bugBig:false,ripeT:0});
+  Object.assign(p,{state:"planted",crop:key,grow:0,ripe:false,stolen:0,dry:false,weed:false,bug:0,bugBig:false,ripeT:0,pid:Math.round(gameNow())});   // pid：這一株作物的編號，好友的偷菜／照顧紀錄靠它對應
   window.__plantSel=key;gainXp(1);questProg("plant",1);tutHit("plant");sfx("plant");log("播種 "+CROPS[key].emoji+CROPS[key].name);render();
 }
 /* ============ 金色作物＋圖鑑 ============
@@ -3990,7 +3991,8 @@ function dexBody(){
 }
 function harvest(i){
   const p=G.plots[i];const c=CROPS[p.crop];
-  let qty=4-p.stolen;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty+=fQtyB();
+  const stolenEff=stolenOf(p,i);            // 本機（電腦好友）＋真實好友名片上的紀錄
+  let qty=4-stolenEff;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty+=fQtyB();
   if(upkeepDebt()>0)qty=Math.round(qty*upkeepMul());   // 積欠維護費：收成打折
   qty=Math.max(1,qty);
   G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;achStat("harv");gainXp(c.xp);upkeepMark();
@@ -3999,7 +4001,7 @@ function harvest(i){
   questProg("harv",1);tutHit("harv");
   if(c.type==="flower"){G.charm+=c.charm;log("收成 "+c.emoji+c.name+" ×"+qty+"，魅力 +"+c.charm+" ❤️","b");}
   else log("收成 "+c.emoji+c.name+" ×"+qty+"！記得到倉庫賣錢","g");
-  Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0,ripeT:0});
+  Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0,ripeT:0,pid:0});
 }
 
 /* ============ 工廠：升級（1-10級，需魅力門檻）＋農產加工 ============ */
@@ -4603,7 +4605,9 @@ function loadAllPlayers(){
   if(!friendReady())return;
   fbDB.ref("profiles").once("value").then(function(snap){
     const d=snap.val()||{}; let added=0; if(!G.pals||typeof G.pals!=="object"||Array.isArray(G.pals))G.pals={};
+    _profCache=d;
     try{ palInbox(d); }catch(e){}
+    try{ palApply(d); }catch(e){}
     Object.keys(d).forEach(function(uid){
       if(!uid||uid===fbUser.uid||G.pals[uid])return;
       const p=d[uid]||{}; G.pals[uid]={name:p.name||"農友",lv:p.level||1}; added++;
@@ -4611,6 +4615,7 @@ function loadAllPlayers(){
     if(added>0){saveGame(); if(document.getElementById("palCode"))openFriends();}
   }).catch(function(e){ log("⚠️ 讀取全服玩家名冊失敗（需 Firebase 規則允許讀取 profiles 節點）："+(e&&e.message||e),"r"); });
 }
+setInterval(function(){ if(friendReady()&&!document.hidden&&!VISIT.on)loadAllPlayers(); },60000);
 function addPalByCode(){
   const inp=document.getElementById("palCode");
   const code=(inp&&inp.value||"").trim().toUpperCase();
@@ -4706,6 +4711,47 @@ function sendGift(id){   // id：真實好友 uid，或 "npc0"…
   if(typeof sfx==="function")sfx("pop");
   saveGame(); openFriends();
 }
+/* ============ 真實好友互動改記在「自己的名片」 ============
+   原本偷菜／照顧／狗咬罰金是直接寫進對方的 users/{uid} 存檔，有兩個問題：
+   1. 對方在線時每 10 秒整份 set() 覆蓋，寫進去的「已被偷次數」被蓋回 0 → 可以無限重複偷，對方什麼都沒少
+   2. 資料庫規則必須開放「任何登入玩家都能寫別人的田地」→ 任何人都能用開發工具清空全服玩家的田
+   改成：偷的人記在 profiles/{自己}/steals/{對方}/{格}（帶作物編號 pid），
+         照顧記在 profiles/{自己}/cares/{對方}/{格}，狗咬罰金記在 profiles/{自己}/bites/{對方}，
+   被偷／被照顧的人讀名冊（loadAllPlayers，登入時與每分鐘）時自己套用。users/ 從此只有本人能寫。 */
+let _profCache={};
+function stealsFrom(profiles,victim,i,pid){   // 所有真實好友對「這一株」偷了幾次
+  let n=0; pid=pid||0;
+  Object.keys(profiles||{}).forEach(function(u){ if(u===victim)return;
+    const r=profiles[u]&&profiles[u].steals&&profiles[u].steals[victim]&&profiles[u].steals[victim][i];
+    if(r&&(r.pid||0)===pid)n+=Math.max(0,r.n|0); });
+  return n;
+}
+function stolenOf(p,i){   // 自己田地的有效被偷次數（上限 2）
+  const ext=(typeof fbUser!=="undefined"&&fbUser)?stealsFrom(_profCache,fbUser.uid,i,p.pid):0;
+  return Math.min(2,(p.stolen||0)+ext);
+}
+function palApply(profiles){   // 被偷的通知、別人幫我照顧、狗咬罰金入帳
+  if(!friendReady()||!profiles)return;
+  const me=fbUser.uid; let changed=false;
+  ["careGot","biteGot","stealSeen"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object")G[k]={}; });
+  Object.keys(profiles).forEach(function(uid){
+    if(uid===me)return; const P=profiles[uid]||{}, who=P.name||"農友";
+    const cares=P.cares&&P.cares[me];
+    if(cares)Object.keys(cares).forEach(function(i){ const c=cares[i], pl=G.plots[+i]; if(!c||!pl)return;
+      const key=uid+"|"+i; if((c.ts||0)<=(G.careGot[key]||0))return; G.careGot[key]=c.ts||0;
+      if(pl.state==="planted"&&(pl.pid||0)===(c.pid||0)&&(pl.dry||pl.weed||pl.bug)){ pl.dry=false;pl.weed=false;pl.bug=0;pl.bugBig=false;
+        log("🤝 "+who+" 幫你照顧了一塊田","g"); changed=true; } });
+    const b=P.bites&&P.bites[me];
+    if(b&&b.d){ const prev=G.biteGot[uid]||{}, before=(prev.d===b.d)?(prev.g||0):0, add=Math.max(0,Math.min(5000,b.g|0)-before);
+      if(add>0){ G.biteGot[uid]={d:b.d,g:before+add}; G.gold+=add; log("🐕 看門狗咬住來偷菜的 "+who+"，對方掉了 "+CO+add+" 給你！","g"); changed=true; } }
+    const st=P.steals&&P.steals[me];
+    if(st)Object.keys(st).forEach(function(i){ const r=st[i], pl=G.plots[+i]; if(!r||!pl||(pl.pid||0)!==(r.pid||0))return;
+      const key=uid+"|"+i, seen=G.stealSeen[key]||{}, before=(seen.pid===r.pid)?(seen.n||0):0;
+      if((r.n|0)>before){ G.stealSeen[key]={pid:r.pid,n:r.n|0}; const c=CROPS[pl.crop]||{emoji:"🌾",name:"作物"};
+        log("😱 "+who+" 偷走了你一些 "+c.emoji+c.name+"…快收成吧！","r"); changed=true; } });
+  });
+  if(changed){ renderHUD(); renderGrid(); saveGame(); }
+}
 /* 讀名冊時：收下真實好友寫給我的禮物、以及他們幫我照顧的謝禮 */
 function palInbox(profiles){
   if(!friendReady()||!profiles)return;
@@ -4785,8 +4831,8 @@ function enterVisitNpc(i){
 function enterVisitPal(uid){
   if(!friendReady())return;
   toast("前往好友農場…");
-  fbDB.ref("users/"+uid).once("value").then(function(snap){
-    const d=snap.val();
+  Promise.all([fbDB.ref("users/"+uid).once("value"),fbDB.ref("profiles").once("value")]).then(function(res){
+    const snap=res[0]; const d=snap.val(); _profCache=res[1].val()||{};
     if(!d||!Array.isArray(d.plots)){alert("讀不到好友的農場資料（對方可能還沒上線存檔過）。");return;}
     const f=G.pals[uid]||{name:"農友"};
     const st=d.stat||{}, fx=d.factory||{};
@@ -4797,6 +4843,10 @@ function enterVisitPal(uid){
       decos:Array.isArray(d.decoItems)?d.decoItems:[],   // 看到的是對方買的裝飾
       plots:d.plots.map(function(p){return (p&&typeof p==="object")?p:{unlocked:false,state:"empty",crop:null};})};
     advancePlotsOffline(VISIT.plots, d.ts);   // 補算到現在，顯示好友作物的即時生長階段
+    VISIT.plots.forEach(function(p,i){ if(!p||!p.crop)return;   // 加上真實好友名片上的偷菜／照顧紀錄（對方可能還沒上線套用）
+      p.stolen=Math.min(2,(p.stolen||0)+stealsFrom(_profCache,uid,i,p.pid));
+      Object.keys(_profCache).forEach(function(u){ const c=_profCache[u]&&_profCache[u].cares&&_profCache[u].cares[uid]&&_profCache[u].cares[uid][i];
+        if(c&&(c.pid||0)===(p.pid||0)&&(c.ts||0)>(d.ts||0)){ p.dry=false;p.weed=false;p.bug=0;p.bugBig=false; } }); });
     startVisit();
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
 }
@@ -4868,22 +4918,22 @@ function visitTap(i){
     renderHUD();renderGrid();saveGame();
     return;
   }
-  // 真實好友：直接寫回對方資料庫
-  const plotRef=fbDB.ref("users/"+VISIT.uid+"/plots/"+i);
+  // 真實好友：只寫自己的名片（profiles/{我}/...），對方讀名冊時自己套用
+  const me=fbUser.uid, victim=VISIT.uid, myRef=fbDB.ref("profiles/"+me);
   if(care){
-    let n=0; const up={};
-    if(p.dry){p.dry=false;up.dry=false;n++;}
-    if(p.weed){p.weed=false;up.weed=false;n++;}
-    if(p.bug){p.bug=0;p.bugBig=false;up.bug=0;up.bugBig=false;n++;}
+    let n=0;
+    if(p.dry){p.dry=false;n++;}
+    if(p.weed){p.weed=false;n++;}
+    if(p.bug){p.bug=0;p.bugBig=false;n++;}
     if(!n){toast("這塊地不需要照顧");return;}
-    const helpUid=VISIT.uid;
-    plotRef.update(up).then(function(){
+    const helpUid=victim;
+    myRef.child("cares/"+victim+"/"+i).set({pid:p.pid||0,ts:Math.round(gameNow())}).then(function(){
       helpReward(n,VISIT.name);saveGame();
       // 在自己名片記下「今天幫他照顧了幾次」，對方讀名冊時會收到謝禮
       const t=todayStr(), hr=fbDB.ref("profiles/"+fbUser.uid+"/helped/"+helpUid);
       hr.transaction(function(cur){ return (cur&&cur.d===t)?{d:t,n:(cur.n||0)+n}:{d:t,n:n}; }).catch(function(){});
       renderGrid();
-    }).catch(function(e){alert("寫入失敗："+(e&&e.message||e));});
+    }).catch(function(e){log("⚠️ 照顧紀錄寫入失敗："+(e&&e.message||e),"r");});
   }else{
     if(!p.ripe){toast("還沒成熟，不能偷");return;}
     if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
@@ -4891,22 +4941,22 @@ function visitTap(i){
     if(dog&&dog.fedUntil&&dog.fedUntil>gameNow()&&Math.random()<dogBiteChance(dog.level||1)){
       const fine=Math.round((15+Math.random()*30)*(1+((dog.level||1)-1)*0.6));
       G.gold=Math.max(0,G.gold-fine);renderHUD();saveGame();
-      fbDB.ref("users/"+VISIT.uid+"/gold").transaction(function(g){return (g||0)+fine;});
+      const t=todayStr();   // 罰金記在自己名片，對方讀名冊時入帳
+      myRef.child("bites/"+victim).transaction(function(cur){ return (cur&&cur.d===t)?{d:t,g:(cur.g||0)+fine}:{d:t,g:fine}; }).catch(function(){});
       log("你在 "+VISIT.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");
       return;
     }
-    plotRef.child("stolen").transaction(function(cur){
-      cur=cur||0; return cur>=2?undefined:cur+1;
-    },function(err,committed,snap){
-      if(err){alert("偷菜失敗："+(err.message||err));return;}
-      if(!committed){toast("這塊已被偷光了");p.stolen=2;renderGrid();return;}
-      p.stolen=snap.val();
+    const pid=p.pid||0, mine=(_profCache[me]&&_profCache[me].steals&&_profCache[me].steals[victim]&&_profCache[me].steals[victim][i])||null;
+    const n=(mine&&(mine.pid||0)===pid)?((mine.n|0)+1):1, rec={pid:pid,n:n,ts:Math.round(gameNow())};
+    myRef.child("steals/"+victim+"/"+i).set(rec).then(function(){
+      if(!_profCache[me])_profCache[me]={}; const P=_profCache[me]; if(!P.steals)P.steals={}; if(!P.steals[victim])P.steals[victim]={}; P.steals[victim][i]=rec;
+      p.stolen=Math.min(2,(p.stolen||0)+1);
       const q=1+Math.floor(Math.random()*2);
       const c=CROPS[p.crop]||{name:"作物",emoji:"🌾"};
       G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);saveGame();
       log("偷到 "+VISIT.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);
       renderGrid();
-    });
+    }).catch(function(e){toast("偷菜失敗："+(e&&e.message||e));});
   }
 }
 
@@ -5131,7 +5181,7 @@ function tick(){
   /* 偷菜：成熟後先有寬限期（STEAL_GRACE），過了才會有人來偷 ——
      讓偷菜是「放太久」的懲罰，不是「沒秒收」的懲罰（原本每 tick 35%，幾秒內必被偷兩次） */
   G.plots.forEach(p=>{ if(p.unlocked&&p.state==="planted"&&p.ripe)p.ripeT=(p.ripeT||0)+1; });
-  if(Math.random()<STEAL_P){const rp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&p.ripe&&p.stolen<2&&(p.ripeT||0)>=STEAL_GRACE);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(dogFed()&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 <span class=coinico></span>"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
+  if(Math.random()<STEAL_P){const rp=G.plots.filter((p,i)=>p.unlocked&&p.state==="planted"&&p.ripe&&stolenOf(p,i)<2&&(p.ripeT||0)>=STEAL_GRACE);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(dogFed()&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 <span class=coinico></span>"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
   if(Math.random()<0.3){const f=G.friends[Math.floor(Math.random()*G.friends.length)];f.plots[Math.floor(Math.random()*f.plots.length)]=makeFriendPlot();}
   // 電腦好友偶爾路過幫忙照顧（約每 3 分鐘一次，只在有田需要照顧時）
   if(!VISIT.on&&Math.random()<0.008){const hp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&(p.dry||p.weed||(p.bug&&!p.bugBig)));
