@@ -347,6 +347,9 @@
     font-size:14px;font-weight:800;color:#5b3f17;white-space:nowrap;}
   #scene.visiting .visitbar{display:flex;}
   #scene.visiting .sceneswitch{display:none;}
+  /* 拜訪好友：倉庫／工廠是對方的，不能點；只保留農舍（看對方資料） */
+  #scene.visiting .bld[data-act]:not(.bhouse){pointer-events:none;cursor:default;}
+  #scene.visiting .bld[data-act]:not(.bhouse) .bldcue{display:none;}
   .visitbar button{border:calc(var(--u)*2) solid #e98a8a;background:#ffe3e3;color:#a23b3b;border-radius:calc(var(--u)*16);padding:calc(var(--u)*4) calc(var(--u)*14);font-weight:800;cursor:pointer;font-size:calc(var(--u)*13);}
   .visitbar button:active{transform:translateY(1px);}
   /* ===== 佈局編輯模式（?edit=1） ===== */
@@ -843,6 +846,38 @@
 
   .toast{position:fixed;left:50%;top:calc(var(--u)*64 + env(safe-area-inset-top,0px));transform:translateX(-50%);background:#3e2723e8;color:#fff;padding:calc(var(--u)*8) calc(var(--u)*16);border-radius:calc(var(--u)*20);font-weight:700;font-size:calc(var(--u)*14);z-index:80;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(6px);}
+  /* ===== 金色作物＋圖鑑 ===== */
+  .gold-e{display:inline-block;filter:sepia(1) saturate(5) hue-rotate(-12deg) brightness(1.15) drop-shadow(0 0 3px #ffd54f);}
+  .dexsum{background:#fff8e1;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px;}
+  .dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;}
+  .dexcell{background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:6px 4px;text-align:center;font-size:11px;color:#6b5a45;line-height:1.3;position:relative;}
+  .dexcell .de{font-size:26px;display:block;line-height:1.2;}
+  .dexcell.off{opacity:.45;}
+  .dexcell.g{background:#fff3c4;border-color:#f5b733;}
+  .dexcell .dstar{position:absolute;top:2px;right:4px;font-size:12px;}
+  /* ===== 每日任務 ===== */
+  .qbadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e53935;color:#fff;
+    font-size:11px;font-weight:900;line-height:18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3);display:none;pointer-events:none;}
+  .qbadge.on{display:block;}
+  .qrow{display:flex;align-items:center;gap:10px;background:#faf6ec;border:1px solid #eee3cf;border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:13px;}
+  .qrow.done{background:#eef8e4;border-color:#b9dc93;}
+  .qrow .qe{font-size:24px;}
+  .qrow .qm{flex:1;min-width:0;}
+  .qbar{height:7px;background:#eadfca;border-radius:4px;overflow:hidden;margin:4px 0 2px;}
+  .qbar i{display:block;height:100%;background:#7cb342;border-radius:4px;}
+  /* ===== 新手引導 ===== */
+  .tutbub{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:45;
+    width:min(360px,calc(100vw - 32px));background:#fffef6;border:2px solid #f5b733;border-radius:12px;padding:6px 8px 6px 10px;
+    box-shadow:0 4px 12px rgba(0,0,0,.22);font-size:12px;line-height:1.45;color:#5d4a36;display:none;align-items:center;gap:8px;}
+  .tutbub.on{display:flex;animation:tutIn .35s ease-out;}
+  .tutbub .ttx{flex:1;min-width:0;}
+  .tutbub b{color:#c9920f;}
+  .tutbub .tstep{font-size:11px;color:#a08a6a;font-weight:800;}
+  .tutbub button{flex-shrink:0;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer;background:#eee3cf;color:#8a7350;white-space:nowrap;}
+  .tutbub button.go{background:#7cb342;color:#fff;}
+  @keyframes tutIn{from{opacity:0;transform:translate(-50%,-8px);}to{opacity:1;transform:translate(-50%,0);}}
+  .tut-hl{animation:tutPulse 1.2s ease-in-out infinite;}
+  @keyframes tutPulse{0%,100%{filter:drop-shadow(0 0 0 rgba(255,193,7,0));}50%{filter:drop-shadow(0 0 10px rgba(255,193,7,1)) brightness(1.08);}}
 </style>
 </head>
 <body>
@@ -951,11 +986,12 @@
     <div class="sp"></div>
     <div class="grp">
       <div class="dbtn" onclick="openShop()">🛒<small>商店</small></div>
-      <div class="dbtn" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
+      <div class="dbtn" id="invBtn" onclick="openInv('harvest')">🎒<small>倉庫</small></div>
       <!-- 功能鈕（接在倉庫右邊、同組同間距，選單往右展開） -->
       <div class="leftbar" id="leftbar">
-        <div class="lbtn lbtoggle" onclick="toggleLeftbar()">🎯<small>功能</small></div>
+        <div class="lbtn lbtoggle" onclick="toggleLeftbar()" style="position:relative">🎯<small>功能</small><span class="qbadge" id="qBadge1"></span></div>
         <div class="lbitems" id="lbItems">
+          <div class="lbtn" onclick="openQuests();closeLeftbar()" style="position:relative">📋<small>任務</small><span class="qbadge" id="qBadge2"></span></div>
           <div class="lbtn" id="decoBtn" onclick="toggleDecoMode();closeLeftbar()">🏡<small>擺設</small></div>
           <div class="lbtn" onclick="openDaily();closeLeftbar()">🎁<small>每日</small></div>
           <div class="lbtn" onclick="openArcade();closeLeftbar()">🎡<small>遊藝場</small></div>
@@ -1096,6 +1132,7 @@
 </div>
 
 <!-- 登入畫面（啟用帳號登入時才顯示） -->
+<div class="tutbub" id="tutBub"></div>
 <div class="loginmask" id="loginMask">
   <div class="loginbox">
     <div style="font-size:48px">🌻</div>
@@ -1318,7 +1355,7 @@ const FIREBASE_CONFIG = {
 let fbAuth=null, fbDB=null, fbUser=null, fbSaveTimer=null, cloudReady=false;
 function accountMode(){return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&window.firebase);}
 function showLogin(m){const el=document.getElementById("loginMask");if(el)el.classList.add("on");const mm=document.getElementById("loginMsg");if(mm)mm.textContent=m||"";}
-function hideLogin(){const el=document.getElementById("loginMask");if(el)el.classList.remove("on");}
+function hideLogin(){const el=document.getElementById("loginMask");if(el)el.classList.remove("on");if(typeof tutRender==="function")tutRender();}
 function googleLogin(){
   if(!fbAuth){showLogin("尚未設定 Firebase");return;}
   const p=new firebase.auth.GoogleAuthProvider();
@@ -1417,7 +1454,7 @@ function freshGame(){
   G.stockOrders=[];G.stockFav={};
   G.plots=LANDS.map((l,i)=>newPlot(i<6));
   G.ranch=[];G.pals={};G.myCode="";
-  G.factory={lv:1,q:[]};G.goods={};G.buffs={};
+  G.factory={lv:1,q:[]};G.goods={};G.buffs={};G.tut=0;
   G.friends=FRIEND_NAMES.map(f=>({name:f[0],av:f[1],plots:Array.from({length:6},()=>makeFriendPlot())}));
 }
 function normalizeState(){
@@ -1487,6 +1524,16 @@ function normalizeState(){
   if(!G.stockFav||typeof G.stockFav!=="object")G.stockFav={};
   if(!Array.isArray(G.decoItems)&&!(G.decos&&typeof G.decos==="object"))G.decoItems=[];   // 莊園裝飾（實例陣列）
   if(typeof G.upDebt!=="number")G.upDebt=0;             // 維護費欠款
+  if(!Array.isArray(G.upAct))G.upAct=[];                 // 有收成的日子（維護費只收這些天）
+  if(!G.rare||typeof G.rare!=="object")G.rare={};        // 金色作物庫存
+  if(!G.dex||typeof G.dex!=="object"){                   // 圖鑑：舊存檔用倉庫現有作物當「見過」
+    G.dex={}; Object.keys(G.harvest||{}).forEach(k=>{ if(CROPS[k])G.dex[k]={n:G.harvest[k]||0,g:0}; }); }
+  Object.keys(G.dex).forEach(k=>{ const d=G.dex[k]; if(!d||typeof d!=="object"||!CROPS[k])delete G.dex[k]; else{ d.n=d.n||0; d.g=d.g||0; } });
+  if(typeof G.dexClaim!=="number")G.dexClaim=0;
+  if(!Array.isArray(G.gifts))G.gifts=[];                                             // 好友禮物箱
+  ["giftSent","giftGot","helpGot"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object"||Array.isArray(G[k]))G[k]={}; });
+  if(typeof G.helpN!=="number")G.helpN=0;
+  if(typeof G.tut!=="number")G.tut=(G.level>1||achSt("harv")>0)?99:0;   // 舊玩家不跳新手引導
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
   if(typeof G.factory.lv!=="number"||G.factory.lv<1)G.factory.lv=1;
@@ -1636,9 +1683,74 @@ function claimDaily(){
   if(r.h){G.charm+=r.h;parts.push("❤️"+r.h);}
   if(r.s)Object.entries(r.s).forEach(([k,n])=>{G.seeds[k]=(G.seeds[k]||0)+n;parts.push(CROPS[k].emoji+seedName(k)+"×"+n);});
   if(G.totalDays%30===0){G.credit+=10;parts.push("｜累積"+G.totalDays+"天額外 💎10");} // 累積里程碑
-  log("🎁 連續第 "+G.streak+" 天登入，領取："+parts.join(" "),"g");
+  log("🎁 連續第 "+G.streak+" 天登入，領取："+parts.join(" "),"g"); sfx("coin");
   toast("領取成功 "+parts.join(" "));
   renderHUD();saveGame();openDaily();
+}
+/* ============ 每日任務 ============
+   每天（跟每日登入同一個日界）從任務池抽 3 個，只抽玩家已經能做的。
+   每個任務給金幣＋經驗，三個都領完再給 💎1。進度由各動作呼叫 questProg(種類, 數量)。 */
+const QUEST_POOL={
+  harv:  {e:"🧺", t:n=>"收成作物 "+n+" 次",           n:lv=>lv<4?8:15,  ok:()=>true},
+  plant: {e:"🌱", t:n=>"播種 "+n+" 次",               n:lv=>lv<4?8:15,  ok:()=>true},
+  sell:  {e:"💰", t:n=>"賣東西賺到 "+n.toLocaleString()+" 金幣", n:lv=>200*lv, ok:()=>true},
+  care:  {e:"🚿", t:n=>"照顧自己的田地 "+n+" 次",     n:()=>3,          ok:()=>G.level>=2},
+  animal:{e:"🐮", t:n=>"收取動物產物 "+n+" 次",       n:()=>5,          ok:()=>(G.ranch||[]).length>0},
+  craft: {e:"🏭", t:n=>"在工廠完成加工 "+n+" 次",     n:()=>1,          ok:()=>G.level>=3},
+  help:  {e:"🤝", t:n=>"拜訪好友幫忙照顧 "+n+" 次",   n:()=>3,          ok:()=>true},
+  gift:  {e:"🎁", t:n=>"送禮給好友 "+n+" 次",         n:()=>2,          ok:()=>true},
+};
+function questReward(){ const lv=G.level||1; return {g:150+lv*60, x:10+lv*3}; }
+function questEnsure(){
+  const t=todayStr();
+  if(G.quest&&G.quest.d===t&&Array.isArray(G.quest.list))return G.quest;
+  const ks=Object.keys(QUEST_POOL).filter(k=>{try{return QUEST_POOL[k].ok();}catch(e){return false;}});
+  for(let i=ks.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ks[i],ks[j]]=[ks[j],ks[i]];}
+  G.quest={d:t,bonus:0,list:ks.slice(0,3).map(k=>({k:k,need:QUEST_POOL[k].n(G.level||1),have:0,cl:0}))};
+  return G.quest;
+}
+function questProg(k,n){
+  if(!G||VISIT.on&&k!=="help")return;
+  const q=questEnsure(); let changed=false;
+  q.list.forEach(function(it){
+    if(it.k!==k||it.have>=it.need)return;
+    it.have=Math.min(it.need,it.have+(n||1)); changed=true;
+    if(it.have>=it.need){ toast("📋 任務完成："+QUEST_POOL[k].t(it.need)+"，去領獎勵！"); log("📋 每日任務完成："+QUEST_POOL[k].t(it.need),"g");
+      if(typeof sfx==="function")sfx("quest"); }
+  });
+  if(changed)questBadge();
+}
+function questClaimable(){ const q=questEnsure(); let n=q.list.filter(it=>it.have>=it.need&&!it.cl).length;
+  if(!q.bonus&&q.list.length&&q.list.every(it=>it.cl))n++; return n; }
+function questBadge(){ let n=0; try{n=questClaimable();}catch(e){}
+  ["qBadge1","qBadge2"].forEach(id=>{const b=document.getElementById(id); if(b){b.textContent=n; b.classList.toggle("on",n>0);}}); }
+function questClaim(i){
+  const q=questEnsure(), it=q.list[i]; if(!it||it.cl||it.have<it.need)return;
+  const r=questReward(); it.cl=1; G.gold+=r.g; gainXp(r.x);
+  log("📋 領取任務獎勵 "+CO+r.g+" ⭐"+r.x,"g"); toast("📋 "+CO+"+"+r.g+" ⭐+"+r.x);
+  if(typeof sfx==="function")sfx("coin");
+  renderHUD(); saveGame(); openQuests();
+}
+function questClaimBonus(){
+  const q=questEnsure(); if(q.bonus||!q.list.every(it=>it.cl))return;
+  q.bonus=1; G.credit+=1; log("📋 今日任務全部完成！額外獎勵 💎1","g"); toast("🎉 今日任務全破！💎+1");
+  if(typeof sfx==="function")sfx("level");
+  renderHUD(); saveGame(); openQuests();
+}
+function openQuests(){
+  const q=questEnsure(), r=questReward();
+  let h='<h2>📋 每日任務 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
+  q.list.forEach(function(it,i){ const Q=QUEST_POOL[it.k], done=it.have>=it.need;
+    h+='<div class="qrow'+(done?' done':'')+'"><span class="qe">'+Q.e+'</span><div class="qm"><b>'+Q.t(it.need)+'</b>'+
+       '<div class="qbar"><i style="width:'+Math.round(it.have/it.need*100)+'%"></i></div>'+
+       '<small style="color:#8d7b6a">'+it.have.toLocaleString()+' / '+it.need.toLocaleString()+'　獎勵 '+CO+r.g+' ⭐'+r.x+'</small></div>'+
+       (it.cl?'<span style="font-weight:800;color:#6a9a3a">✅ 已領</span>':
+         '<button class="pbtn'+(done?' gold':'')+'" '+(done?'':'disabled style="opacity:.55"')+' onclick="questClaim('+i+')">領取</button>')+'</div>';});
+  const all=q.list.every(it=>it.cl);
+  h+='<div class="qrow'+(q.bonus?' done':'')+'" style="background:#fff3c4;border-color:#f5b733"><span class="qe">🎉</span><div class="qm"><b>三個任務都領完</b><br><small style="color:#8d7b6a">額外獎勵 💎1</small></div>'+
+     (q.bonus?'<span style="font-weight:800;color:#6a9a3a">✅ 已領</span>':'<button class="pbtn'+(all?' gold':'')+'" '+(all?'':'disabled style="opacity:.55"')+' onclick="questClaimBonus()">領取</button>')+'</div>';
+  h+='<p class="hint">任務每天早上 8:00 更新（和每日登入獎勵同一時間）。</p></div>';
+  showM(h);
 }
 function openDaily(){
   const today=todayStr(); const claimedToday=(G.lastClaim===today);
@@ -1826,7 +1938,10 @@ const ACH=[
  {id:"pal",   ico:"🤝",n:"呼朋引伴",  d:"新增 1 位真人好友",     c:()=>Object.keys(G.pals||{}).length>=1},
  {id:"fs",    ico:"🎰",n:"螢光起舞",  d:"觸發拉霸 FREE GAME",    c:()=>achSt("fs")>=1},
  {id:"slot50",ico:"💎",n:"一夜致富",  d:"拉霸單轉贏得 50 倍押注",c:()=>achSt("big50")>=1},
- {id:"stock", ico:"📈",n:"進軍華爾街",d:"持有任一檔股票",        c:()=>Object.values(G.stocks||{}).some(s=>s&&s.shares)}
+ {id:"stock", ico:"📈",n:"進軍華爾街",d:"持有任一檔股票",        c:()=>Object.values(G.stocks||{}).some(s=>s&&s.shares)},
+ {id:"gold1st",ico:"✨",n:"點石成金",  d:"第一次收成金色作物",    c:()=>dexGoldKinds()>=1},
+ {id:"dexall", ico:"📖",n:"圖鑑收藏家",d:"每種作物都收成過",      c:()=>dexSeenKinds()>=Object.keys(CROPS).length, p:()=>dexSeenKinds()+"/"+Object.keys(CROPS).length+" 種"},
+ {id:"dexgold",ico:"🏅",n:"金色傳說",  d:"收集 10 種金色作物",    c:()=>dexGoldKinds()>=10, p:()=>dexGoldKinds()+"/10 種"}
 ];
 function checkAch(){
   if(!G||!Array.isArray(G.plots))return;
@@ -1844,10 +1959,13 @@ function openProfile(tab){
   const tabs='<div class="ptabs">'+
     '<button class="'+(!tab?"on":"")+'" onclick="openProfile()">👤 總覽</button>'+
     '<button class="'+(tab==="ach"?"on":"")+'" onclick="openProfile(\'ach\')">🏆 成就('+done+'/'+ACH.length+')</button>'+
+    '<button class="'+(tab==="dex"?"on":"")+'" onclick="openProfile(\'dex\')">📖 圖鑑</button>'+
     '<button class="'+(tab==="dog"?"on":"")+'" onclick="openProfile(\'dog\')">🐕 養狗</button></div>';
   let body="";
   if(tab==="dog"){
     body=dogBody();
+  }else if(tab==="dex"){
+    body=dexBody();
   }else if(tab==="ach"){
     body='<div class="achlist">'+ACH.map(a=>{
       const ok=!!G.ach[a.id];
@@ -1863,13 +1981,13 @@ function openProfile(tab){
     const need=XP_NEED(G.level);
     body=
     '<div class="pcard"><div class="pav">🧑‍🌾</div><div style="flex:1"><b>'+farmLabel()+'</b><br><small>Lv.'+G.level+'（XP '+G.xp+'/'+need+'）</small></div><button class="pbtn" style="padding:5px 10px;flex-shrink:0" onclick="renameFarm()">✏️ 改名</button></div>'+
-    // 維護費：每天扣一次，欠款會讓收成打折，所以要放在顯眼的地方
+    // 維護費：有收成的日子才收，欠款會讓收成打折，所以要放在顯眼的地方
     (function(){ const per=upkeepDaily(), debt=upkeepDebt();
       if(!per&&!debt)return "";
       return '<div style="background:'+(debt?'#ffe3e3':'#eef4ff')+';border:2px solid '+(debt?'#e98a8a':'#b8cbe8')+
         ';border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px">'+
         '<b>🧾 每日維護費</b>　'+CO+per.toLocaleString()+' / 天'+
-        '<div style="font-size:12px;color:#6b5a45;margin-top:2px">田地與動物越多，維護費越高。</div>'+
+        '<div style="font-size:12px;color:#6b5a45;margin-top:2px">買來的田地與動物越多，維護費越高。<br>只在有收成的日子收取；初始 6 塊田免收。</div>'+
         (debt?('<div style="margin-top:6px;color:#a23b3b;font-weight:800">積欠 '+CO+debt.toLocaleString()+
           '　收成 -'+Math.round(UPKEEP_DEBT_PENALTY*100)+'%</div>'+
           '<button class="pbtn gold" style="margin-top:6px" onclick="upkeepPay()">立即結清</button>'):'')+
@@ -3546,14 +3664,15 @@ function renderTools(){
   box.appendChild(ha);
 }
 function harvestAll(){
-  let n=0;
+  let n=0; const r0=Object.values(G.rare||{}).reduce((a,b)=>a+b,0);
   G.plots.forEach((p,i)=>{ if(p.unlocked&&p.state==="planted"&&p.ripe){harvest(i);n++;} });
-  if(n>0){toast("🧺 一鍵收成了 "+n+" 塊田！");render();saveGame();}
+  const gn=Object.values(G.rare||{}).reduce((a,b)=>a+b,0)-r0;
+  if(n>0){toast("🧺 一鍵收成了 "+n+" 塊田！"+(gn>0?("　✨ 金色作物 ×"+gn):""));render();saveGame();}
   else toast("目前沒有成熟的作物");
 }
 
 /* ============ 渲染 ============ */
-function render(){renderHUD();renderTools();renderGrid();renderPen();}
+function render(){renderHUD();renderTools();renderGrid();renderPen();tutRender();}
 
 /* ============ 小牧場（圍欄＋會走動的動物） ============ */
 function ranchCap(){return Math.min(8, 2+Math.floor(G.level/3));}
@@ -3627,7 +3746,7 @@ function walkAnimal(i){
 function tapAnimal(i){
   const s=G.ranch[i];if(!s)return;const a=ANIMALS[s.a];
   if(s.ready){
-    G.gold+=a.yield;gainXp(a.xp);s.ready=false;s.prod=0;
+    G.gold+=a.yield;gainXp(a.xp);s.ready=false;s.prod=0;upkeepMark();questProg("animal",1);sfx("coin");
     if(penNodes[i])penNodes[i].classList.remove("ready");
     log("收成 "+a.emoji+a.name+" 的 "+a.prod+" ＝ <span class=coinico></span>"+a.yield,"g");toast("<span class=coinico></span> +"+a.yield);
     renderHUD();saveGame();
@@ -3666,6 +3785,7 @@ function renderHUD(){
   document.getElementById("xpText").textContent=G.xp+"/"+need;
   const fn=document.getElementById("farmName"); if(fn)fn.textContent=farmLabel();   // 農場名：自訂優先，否則名字+的農場
   checkAch();   // 順便檢查是否有新成就達成
+  questBadge();
 }
 function renderGrid(){
   const grid=document.getElementById("grid");grid.innerHTML="";
@@ -3724,7 +3844,7 @@ function tapPlot(i){
       else{p.bug=0;gainXp(1);log("殺蟲 🐜 +經驗");}
       did=true;
     }
-    if(!did)toast("這塊地不需要照顧");
+    if(!did)toast("這塊地不需要照顧");else{questProg("care",1);sfx("care");}
   }else if(t==="hand"){
     if(p.state==="planted"&&p.ripe)harvest(i);
     else if(p.state==="planted")toast("還沒成熟");
@@ -3748,18 +3868,77 @@ function openSeedPick(i,avail){
 }
 function doPlant(i,key){
   const p=G.plots[i];G.seeds[key]--;if(G.seeds[key]<=0)delete G.seeds[key];
-  Object.assign(p,{state:"planted",crop:key,grow:0,ripe:false,stolen:0,dry:false,weed:false,bug:0,bugBig:false});
-  window.__plantSel=key;gainXp(1);log("播種 "+CROPS[key].emoji+CROPS[key].name);render();
+  Object.assign(p,{state:"planted",crop:key,grow:0,ripe:false,stolen:0,dry:false,weed:false,bug:0,bugBig:false,ripeT:0});
+  window.__plantSel=key;gainXp(1);questProg("plant",1);tutHit("plant");sfx("plant");log("播種 "+CROPS[key].emoji+CROPS[key].name);render();
+}
+/* ============ 金色作物＋圖鑑 ============
+   收成時小機率多得 1 顆「金色作物」：照顧好（沒乾/草/蟲）機率較高，給照顧一個看得見的回報。
+   金色作物只能單獨賣（當日行情 ×RARE_MUL），不會被「全部賣掉」一起賣掉、也不能加工。
+   期望值：照顧好的田每次收成約 +0.42 顆等值（+9% 左右），不會打亂 8/10 重訂的經濟。 */
+const RARE_P=0.02, RARE_P_CARE=0.035, RARE_MUL=12;
+const DEX_MILES=[   // 收集到 n 種金色作物時自動發放
+  {n:3, c:2, h:3}, {n:6, c:3, h:5}, {n:10, c:5, h:10}, {n:15, c:8, h:15}, {n:20, c:15, h:30}];
+function dexGoldKinds(){ return Object.keys(G.dex||{}).filter(k=>CROPS[k]&&G.dex[k].g>0).length; }
+function dexSeenKinds(){ return Object.keys(G.dex||{}).filter(k=>CROPS[k]&&G.dex[k].n>0).length; }
+function dexAdd(k,qty,clean){
+  if(!G.dex)G.dex={}; if(!G.rare)G.rare={};
+  const d=G.dex[k]||(G.dex[k]={n:0,g:0}); d.n=(d.n||0)+qty;
+  if(Math.random()>=(clean?RARE_P_CARE:RARE_P))return false;
+  const first=!(d.g>0); d.g=(d.g||0)+1;
+  G.rare[k]=(G.rare[k]||0)+1;
+  const c=CROPS[k];
+  log("✨ 收成時發現了 <span class=gold-e>"+c.emoji+"</span><b>金色"+c.name+"</b>！"+(first?"（圖鑑新登錄）":"")+" 到倉庫可以高價賣出","b");
+  toast("✨ 金色"+c.name+"！"+(first?"圖鑑新登錄":""));
+  if(typeof sfx==="function")sfx("gold");
+  if(first)dexMileCheck();
+  return true;
+}
+function dexMileCheck(){
+  const n=dexGoldKinds(); G.dexClaim=G.dexClaim||0;
+  while(G.dexClaim<DEX_MILES.length&&n>=DEX_MILES[G.dexClaim].n){
+    const m=DEX_MILES[G.dexClaim]; G.dexClaim++;
+    G.credit+=m.c; G.charm+=m.h;
+    log("📖 圖鑑里程碑：收集 "+m.n+" 種金色作物！獲得 💎"+m.c+" ❤️"+m.h,"g");
+    toast("📖 圖鑑里程碑 "+m.n+" 種！💎"+m.c+" ❤️"+m.h);
+  }
+}
+function rarePrice(k){ return Math.round(cropPrice(k)*RARE_MUL*sellMul()); }
+function sellRare(k){
+  if(!(G.rare&&G.rare[k]>0))return;
+  const v=rarePrice(k); G.rare[k]--; if(G.rare[k]<=0)delete G.rare[k];
+  G.gold+=v; questProg("sell",v); log("賣出 ✨金色"+CROPS[k].name+"，得 "+CO+v.toLocaleString(),"g");
+  toast("✨ 賣出金色"+CROPS[k].name+" "+CO+"+"+v.toLocaleString());
+  if(typeof sfx==="function")sfx("coin");
+  renderHUD(); saveGame(); openInv("harvest");
+}
+function dexBody(){
+  const gk=dexGoldKinds(), sk=dexSeenKinds(), all=Object.keys(CROPS);
+  const next=DEX_MILES[G.dexClaim||0];
+  let h='<div class="dexsum">📖 已收成 <b>'+sk+'/'+all.length+'</b> 種　✨ 金色 <b>'+gk+'/'+all.length+'</b> 種'+
+    '<div style="font-size:12px;color:#8d7b6a;margin-top:3px">'+
+    (next?('下一個里程碑：金色 '+next.n+' 種 → 💎'+next.c+' ❤️'+next.h):'全部里程碑已達成 🎉')+
+    '<br>收成時有小機率得到金色作物，田照顧好（沒乾、沒草、沒蟲）機率更高。</div></div><div class="dexgrid">';
+  all.sort((a,b)=>CROPS[a].lvl-CROPS[b].lvl).forEach(k=>{
+    const c=CROPS[k], d=(G.dex||{})[k]||{n:0,g:0}, seen=d.n>0, gold=d.g>0;
+    h+='<div class="dexcell'+(seen?'':' off')+(gold?' g':'')+'">'+(gold?'<span class="dstar">⭐</span>':'')+
+      '<span class="de'+(gold?' gold-e':'')+'">'+(seen?c.emoji:'❔')+'</span>'+
+      '<b>'+(seen?c.name:'???')+'</b><br>'+(seen?('收成 '+d.n.toLocaleString()):(G.level>=c.lvl?'尚未收成':('Lv.'+c.lvl+' 解鎖')))+
+      (gold?('<br>✨×'+d.g):'')+'</div>';
+  });
+  return h+'</div>';
 }
 function harvest(i){
   const p=G.plots[i];const c=CROPS[p.crop];
   let qty=4-p.stolen;if(!p.dry&&!p.weed&&!p.bug)qty+=1;qty+=fQtyB();
   if(upkeepDebt()>0)qty=Math.round(qty*upkeepMul());   // 積欠維護費：收成打折
   qty=Math.max(1,qty);
-  G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;achStat("harv");gainXp(c.xp);
+  G.harvest[p.crop]=(G.harvest[p.crop]||0)+qty;achStat("harv");gainXp(c.xp);upkeepMark();
+  sfx("pop");
+  dexAdd(p.crop,qty,!p.dry&&!p.weed&&!p.bug);
+  questProg("harv",1);tutHit("harv");
   if(c.type==="flower"){G.charm+=c.charm;log("收成 "+c.emoji+c.name+" ×"+qty+"，魅力 +"+c.charm+" ❤️","b");}
   else log("收成 "+c.emoji+c.name+" ×"+qty+"！記得到倉庫賣錢","g");
-  Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0});
+  Object.assign(p,{state:"empty",crop:null,ripe:false,grow:0,dry:false,weed:false,bug:0,bugBig:false,stolen:0,ripeT:0});
 }
 
 /* ============ 工廠：升級（1-10級，需魅力門檻）＋農產加工 ============ */
@@ -3835,7 +4014,7 @@ function fSell(k){
   if(!(G.goods[k]>0))return; const r=FGOODS[k];
   const v=Math.round(r.sell*fSellBonus()*(buffOn("sell")?1.15:1));
   G.goods[k]--; if(G.goods[k]<=0)delete G.goods[k];
-  G.gold+=v; log("賣出 "+r.emoji+r.name+"＝<span class=coinico></span>"+v,"g"); toast("<span class=coinico></span> +"+v);
+  G.gold+=v; questProg("sell",v); sfx("coin"); log("賣出 "+r.emoji+r.name+"＝<span class=coinico></span>"+v,"g"); toast("<span class=coinico></span> +"+v);
   renderHUD(); saveGame(); openFactory();
 }
 function fUse(k){
@@ -4077,9 +4256,11 @@ function decoBindDrag(el,idx){
    設計原則：
      · 依「擁有的資產」計費，不是依收入 —— 擴張才有代價，這才叫維護費
      · 付不出來不會沒收資產，只會累積欠款並降低收成，隨時可以補繳
-     · 免費的前 6 塊田收得很輕，主要壓力放在後面買的地
+     · 初始免費的 6 塊田不收（新手第二天就欠款會直接勸退）
+     · 只有「有收成的日子」才收：作物熟了就停、離線不產出，
+       沒上線的日子沒有收入，就不該有支出（2026-09 改）
    ============================================================ */
-const UPKEEP_FREE=800;        // 初始免費田每塊每日
+const UPKEEP_FREE=0;          // 初始免費田每塊每日（原 800，新手第二天就負債）
 const UPKEEP_RATE=0.03;       // 付費田：每日收購地價的 3%
 const UPKEEP_ANIMAL=0.10;     // 動物飼料：每日收購買價的 10%
 const UPKEEP_DEBT_PENALTY=0.30;   // 欠款期間收成扣減
@@ -4087,9 +4268,16 @@ function upkeepDaily(){
   let sum=0;
   (G.plots||[]).forEach(function(p,i){ if(!p||!p.unlocked)return;
     const L=LANDS[i]; sum+=(L&&L.price>0)?Math.round(L.price*UPKEEP_RATE):UPKEEP_FREE; });
-  (G.ranch||[]).forEach(function(a){ if(!a||!a.k)return;
-    const A=ANIMALS[a.k]; if(A)sum+=Math.round(A.cost*UPKEEP_ANIMAL); });
+  (G.ranch||[]).forEach(function(a){ if(!a)return;   // 牧場欄位的種類存在 .a（舊版誤讀 .k，動物飼料費一直是 0）
+    const k=a&&(a.a||a.k); const A=ANIMALS[k]; if(A)sum+=Math.round(A.cost*UPKEEP_ANIMAL); });
   return sum;
+}
+/* 記錄「今天有收成」—— 維護費只對這些日子收（作物、動物收成都算） */
+function upkeepMark(){
+  if(!G)return;
+  const d=mktDay(Date.now());
+  if(!Array.isArray(G.upAct))G.upAct=[];
+  if(G.upAct.indexOf(d)<0){ G.upAct.push(d); if(G.upAct.length>14)G.upAct=G.upAct.slice(-14); }
 }
 function upkeepDebt(){ return Math.max(0,Math.round(G.upDebt||0)); }
 /* 欠款時收成打折 —— 不沒收資產，但拖著不繳會愈來愈痛 */
@@ -4110,8 +4298,12 @@ function upkeepCheck(){
   if(mktMin(now)<0)return;
   if(G.upDay==null){ G.upDay=day; return; }      // 第一次只記日期，不補收歷史
   if(G.upDay>=day)return;
-  let days=Math.min(7,day-G.upDay);              // 久沒玩最多補收 7 天，不讓人一回來就破產
   G.upDay=day;
+  // 只收「有收成的日子」：upkeepMark() 在收成時記下當天，結算時數昨天以前記了幾天
+  const act=Array.isArray(G.upAct)?G.upAct:[];
+  G.upAct=act.filter(function(d){return d>=day;});   // 今天的留到下次結算
+  let days=Math.min(7,act.filter(function(d){return d<day;}).length);   // 最多補收 7 天
+  if(!days){ saveGame(); return; }
   const per=upkeepDaily(); const bill=per*days;
   if(bill<=0)return;
   const pay=Math.min(G.gold,bill);
@@ -4133,7 +4325,7 @@ function gainXp(n){
   while(G.xp>=XP_NEED(G.level)){
     G.xp-=XP_NEED(G.level);G.level++;G.credit+=1;G.charm+=2;
     log("🎉 升級！Lv."+G.level+" 獎勵 💎1 ＋ ❤️2，可種更高級作物、買新農地。","g");
-    toast("⭐ 升級 Lv."+G.level+"（+💎1 +❤️2）");
+    toast("⭐ 升級 Lv."+G.level+"（+💎1 +❤️2）"); sfx("level");
   }
   renderHUD();
 }
@@ -4247,8 +4439,13 @@ function openInv(tab){
     '<button class="'+(tab==='seeds'?'on':'')+'" onclick="openInv(\'seeds\')">🌱 種子</button></div>';
   if(tab==="harvest"){
     const ks=Object.keys(G.harvest).filter(k=>G.harvest[k]>0);
-    if(ks.length===0)h+='<p class="hint">倉庫是空的，去收成作物吧。</p>';
-    else{ks.forEach(k=>{const c=CROPS[k];const cnt=G.harvest[k];
+    const rk=Object.keys(G.rare||{}).filter(k=>G.rare[k]>0&&CROPS[k]);
+    rk.forEach(k=>{const c=CROPS[k];
+      h+='<div class="invitem" style="background:#fff8e1;border-color:#f5b733"><span class="e gold-e">'+c.emoji+'</span>'+
+        '<div class="meta"><b>✨ 金色'+c.name+'</b> ×'+G.rare[k]+'<div style="font-size:12px;color:#8d7b6a">每顆 '+CO+rarePrice(k).toLocaleString()+'（當日行情 ×'+RARE_MUL+'）</div></div>'+
+        '<button class="pbtn gold" onclick="sellRare(\''+k+'\')">賣 1 顆</button></div>';});
+    if(ks.length===0&&!rk.length)h+='<p class="hint">倉庫是空的，去收成作物吧。</p>';
+    else if(ks.length){ks.forEach(k=>{const c=CROPS[k];const cnt=G.harvest[k];
       h+='<div class="invitem"><span class="e">'+c.emoji+'</span>'+
         '<div class="meta"><b>'+c.name+'</b> ×'+cnt+'<div style="font-size:12px;color:#8d7b6a">今日 '+CO+cropPrice(k)+' '+cropTag(k)+' <span style="opacity:.65">（平時 '+c.sell+'）</span></div></div>'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
@@ -4273,10 +4470,10 @@ function sqClamp(k){const el=document.getElementById("sq_"+k);if(!el)return;let 
 function sqStep(k,d){const el=document.getElementById("sq_"+k);if(!el)return;let n=(parseInt(el.value)||1)+d;const mx=G.harvest[k]||1;if(n<1)n=1;if(n>mx)n=mx;el.value=n;}
 function sellQtyInput(k){const el=document.getElementById("sq_"+k);let n=parseInt(el&&el.value)||1;sellQty(k,n);}
 function sellMul(){return (buffOn("sell")?1.15:1)*fSellBonus();}   // 辣椒醬加乘 × 工廠全域賣價加成
-function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));const v=Math.round(cropPrice(k)*n*sellMul());G.gold+=v;G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+v);renderHUD();saveGame();openInv("harvest");}
+function sellQty(k,n){if(!G.harvest[k])return;n=Math.max(1,Math.min(n,G.harvest[k]));const v=Math.round(cropPrice(k)*n*sellMul());G.gold+=v;questProg("sell",v);tutHit("sell");sfx("coin");G.harvest[k]-=n;if(G.harvest[k]<=0)delete G.harvest[k];toast("賣出 "+CROPS[k].name+" ×"+n+"，得 <span class=coinico></span>"+v);renderHUD();saveGame();openInv("harvest");}
 function sellOne(k){sellQty(k,1);}
-function sellAll(k){if(!G.harvest[k])return;G.gold+=Math.round(cropPrice(k)*G.harvest[k]*sellMul());delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
-function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=cropPrice(k)*G.harvest[k]);t=Math.round(t*sellMul());G.gold+=t;G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
+function sellAll(k){if(!G.harvest[k])return;const v=Math.round(cropPrice(k)*G.harvest[k]*sellMul());G.gold+=v;questProg("sell",v);tutHit("sell");sfx("coin");delete G.harvest[k];toast("全部賣出！");renderHUD();saveGame();openInv("harvest");}
+function sellEverything(){let t=0;Object.keys(G.harvest).forEach(k=>t+=cropPrice(k)*G.harvest[k]);t=Math.round(t*sellMul());G.gold+=t;questProg("sell",t);tutHit("sell");sfx("coin");G.harvest={};log("倉庫全部賣出，獲得 <span class=coinico></span>"+t,"g");toast("<span class=coinico></span> +"+t);renderHUD();saveGame();openInv("harvest");}
 function selectSeed(k){window.__plantSel=k;G.tool="plant";renderTools();toast("已選 "+CROPS[k].name+"，點翻好的田播種");closeM();}
 
 /* ============ 肥料 ============ */
@@ -4345,6 +4542,7 @@ function loadAllPlayers(){
   if(!friendReady())return;
   fbDB.ref("profiles").once("value").then(function(snap){
     const d=snap.val()||{}; let added=0; if(!G.pals||typeof G.pals!=="object"||Array.isArray(G.pals))G.pals={};
+    try{ palInbox(d); }catch(e){}
     Object.keys(d).forEach(function(uid){
       if(!uid||uid===fbUser.uid||G.pals[uid])return;
       const p=d[uid]||{}; G.pals[uid]={name:p.name||"農友",lv:p.level||1}; added++;
@@ -4383,9 +4581,103 @@ function removePal(uid){ if(!confirm("移除這位好友？"))return; delete G.p
   saveGame(); openFriends(); }
 
 let palSyncTs=0;
+/* ============ 好友正向互動：幫忙照顧有獎勵、每日送禮、電腦好友回禮 ============
+   真實好友的禮物／幫忙紀錄寫在「送出者自己的名片」 profiles/{我}/gifts/{對方}、profiles/{我}/helped/{對方}，
+   收的人在 loadAllPlayers 讀名冊時順便領取。
+   —— 不寫進對方的 users/ 存檔：對方在線時整份 set() 會把別人寫進去的東西蓋掉，
+      而且名片本來就是用 update() 寫，也不需要新增資料庫規則。 */
+const HELP_DAILY=20;                       // 每天前 20 次幫忙有金幣獎勵（避免對電腦好友無限刷）
+function helpCoin(){ return 5+(G.level||1)*2; }
+function socialDay(){ const t=todayStr(); if(G.helpDay!==t){G.helpDay=t;G.helpN=0;} return t; }
+function helpReward(n,who){   // 幫別人照顧 n 處 → 經驗 n，前 HELP_DAILY 次另給金幣
+  socialDay(); const paid=Math.max(0,Math.min(n,HELP_DAILY-(G.helpN||0)));
+  G.helpN=(G.helpN||0)+n; gainXp(n);
+  const coin=paid*helpCoin(); if(coin)G.gold+=coin;
+  if(typeof questProg==="function")questProg("help",n);
+  if(typeof sfx==="function")sfx("care");
+  const msg="幫 "+who+" 照顧 🤝 +"+n+" 經驗"+(coin?("、"+CO+coin):"（今日金幣獎勵已滿）");
+  log(msg,"g"); toast(msg);
+}
+/* 禮物內容：雙方等級都能種的作物種子 ×3，或普通肥料 ×1 */
+function giftMake(lv){
+  if(Math.random()<0.25)return {k:"fert",n:1};
+  const ks=Object.keys(CROPS).filter(k=>CROPS[k].type==="crop"&&CROPS[k].lvl<=Math.max(1,lv));
+  return {k:"seed",crop:ks[Math.floor(Math.random()*ks.length)],n:3};
+}
+function giftText(g){ return g.k==="fert"?("💩 普通肥料 ×"+g.n):((CROPS[g.crop]||{emoji:"🌱"}).emoji+seedName(g.crop)+" ×"+g.n); }
+function giftPush(from,g){ if(!Array.isArray(G.gifts))G.gifts=[]; if(G.gifts.length>=30)G.gifts.shift(); G.gifts.push(Object.assign({from:from},g)); }
+function claimGifts(){
+  const gs=G.gifts||[]; if(!gs.length){toast("沒有待領的禮物");return;}
+  gs.forEach(function(g){
+    if(g.k==="fert")G.ferts.f1=(G.ferts.f1||0)+g.n;
+    else if(g.k==="coin")G.gold+=g.n;
+    else if(CROPS[g.crop])G.seeds[g.crop]=(G.seeds[g.crop]||0)+g.n;
+  });
+  log("📬 領取了 "+gs.length+" 份禮物："+gs.map(g=>g.from+"送的"+(g.k==="coin"?(CO+g.n):giftText(g))).join("、"),"g");
+  toast("📬 領取了 "+gs.length+" 份禮物");
+  if(typeof sfx==="function")sfx("coin");
+  G.gifts=[]; renderHUD(); saveGame(); openFriends();
+}
+/* 每天電腦好友各送一份禮（第一次開遊戲或跨日時） */
+function npcGiftCheck(){
+  const t=todayStr(); if(G.npcGiftDay===t)return;
+  G.npcGiftDay=t;
+  (G.friends||[]).forEach(function(f){ giftPush(f.av+f.name, giftMake(G.level||1)); });
+  log("📬 電腦好友送來了今天的禮物，到 👑好友 領取","b");
+}
+function sendGift(id){   // id：真實好友 uid，或 "npc0"…
+  const t=todayStr(); if(!G.giftSent||typeof G.giftSent!=="object")G.giftSent={};
+  if(G.giftSent[id]===t){toast("今天已經送過了");return;}
+  if(id.indexOf("npc")===0){
+    const f=G.friends[+id.slice(3)]; if(!f)return;
+    G.giftSent[id]=t; gainXp(5);
+    log("🎁 送了禮物給 "+f.av+f.name+"，對方很開心！+5 經驗","g"); toast("🎁 送出！+5 經驗");
+  }else{
+    if(!friendReady())return;
+    const pal=G.pals[id]||{}; const g=giftMake(Math.min(G.level||1,pal.lv||1));
+    G.giftSent[id]=t; gainXp(5);
+    fbDB.ref("profiles/"+fbUser.uid+"/gifts/"+id).set(Object.assign({d:t,from:myName()},g))
+      .catch(function(e){log("⚠️ 送禮失敗："+(e&&e.message||e),"r");});
+    log("🎁 送給 "+(pal.name||"農友")+" "+giftText(g)+"，+5 經驗","g"); toast("🎁 已送出 "+giftText(g));
+  }
+  if(typeof questProg==="function")questProg("gift",1);
+  if(typeof sfx==="function")sfx("pop");
+  saveGame(); openFriends();
+}
+/* 讀名冊時：收下真實好友寫給我的禮物、以及他們幫我照顧的謝禮 */
+function palInbox(profiles){
+  if(!friendReady()||!profiles)return;
+  const me=fbUser.uid; let got=0, helps=[];
+  if(!G.giftGot||typeof G.giftGot!=="object")G.giftGot={};
+  if(!G.helpGot||typeof G.helpGot!=="object")G.helpGot={};
+  Object.keys(profiles).forEach(function(uid){
+    if(uid===me)return; const p=profiles[uid]||{};
+    const g=p.gifts&&p.gifts[me];
+    if(g&&g.d&&G.giftGot[uid]!==g.d&&(g.k==="fert"||CROPS[g.crop])){
+      G.giftGot[uid]=g.d; giftPush(g.from||p.name||"農友",{k:g.k,crop:g.crop,n:Math.min(3,g.n||1)}); got++;
+    }
+    const h=p.helped&&p.helped[me];
+    if(h&&h.d){
+      const prev=G.helpGot[uid]||{}; const before=(prev.d===h.d)?(prev.n||0):0; const add=Math.max(0,Math.min(20,(h.n||0))-before);
+      if(add>0){ G.helpGot[uid]={d:h.d,n:before+add}; giftPush(p.name||"農友",{k:"coin",n:add*helpCoin()}); helps.push((p.name||"農友")+" ×"+add); }
+    }
+  });
+  if(got)log("📬 收到 "+got+" 位好友送的禮物，到 👑好友 領取","b");
+  if(helps.length)log("🤝 好友來幫你照顧過田地："+helps.join("、")+"，謝禮放在 👑好友 禮物箱","b");
+  if(got||helps.length){ toast("📬 有新的好友禮物"); saveGame(); }
+}
 function openFriends(){
   if(friendReady()&&Date.now()-palSyncTs>15000){palSyncTs=Date.now();loadFriends();loadAllPlayers();}   // 開好友面板時重新同步雲端好友清單＋全服玩家名冊
+  npcGiftCheck(); socialDay();
   let h='<h2>👑 好友名單 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
+  const gs=G.gifts||[];
+  h+='<div style="display:flex;align-items:center;gap:8px;background:'+(gs.length?'#fff3c4':'#faf6ec')+';border:2px solid '+(gs.length?'#f5b733':'#eee3cf')+';border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px">'+
+     '<div style="flex:1"><b>📬 禮物箱（'+gs.length+'）</b><div style="font-size:12px;color:#8d7b6a">'+
+     (gs.length?gs.slice(0,4).map(g=>g.from+"："+(g.k==="coin"?("幫忙謝禮 "+CO+g.n):giftText(g))).join("<br>")+(gs.length>4?"<br>…":""):"電腦好友每天會送禮，真實好友送的也會出現在這裡")+
+     '</div><div style="font-size:12px;color:#8d7b6a;margin-top:3px">🤝 今日幫忙獎勵 '+Math.min(G.helpN||0,HELP_DAILY)+'/'+HELP_DAILY+' 次（每次 '+CO+helpCoin()+'）</div></div>'+
+     (gs.length?'<button class="pbtn gold" onclick="claimGifts()">全部領取</button>':'')+'</div>';
+  const giftBtn=function(id){ const sent=(G.giftSent||{})[id]===todayStr();
+    return '<button class="pbtn'+(sent?'':' gold')+'" '+(sent?'disabled style="opacity:.55"':'')+' onclick="sendGift(\''+id+'\')">'+(sent?'已送':'🎁 送禮')+'</button>'; };
   if(friendReady()){
     if(!G.myCode)ensureProfile();   // 代碼還沒產生（或之前失敗）就再試一次
     h+='<div style="background:#fff3c4;border:2px solid #f5b733;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px;font-weight:800">我的好友代碼：<span style="font-size:17px;color:#c9920f;letter-spacing:2px">'+(G.myCode||"產生中…")+'</span><div style="font-weight:400;font-size:12px;color:#8d7b6a">把代碼給朋友，他輸入後就能加你好友、來你的農場。</div></div>'+
@@ -4395,7 +4687,7 @@ function openFriends(){
     if(!uids.length)h+='<p class="hint">還沒有真實好友。跟朋友交換代碼互加，就能去對方農場偷菜、幫忙照顧！</p>';
     uids.forEach(function(uid){const f=G.pals[uid];
       h+='<div class="friend"><span class="av">🧑‍🌾</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+(f.lv||"?")+'</div></div>'+
-        '<button class="pbtn blue" onclick="enterVisitPal(\''+uid+'\')">前往農場</button>'+
+        giftBtn(uid)+'<button class="pbtn blue" onclick="enterVisitPal(\''+uid+'\')">前往農場</button>'+
         '<button class="pbtn" style="background:#ffe3e3;border-color:#e98a8a;color:#a23b3b" onclick="removePal(\''+uid+'\')">移除</button></div>';
     });
     h+='<hr style="margin:12px 0;border:none;border-top:1px solid #eadfca">';
@@ -4404,7 +4696,7 @@ function openFriends(){
   }
   h+='<div style="font-size:13px;font-weight:800;margin:0 0 6px">🤖 電腦好友（練習）</div>';
   const NPC_LV=[3,5,8,12];
-  G.friends.forEach((f,i)=>{const ripe=(f.plots||[]).filter(p=>p&&p.ripe&&(p.stolen||0)<2).length;h+='<div class="friend"><span class="av">'+f.av+'</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+NPC_LV[i%NPC_LV.length]+'｜成熟可偷：'+ripe+' 塊</div></div><button class="pbtn blue" onclick="enterVisitNpc('+i+')">前往農場</button></div>';});
+  G.friends.forEach((f,i)=>{const ripe=(f.plots||[]).filter(p=>p&&p.ripe&&(p.stolen||0)<2).length;h+='<div class="friend"><span class="av">'+f.av+'</span><div class="meta"><b>'+f.name+'</b><div>Lv.'+NPC_LV[i%NPC_LV.length]+'｜成熟可偷：'+ripe+' 塊</div></div>'+giftBtn("npc"+i)+'<button class="pbtn blue" onclick="enterVisitNpc('+i+')">前往農場</button></div>';});
   h+='</div>';showM(h);
 }
 
@@ -4423,7 +4715,9 @@ function visitPlotsFromNpc(f){
 }
 function enterVisitNpc(i){
   const f=G.friends[i]; if(!f)return;
-  VISIT={on:true,uid:null,npc:i,plots:visitPlotsFromNpc(f),name:f.av+" "+f.name,dog:null,decos:[]};   // NPC 沒有裝飾
+  const NPC_LV=[3,5,8,12];
+  VISIT={on:true,uid:null,npc:i,plots:visitPlotsFromNpc(f),name:f.av+" "+f.name,dog:null,decos:[],   // NPC 沒有裝飾
+    info:{name:f.name,av:f.av,npc:true,lv:NPC_LV[i%NPC_LV.length]}};
   startVisit();
 }
 function enterVisitPal(uid){
@@ -4433,7 +4727,11 @@ function enterVisitPal(uid){
     const d=snap.val();
     if(!d||!Array.isArray(d.plots)){alert("讀不到好友的農場資料（對方可能還沒上線存檔過）。");return;}
     const f=G.pals[uid]||{name:"農友"};
-    VISIT={on:true,uid:uid,npc:-1,name:"🧑‍🌾 "+f.name+"（Lv."+(d.level||1)+"）",dog:d.dog||null,
+    const st=d.stat||{}, fx=d.factory||{};
+    const info={name:f.name,farm:d.farmName||"",lv:d.level||1,xp:d.xp||0,charm:d.charm||0,days:d.totalDays||0,harv:st.harv||0,
+      ach:Object.keys(d.ach||{}).length,dex:Object.keys(d.dex||{}).filter(k=>CROPS[k]&&d.dex[k]&&d.dex[k].g>0).length,
+      flv:fx.lv||1,ranch:Array.isArray(d.ranch)?d.ranch.filter(a=>a&&ANIMALS[a.a]).map(a=>a.a):[],deco:Array.isArray(d.decoItems)?d.decoItems.length:0,ts:d.ts||0};
+    VISIT={on:true,uid:uid,npc:-1,info:info,name:"🧑‍🌾 "+f.name+"（Lv."+(d.level||1)+"）",dog:d.dog||null,
       decos:Array.isArray(d.decoItems)?d.decoItems:[],   // 看到的是對方買的裝飾
       plots:d.plots.map(function(p){return (p&&typeof p==="object")?p:{unlocked:false,state:"empty",crop:null};})};
     advancePlotsOffline(VISIT.plots, d.ts);   // 補算到現在，顯示好友作物的即時生長階段
@@ -4447,6 +4745,36 @@ function startVisit(){
   if(G.tool!=="hand"&&G.tool!=="care")G.tool="hand";
   render(); renderDecos(); centerField();
   toast("✋ 偷成熟作物｜🚿 幫忙照顧"+((VISIT.dog&&VISIT.dog.fedUntil&&VISIT.dog.fedUntil>Date.now())?"（⚠️ 小心他的看門狗）":""));
+}
+/* 拜訪時點好友的農舍：顯示對方資料與農場目前狀態 */
+function openVisitProfile(){
+  if(!VISIT.on)return; const I=VISIT.info||{name:VISIT.name,lv:"?"};
+  const ps=(VISIT.plots||[]).filter(p=>p&&p.unlocked);
+  const planted=ps.filter(p=>p.crop&&(!p.state||p.state==="planted"));
+  const ripe=planted.filter(p=>p.ripe), canSteal=ripe.filter(p=>(p.stolen||0)<2).length;
+  const needCare=planted.filter(p=>p.dry||p.weed||p.bug).length, growing=planted.length-ripe.length;
+  const dog=VISIT.dog, dogFedNow=!!(dog&&dog.fedUntil&&dog.fedUntil>Date.now());
+  const ago=function(ts){ if(!ts)return "—"; const m=Math.floor((Date.now()-ts)/60000);
+    return m<1?"剛剛":m<60?(m+" 分鐘前"):m<1440?(Math.floor(m/60)+" 小時前"):(Math.floor(m/1440)+" 天前"); };
+  const box=function(k,v){return '<div class="pbox"><small>'+k+'</small><b>'+v+'</b></div>';};
+  let h='<h2>🏡 '+(I.av||"🧑‍🌾")+' '+I.name+' 的農舍 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
+  h+='<div class="pcard"><div class="pav">'+(I.av||"🧑‍🌾")+'</div><div style="flex:1"><b>'+(I.farm?(I.farm+"的農場"):(I.name+" 的農場"))+'</b><br><small>Lv.'+I.lv+
+     (I.npc?'　🤖 電腦好友':('　最後上線：'+ago(I.ts)))+'</small></div></div>';
+  h+='<div style="font-size:13px;font-weight:800;margin:4px 0 6px">🌾 農場現況</div><div class="pgrid">'+
+     box("✋ 成熟可偷",canSteal+" 塊")+box("🚿 需要照顧",needCare+" 塊")+box("🌱 成長中",growing+" 塊")+box("🟫 農地",ps.length+" 塊")+
+     box("🐕 看門狗",dog?("Lv."+(dog.level||1)+(dogFedNow?"・巡守中 ⚠️":"・餓肚子")):"沒有養")+'</div>';
+  if(!I.npc){
+    h+='<div style="font-size:13px;font-weight:800;margin:10px 0 6px">📋 農夫資料</div><div class="pgrid">'+
+      box("❤️ 魅力",I.charm)+box("🏭 工廠",I.flv+" 級")+box("🐮 動物",I.ranch.length?I.ranch.map(k=>ANIMALS[k].emoji).join(""):"0 隻")+
+      box("🧺 累積收成",(I.harv||0).toLocaleString()+" 次")+box("📅 累積簽到",I.days+" 天")+box("🏆 成就",I.ach+" 個")+
+      box("✨ 金色圖鑑",I.dex+" 種")+box("🏡 裝飾",I.deco+" 件")+'</div>';
+  }
+  const gid=VISIT.uid||("npc"+VISIT.npc), sent=(G.giftSent||{})[gid]===todayStr();
+  h+='<div style="display:flex;gap:8px;margin-top:12px">'+
+     '<button class="pbtn'+(sent?'':' gold')+'" style="flex:1;padding:10px" '+(sent?'disabled':'')+' onclick="sendGift(\''+gid+'\');openVisitProfile()">'+(sent?'🎁 今天已送禮':'🎁 送禮')+'</button>'+
+     '<button class="pbtn blue" style="flex:1;padding:10px" onclick="closeM();leaveVisit()">🏠 回自己的農場</button></div>';
+  h+='<p class="hint">'+(needCare?'有 '+needCare+' 塊田需要照顧，選右側 🚿 幫忙可以賺金幣和經驗。':'對方的田都照顧得很好。')+'</p></div>';
+  showM(h);
 }
 function leaveVisit(){
   VISIT={on:false,uid:null,npc:-1,plots:[],name:"",dog:null,decos:[]};
@@ -4466,7 +4794,7 @@ function visitTap(i){
       if(p.dry){p.dry=false;np.dry=false;n++;}
       if(p.weed){p.weed=false;np.weed=false;n++;}
       if(p.bug){p.bug=0;p.bugBig=false;np.bug=0;n++;}
-      if(n){gainXp(n);toast("幫忙照顧 +"+n+" 經驗");}else toast("這塊地不需要照顧");
+      if(n)helpReward(n,VISIT.name);else toast("這塊地不需要照顧");
     }else{
       if(!p.ripe){toast("還沒成熟，不能偷");return;}
       if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
@@ -4484,9 +4812,12 @@ function visitTap(i){
     if(p.weed){p.weed=false;up.weed=false;n++;}
     if(p.bug){p.bug=0;p.bugBig=false;up.bug=0;up.bugBig=false;n++;}
     if(!n){toast("這塊地不需要照顧");return;}
+    const helpUid=VISIT.uid;
     plotRef.update(up).then(function(){
-      gainXp(n);saveGame();
-      log("幫 "+VISIT.name+" 照顧田地 🤝 +"+n+" 經驗","g");toast("幫忙照顧 +"+n+" 經驗");
+      helpReward(n,VISIT.name);saveGame();
+      // 在自己名片記下「今天幫他照顧了幾次」，對方讀名冊時會收到謝禮
+      const t=todayStr(), hr=fbDB.ref("profiles/"+fbUser.uid+"/helped/"+helpUid);
+      hr.transaction(function(cur){ return (cur&&cur.d===t)?{d:t,n:(cur.n||0)+n}:{d:t,n:n}; }).catch(function(){});
       renderGrid();
     }).catch(function(e){alert("寫入失敗："+(e&&e.message||e));});
   }else{
@@ -4547,8 +4878,9 @@ function openHelp(){
   '<b>基本循環</b><br>🌱 播種（空地直接點即可，免翻土） → 💧 照顧 → 等成熟 → ✋ 收成 → 🏚️ 倉庫賣錢 → ⭐ 升級 → 🛒 買高級種子 / 🪧 購買土地。收成後土地會空出來，可以馬上再種。<br><br>'+
   '<b>作物三階段</b>：種子🌰（前 45%）→ 幼苗🌱（45～100%）→ 成熟結果（顯示作物本體，發光代表可收成）。<br><br>'+
   '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。選右側 🚿 照顧工具點田地，會自動一次澆水／除草／除蟲。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。成熟作物可用右側 🧺 一鍵收成全部收下。<br><br>'+
+  '<b>偷菜</b>：作物成熟後有 <b>3 分鐘</b>安全時間，放超過就可能被電腦好友偷走（每塊最多 2 次）。餵飽看門狗可以擋小偷。<br><br>'+
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
-  '<b>👑 好友</b>：登入帳號後會有一組 6 碼好友代碼，和朋友交換代碼互加好友，就能前往對方的<b>真實農場</b>：✋偷成熟作物（每塊最多被偷 2 次，小心對方的看門狗）、🚿幫忙澆水/除草/殺蟲賺經驗。沒登入也可以跟🤖電腦好友練習。<br><br>'+
+  '<b>👑 好友</b>：登入帳號後會有一組 6 碼好友代碼，和朋友交換代碼互加好友，就能前往對方的<b>真實農場</b>：✋偷成熟作物（每塊最多被偷 2 次，小心對方的看門狗）、🚿幫忙澆水/除草/殺蟲（每天前 20 次另有金幣，對方也會收到謝禮）。每天可以對每位好友 🎁送禮一次，電腦好友也會每天送你禮物，到 👑好友 的禮物箱領取。沒登入也可以跟🤖電腦好友練習。<br><br>'+
   '<b>養狗</b>：🐕餵一次飽 12 小時，期間會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
   '<b>🐾 牧場</b>：切到「🐮 牧場」分頁看你的動物在草原走動。動物到 🛒 商店 → 🐮 動物 分頁購買（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）；產物出現在動物頭上時點一下即可收成換 <span class=coinico></span>。可拖移瀏覽，容量隨等級提升。<br><br>'+
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
@@ -4721,6 +5053,8 @@ function popBalloon(){
 }
 
 /* ============ 時間循環 ============ */
+const STEAL_GRACE=120;   // 成熟後 120 tick（3 分鐘）內不會被偷
+const STEAL_P=0.04;      // 寬限期過後，每 tick 有 4% 機率來一個小偷（約每 37 秒一次）
 function tick(){
   G.plots.forEach(p=>{
     if(p.unlocked&&p.state==="planted"&&!p.ripe){
@@ -4730,8 +5064,16 @@ function tick(){
   });
   // 蟲／草／乾的發生頻率（拉長間隔：原 0.12 → 0.045）
   if(Math.random()<0.045*fHazM()){const pl=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&!p.ripe&&!p.dry&&!p.weed&&!p.bug);if(pl.length){const p=pl[Math.floor(Math.random()*pl.length)];const r=Math.random();if(r<.4)p.dry=true;else if(r<.7)p.weed=true;else{if(Math.random()<.12){p.bug=5;p.bugBig=true;log("出現大毛毛蟲🐛！需噴 5 次","r");}else p.bug=1;}}}
-  if(Math.random()<0.35){const rp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&p.ripe&&p.stolen<2);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(dogFed()&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 <span class=coinico></span>"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
+  /* 偷菜：成熟後先有寬限期（STEAL_GRACE），過了才會有人來偷 ——
+     讓偷菜是「放太久」的懲罰，不是「沒秒收」的懲罰（原本每 tick 35%，幾秒內必被偷兩次） */
+  G.plots.forEach(p=>{ if(p.unlocked&&p.state==="planted"&&p.ripe)p.ripeT=(p.ripeT||0)+1; });
+  if(Math.random()<STEAL_P){const rp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&p.ripe&&p.stolen<2&&(p.ripeT||0)>=STEAL_GRACE);if(rp.length){const p=rp[Math.floor(Math.random()*rp.length)];const th=G.friends[Math.floor(Math.random()*G.friends.length)];if(dogFed()&&Math.random()<dogBiteChance(G.dog.level)){const lv=G.dog.level||1;const d=Math.round((15+Math.random()*30)*(1+(lv-1)*0.6));G.gold+=d;log("🐕 看門狗(Lv."+lv+")咬住來偷菜的 "+th.name+"，對方失手掉了 <span class=coinico></span>"+d+"！","g");}else{p.stolen++;log(th.av+" "+th.name+" 偷走了你一些 "+CROPS[p.crop].emoji+CROPS[p.crop].name+"…快收成吧！","r");}}}
   if(Math.random()<0.3){const f=G.friends[Math.floor(Math.random()*G.friends.length)];f.plots[Math.floor(Math.random()*f.plots.length)]=makeFriendPlot();}
+  // 電腦好友偶爾路過幫忙照顧（約每 3 分鐘一次，只在有田需要照顧時）
+  if(!VISIT.on&&Math.random()<0.008){const hp=G.plots.filter(p=>p.unlocked&&p.state==="planted"&&(p.dry||p.weed||(p.bug&&!p.bugBig)));
+    if(hp.length){const p=hp[Math.floor(Math.random()*hp.length)], f=G.friends[Math.floor(Math.random()*G.friends.length)];
+      const what=p.dry?"澆了水 💧":(p.weed?"除了草 🌿":"抓了蟲 🐜"); if(p.dry)p.dry=false;else if(p.weed)p.weed=false;else p.bug=0;
+      log("🤝 "+f.av+f.name+" 路過，幫你"+what,"g");}}
   // 牧場動物生產
   if(Array.isArray(G.ranch))G.ranch.forEach(s=>{
     if(s&&!s.ready){s.prod+=(1+fAnimB())*(buffOn("animal")?1.2:1);if(s.prod>=ANIMALS[s.a].time){s.prod=ANIMALS[s.a].time;s.ready=true;}}
@@ -4741,7 +5083,7 @@ function tick(){
     const nowT=Date.now(); const done=G.factory.q.filter(x=>x.end<=nowT);
     if(done.length){ factoryDone=true; G.factory.q=G.factory.q.filter(x=>x.end>nowT);
       done.forEach(x=>{const r=FGOODS[x.k]; if(!r)return;
-        G.goods[x.k]=(G.goods[x.k]||0)+1;
+        G.goods[x.k]=(G.goods[x.k]||0)+1; questProg("craft",1);
         log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
   { const mk=document.getElementById("mask");   // 面板「真的開著」（遮罩顯示中）才刷新倒數，避免關閉後又自己跳出
     const fp=document.getElementById("factPanel");    if(fp&&mk&&mk.classList.contains("on")){      if(factoryDone)openFactory();      else fp.querySelectorAll("[data-factory-end]").forEach(el=>{        const end=Number(el.getAttribute("data-factory-end"))||0;        el.textContent="⏳ 加工中…剩 "+Math.max(0,Math.ceil((end-Date.now())/1000))+"s";      });    } }
@@ -4753,8 +5095,8 @@ function tick(){
 }
 
 /* ============ UI helpers ============ */
-function showM(h){  const oldFact=document.getElementById("factPanel"), oldFactScroll=oldFact?oldFact.scrollTop:0;  document.getElementById("modal").innerHTML=h;document.getElementById("mask").classList.add("on");  const newFact=document.getElementById("factPanel");if(newFact)newFact.scrollTop=oldFactScroll;}
-function closeM(){document.getElementById("mask").classList.remove("on");}
+function showM(h){  const oldFact=document.getElementById("factPanel"), oldFactScroll=oldFact?oldFact.scrollTop:0;  document.getElementById("modal").innerHTML=h;document.getElementById("mask").classList.add("on");  const newFact=document.getElementById("factPanel");if(newFact)newFact.scrollTop=oldFactScroll;tutRender();}
+function closeM(){document.getElementById("mask").classList.remove("on");tutRender();}
 document.getElementById("mask").addEventListener("click",e=>{if(e.target.id==="mask")closeM();});
 function toggleLog(){document.getElementById("logPanel").classList.toggle("on");}
 function toggleLeftbar(){const lb=document.getElementById("leftbar");if(lb)lb.classList.toggle("open");}
@@ -4875,8 +5217,11 @@ function toggleSim(){
 
 /* ====== 可平移的「世界」（天空＋草地＋田地＋裝飾一起連動） ====== */
 let panX=0, panY=0, worldScale=1, userZoom=1;
-const WORLD_W=2200, WORLD_H=1000, FX=934, FY=520;  // 寬世界(2200)；焦點含內容偏移 +314
-const FFX=764, FFY=430;                            // 手機置中焦點（含 +314 偏移）
+/* 焦點＝世界座標（含內容偏移 +314）。2026-09：田地在 7/24 用佈局編輯器移到 .field{left:975px;top:722px}
+   （世界座標約 1289,722），但焦點還停在 7/07 的舊位置，手機一打開田只露出右下角、被工具列擋住。
+   改成對準田地中心，略往右下偏，讓田避開右側工具列與底部按鈕列。 */
+const WORLD_W=2200, WORLD_H=1000, FX=1330, FY=740;  // 網頁焦點
+const FFX=1330, FFY=740;                            // 手機焦點
 function isNarrow(){
   return Math.min(VW(),VH())<=640||(isMobileDevice()&&isLandscapeNow());
 }  // 真機以裝置＋方向判斷；同時涵蓋 Android 高度較大的橫屏視口
@@ -5107,6 +5452,69 @@ function initPan(){
 function toggleHud(){const h=document.querySelector(".hud");if(h)h.classList.toggle("fold");}
 
 /* 右上選單：點擊開視窗 */
+/* ============ 音效（Web Audio 即時合成，不用音檔）＋震動 ============
+   iOS 要在使用者手勢裡 resume AudioContext，所以第一次點畫面時解鎖。
+   開關存在本機 localStorage（這是裝置偏好，不跟存檔走）。 */
+let _ac=null, _sfxLast={};
+function sfxOn(){ try{ return localStorage.getItem("hf_sfx")!=="0"; }catch(e){ return true; } }
+function sfxToggle(){ const on=!sfxOn(); try{localStorage.setItem("hf_sfx",on?"1":"0");}catch(e){} toast(on?"🔊 音效已開啟":"🔇 音效已關閉"); if(on)sfx("coin"); openTopMenu(); }
+function acGet(){
+  if(!_ac){ const C=window.AudioContext||window.webkitAudioContext; if(!C)return null; try{_ac=new C();}catch(e){return null;} }
+  if(_ac.state==="suspended")_ac.resume().catch(function(){});
+  return _ac;
+}
+document.addEventListener("pointerdown",function once(){ if(sfxOn())acGet(); document.removeEventListener("pointerdown",once,true); },true);
+function tone(ac,t,f,dur,type,vol,f2){
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type||"sine"; o.frequency.setValueAtTime(f,t); if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||0.18,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const SFX={
+  pop:  (ac,t)=>{ tone(ac,t,520,0.09,"sine",0.22,900); },
+  plant:(ac,t)=>{ tone(ac,t,260,0.08,"triangle",0.16,180); },
+  care: (ac,t)=>{ tone(ac,t,700,0.07,"sine",0.12,1200); tone(ac,t+0.06,900,0.07,"sine",0.1,1500); },
+  coin: (ac,t)=>{ tone(ac,t,988,0.07,"square",0.07); tone(ac,t+0.07,1319,0.16,"square",0.07); },
+  quest:(ac,t)=>{ tone(ac,t,784,0.12,"triangle",0.16); tone(ac,t+0.11,1047,0.22,"triangle",0.16); },
+  gold: (ac,t)=>{ [1047,1319,1568,2093].forEach((f,i)=>tone(ac,t+i*0.07,f,0.18,"sine",0.14)); },
+  level:(ac,t)=>{ [523,659,784,1047].forEach((f,i)=>tone(ac,t+i*0.09,f,0.2,"triangle",0.17)); },
+};
+const VIB={pop:12,gold:[30,40,30],level:[40,30,60],quest:[20,30,20]};
+function sfx(k){
+  if(!sfxOn()||!SFX[k])return;
+  const now=performance.now(); if(now-(_sfxLast[k]||0)<60)return; _sfxLast[k]=now;   // 一鍵收成時不要疊成一團
+  const ac=acGet(); if(ac)try{ SFX[k](ac,ac.currentTime+0.005); }catch(e){}
+  if(VIB[k]&&navigator.vibrate)try{navigator.vibrate(VIB[k]);}catch(e){}
+}
+
+/* ============ 新手引導 ============
+   只給新玩家（Lv.1 且沒收成過）。四步：播種 → 收成 → 倉庫賣掉 → 認識任務/商店。
+   每一步由實際動作推進（tutHit），不是一直按「下一步」；隨時可以略過。G.tut=99 代表結束。 */
+const TUT=[
+  {t:"歡迎！點一塊<b>褐色空地</b>種下蘿蔔 🥕", hl:"grid", on:"plant"},
+  {t:"蘿蔔約 40 秒成熟、會<b>發光</b>，點它收成（或按右側 <b>🧺</b> 全收）", hl:"grid", on:"harv"},
+  {t:"打開下方 <b>🎒 倉庫</b>，把作物賣掉換金幣 💰", hl:"invBtn", on:"sell"},
+  {t:"到 <b>🛒 商店</b> 買更多種子；每天看 <b>🎯 功能</b> 裡的 <b>📋 任務</b>和 <b>🎁 每日</b>！", hl:"", on:"end"},
+];
+let _tutShown=-2;
+function tutHit(k){ if(!G||typeof G.tut!=="number"||G.tut>=TUT.length)return; if(TUT[G.tut].on===k){ G.tut++; if(G.tut>=TUT.length)G.tut=99; sfx("quest"); _tutShown=-2; tutRender(); saveGame(); } }
+function tutSkip(){ G.tut=99; _tutShown=-2; tutRender(); saveGame(); }
+function tutRender(){
+  const b=document.getElementById("tutBub"); if(!b||!G)return;
+  const lm=document.getElementById("loginMask"), mk=document.getElementById("mask");
+  let hidden=(lm&&lm.classList.contains("on"))||(mk&&mk.classList.contains("on"))||VISIT.on||(G.scene&&G.scene!=="farm");
+  const scn=document.getElementById("scene"); const away=scn&&(scn.classList.contains("s-slot")||scn.classList.contains("s-stock"));
+  if(away)hidden=true;
+  const step=(typeof G.tut==="number"&&G.tut<TUT.length&&!hidden)?G.tut:-1;
+  if(step===_tutShown)return; _tutShown=step;
+  document.querySelectorAll(".tut-hl").forEach(e=>e.classList.remove("tut-hl"));
+  if(step<0){ b.classList.remove("on"); return; }
+  const T=TUT[step]; const last=T.on==="end";
+  b.innerHTML='<div class="ttx"><span class="tstep">新手引導 '+(step+1)+'/'+TUT.length+'　</span>'+T.t+'</div>'+
+    (last?'<button class="go" onclick="tutHit(\'end\')">開始玩！</button>':'<button onclick="tutSkip()">略過</button>');
+  b.classList.remove("on"); void b.offsetWidth; b.classList.add("on");
+  if(T.hl){ const el=document.getElementById(T.hl); if(el)el.classList.add("tut-hl"); }
+}
 function openTopMenu(){
   showM('<h2>⚙️ 選單 <button class="x" onclick="closeM()">×</button></h2><div class="body">'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
@@ -5114,6 +5522,8 @@ function openTopMenu(){
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();openHelp()">❓ 玩法說明</button>'+
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleLog()">📜 農場紀錄</button>'+
     '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="closeM();toggleEditor()">🛠️ 佈局編輯</button>'+
+    '<button class="pbtn gold" style="padding:14px 8px;font-size:14px" onclick="sfxToggle()">'+(sfxOn()?'🔊 音效：開':'🔇 音效：關')+'</button>'+
+    '<button class="pbtn" style="padding:14px 8px;font-size:14px" onclick="G.tut=0;_tutShown=-2;closeM();saveGame()">🎓 重看新手引導</button>'+
     '<button class="pbtn" style="padding:14px 8px;font-size:14px" onclick="dbgToggle()">🔧 診斷面板</button>'+
     '</div></div>');
 }
@@ -5341,8 +5751,9 @@ function applyBldClip(el){
   const poly=silhouettePolygon(img,flip);
   if(poly)el.style.clipPath="polygon("+poly+")";
 }
-const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){openProfile();},factory:function(){openFactory();}};
+const BLD_ACT={inv:function(){openInv('harvest');},profile:function(){ if(VISIT.on)openVisitProfile(); else openProfile(); },factory:function(){openFactory();}};
 const BLD_HINT={inv:"開啟倉庫",profile:"查看農舍",factory:"開啟農產加工廠"};
+function bldHintText(act){ return (VISIT.on&&act==="profile")?"查看好友資料":(BLD_HINT[act]||"點擊互動"); }
 /* 提示固定錨在建築物上，不跟著游標跑。
    錨點取建築物上那顆「☝ 點我」標籤（.bldcue，各建築已個別調過位置），
    沒有的話退回用元素外框中上緣。
@@ -5357,7 +5768,8 @@ function showBldHint(el){
   const scene=document.getElementById("scene"); if(!scene)return;
   let hint=document.getElementById("interactHint");
   if(!hint){hint=document.createElement("div");hint.id="interactHint";hint.className="interacthint";scene.appendChild(hint);}
-  hint.textContent="☝ "+(BLD_HINT[el.getAttribute("data-act")]||"點擊互動");
+  if(VISIT.on&&el.getAttribute("data-act")!=="profile")return;
+  hint.textContent="☝ "+bldHintText(el.getAttribute("data-act"));
   hint.classList.add("on");   // 先顯示才量得到 offsetWidth/Height
   const anchor=el.querySelector(".bldcue")||el;
   const ar=anchor.getBoundingClientRect();
@@ -5389,6 +5801,7 @@ function initBldHit(){
         if(be&&be!==el&&!el.contains(be))be.dispatchEvent(new MouseEvent('click',{clientX:ev.clientX,clientY:ev.clientY,bubbles:true}));
         return;
       }
+      if(VISIT.on&&el.getAttribute('data-act')!=='profile')return;   // 拜訪中只有農舍能點
       const act=BLD_ACT[el.getAttribute('data-act')]; if(act)act();
     };
     el.addEventListener('click',activate);
