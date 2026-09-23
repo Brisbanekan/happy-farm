@@ -1316,6 +1316,49 @@ const FRIEND_NAMES=[["阿明","🧑‍🌾"],["小美","👩‍🌾"],["大雄",
 /* 跨平台一致的金幣圖示（用於彈窗 innerHTML；iOS 的 <span class=coinico></span> 會變銀色） */
 const CO='<span class=coinico></span>';
 /* ============ 遊戲狀態 ============ */
+/* ============ 可信時間 ============
+   2026-09 前全部讀手機時鐘：改日期能連領每日獎勵（30 次＝56,000 金幣＋42 鑽石）、
+   調快讓作物瞬間成熟、把時間調回早上用舊股價買再調回來賣（零風險套利，還算進排行榜）。
+   · 連得上 Firebase（登入或訪客都算）：用伺服器時間 .info/serverTimeOffset
+   · 時間不准倒退：比「看過的最晚時間 G.maxTs」早就停在那裡（調回去沒有用）
+   · 執行中偵測到牆上時間跳動（和單調時鐘 performance.now 比）：先凍結，重新跟伺服器對時；
+     8 秒內沒有新的對時結果（手機剛睡醒、或離線）才接受本機時間
+   限制：完全離線的訪客把時間往前調，沒有伺服器可以比對，擋不住。 */
+let SRV_OFF=0, SRV_OK=false, _clkW=Date.now(), _clkP=performance.now(), _clkHold=0, _clkTimer=0, _pendingGrow=false;
+function gameNow(){
+  const w=Date.now(), p=performance.now();
+  const drift=(w-_clkW)-(p-_clkP); _clkW=w; _clkP=p;           // 牆上時間多跳（或少跳）了多少
+  if(Math.abs(drift)>120000&&!_clkHold){                        // 超過 2 分鐘：可能改時間，也可能剛睡醒
+    _clkHold=(G&&typeof G.maxTs==="number")?G.maxTs:(w+SRV_OFF-drift);
+    timeResync();
+  }
+  let t=_clkHold||(w+SRV_OFF);
+  if(G){ if(typeof G.maxTs==="number"&&t<G.maxTs)t=G.maxTs; else G.maxTs=t; }   // 不准倒退
+  return t;
+}
+/* 對時完成前（剛開遊戲的頭幾秒、或偵測到時間跳動）不能領獎／交易，免得用被調過的時間 */
+function timeReady(){
+  if(_clkHold)return false;
+  if(typeof fbDB==="undefined"||!fbDB||navigator.onLine===false)return true;   // 沒有伺服器可對：用本機時間
+  return SRV_OK||performance.now()>8000;
+}
+function timeWait(){ if(timeReady())return false; toast("⏳ 正在和伺服器對時，請稍等幾秒"); return true; }
+function timeResync(){
+  clearTimeout(_clkTimer);
+  try{ if(typeof fbDB!=="undefined"&&fbDB){ fbDB.goOffline(); fbDB.goOnline(); } }catch(e){}
+  _clkTimer=setTimeout(function(){ _clkHold=0; },8000);         // 沒有新的對時結果就接受本機時間
+}
+function timeOnOffset(off){   // 伺服器告訴我們「手機時間差多少」
+  SRV_OFF=off; SRV_OK=true; _clkHold=0; clearTimeout(_clkTimer);
+  _clkW=Date.now(); _clkP=performance.now();
+  if(G)G.maxTs=Date.now()+SRV_OFF;                                 // 以伺服器為準（之前被調快的也拉回來）
+  if(_pendingGrow){ _pendingGrow=false; applyOfflineGrowth(); try{render();}catch(e){} }
+}
+function timeInit(){   // initAuth 建好 fbDB 後呼叫：訂閱伺服器時間差
+  if(!fbDB)return;
+  fbDB.ref(".info/serverTimeOffset").on("value",function(s){ timeOnOffset(+s.val()||0); });
+  setTimeout(function(){ if(_pendingGrow){ _pendingGrow=false; applyOfflineGrowth(); try{render();}catch(e){} } },5000);   // 離線：5 秒後用本機時間補算
+}
 let G = {
   gold:200, credit:5, level:1, xp:0, charm:0,
   tool:"hand",
@@ -1366,6 +1409,7 @@ function initAuth(){
   if(!accountMode())return false;
   try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
   fbAuth=firebase.auth(); fbDB=firebase.database();
+  try{ timeInit(); }catch(e){}
   fbAuth.onAuthStateChanged(function(user){
     fbUser=user||null;
     if(user){ hideLogin(); loadUserCloud(user.uid); }
@@ -1419,15 +1463,24 @@ function resumeHere(){
     toast("已載入最新進度，這台裝置繼續 ☁️");
   }).catch(function(e){alert("讀取失敗："+(e&&e.message||e));});
 }
-function saveUserCloud(){
+/* 雲端存檔節流：原本每 1.5 秒（每個 tick）就整份上傳一次，一分鐘 40 次，很耗手機流量和電。
+   改成最多每 10 秒一次；切到背景／關閉頁面時立刻補存，不會掉進度。 */
+const CLOUD_GAP=10000;
+let fbLastSave=0;
+function saveUserCloud(now){
   if(!fbDB||!fbUser||!cloudReady||cloudPaused)return;   // 尚未載入完成或已被別台接手時不寫入
-  clearTimeout(fbSaveTimer);
-  // 防抖 0.6 秒（必須小於遊戲心跳 1.5 秒，否則計時器會被一直重置而永遠不存）
-  fbSaveTimer=setTimeout(function(){ try{ if(cloudPaused)return; G.ts=Date.now(); G.dev=DEV_ID; fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e),"r"); }); }catch(e){} }, 600);
+  const doSave=function(){ fbSaveTimer=null; try{ if(cloudPaused||!fbUser)return; fbLastSave=Date.now(); G.ts=gameNow(); G.dev=DEV_ID;
+    fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G))).catch(function(e){ log("⚠️ 雲端存檔失敗："+(e&&e.message||e),"r"); }); }catch(e){} };
+  if(now===true){ clearTimeout(fbSaveTimer); doSave(); return; }   // 立即存（切到背景、關閉頁面）
+  if(fbSaveTimer)return;                                             // 已經排好下一次，這段期間的變動會一起存
+  fbSaveTimer=setTimeout(doSave, Math.max(600, fbLastSave+CLOUD_GAP-Date.now()));
 }
+function flushCloud(){ try{ G.ts=gameNow(); localStorage.setItem(SAVE_KEY,JSON.stringify(G)); }catch(e){} if(accountMode()&&fbUser)saveUserCloud(true); }
+document.addEventListener("visibilitychange",function(){ if(document.hidden)flushCloud(); });
+window.addEventListener("pagehide",flushCloud);
 function cloudSaveNow(){
   if(!fbDB||!fbUser){toast("尚未登入");return;}
-  clearTimeout(fbSaveTimer); G.ts=Date.now(); G.dev=DEV_ID; cloudPaused=false;
+  clearTimeout(fbSaveTimer); G.ts=gameNow(); G.dev=DEV_ID; cloudPaused=false;
   fbDB.ref("users/"+fbUser.uid).set(JSON.parse(JSON.stringify(G)))
     .then(function(){ toast("已存到雲端 ☁️"); log("☁️ 已手動覆寫雲端存檔。","g"); })
     .catch(function(e){ alert("雲端存檔失敗："+(e&&e.message||e)); });
@@ -1533,6 +1586,7 @@ function normalizeState(){
   if(!Array.isArray(G.gifts))G.gifts=[];                                             // 好友禮物箱
   ["giftSent","giftGot","helpGot"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object"||Array.isArray(G[k]))G[k]={}; });
   if(typeof G.helpN!=="number")G.helpN=0;
+  if(typeof G.npcStealN!=="number")G.npcStealN=0;
   if(typeof G.tut!=="number")G.tut=(G.level>1||achSt("harv")>0)?99:0;   // 舊玩家不跳新手引導
   if(G.dog&&typeof G.dog.level!=="number")G.dog.level=1;
   if(!G.factory||typeof G.factory!=="object")G.factory={lv:1,q:[]};   // 工廠
@@ -1545,10 +1599,14 @@ function normalizeState(){
 }
 // 離線生長：載入存檔後，用「現在時間 − 上次存檔時間(ts)」把作物補算成長（每 1.5 秒＝1 tick）
 let _lastGrownTs=0;
+let _pendingFrom=0;
 function applyOfflineGrowth(){
-  if(!G.ts||G.ts===_lastGrownTs)return;              // 無時間戳、或此存檔已補算過就略過
-  const ticks=(Date.now()-G.ts)/1500;                // 換算成成長 tick 數
-  _lastGrownTs=G.ts;                                 // 記住已處理（不改 G.ts，維持雲端同步的時間比較）
+  const from=_pendingFrom||G.ts;                     // 等對時期間遊戲會存檔改寫 G.ts，所以先記下「上次離開的時間」
+  if(!from||from===_lastGrownTs)return;              // 無時間戳、或此存檔已補算過就略過
+  if(typeof fbDB!=="undefined"&&fbDB&&!SRV_OK&&navigator.onLine!==false){ _pendingGrow=true; _pendingFrom=from; return; }   // 等伺服器對時再補算
+  _pendingFrom=0;
+  const ticks=(gameNow()-from)/1500;                 // 換算成成長 tick 數
+  _lastGrownTs=from;                                 // 記住已處理（不改 G.ts，維持雲端同步的時間比較）
   if(!(ticks>0)||!Array.isArray(G.plots))return;
   let ripened=0;
   G.plots.forEach(function(p){
@@ -1572,7 +1630,7 @@ function applyOfflineGrowth(){
 // 拜訪好友時，把對方存檔（凍結在他上次存檔的 ts）的作物補算到「現在」的生長階段，讓拜訪看到即時狀況
 function advancePlotsOffline(plots, ts){
   if(!Array.isArray(plots)||!ts)return plots;
-  const ticks=(Date.now()-ts)/1500;
+  const ticks=(gameNow()-ts)/1500;
   if(!(ticks>0))return plots;
   plots.forEach(function(p){
     if(p&&p.unlocked&&p.state==="planted"&&!p.ripe&&p.crop&&CROPS[p.crop]){
@@ -1583,7 +1641,7 @@ function advancePlotsOffline(plots, ts){
   });
   return plots;
 }
-function saveGame(){try{G.ts=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
+function saveGame(){try{G.ts=gameNow();localStorage.setItem(SAVE_KEY,JSON.stringify(G));}catch(e){} if(accountMode()&&fbUser){saveUserCloud();} else {cloudPush(false);} }
 function loadGame(){
   try{
     const s=localStorage.getItem(SAVE_KEY);if(!s)return false;
@@ -1600,7 +1658,7 @@ function genCode(){let s="";const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";for(let i
 let lastPush=0;
 function cloudPush(force){
   if(!cloudOn()||!syncCode)return;
-  const now=Date.now();
+  const now=gameNow();
   if(!force && now-lastPush<12000)return;
   lastPush=now;
   try{fetch(cloudUrl(syncCode),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(G)}).catch(()=>{});}catch(e){}
@@ -1660,8 +1718,8 @@ function importSave(input){
   }catch(e){alert("這個存檔檔案無效，無法匯入。");}};
   r.readAsText(file);
 }
-function todayStr(){return new Date().toISOString().slice(0,10);}
-function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+function todayStr(){return new Date(gameNow()).toISOString().slice(0,10);}
+function yesterdayStr(){const d=new Date(gameNow());d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
 /* 每日檢查：更新股市、提示可領的每日獎勵 */
 function dailyCheck(){
   const today=todayStr();
@@ -1671,6 +1729,7 @@ function dailyCheck(){
 }
 function rewardText(r){let a=[];if(r.g)a.push("<span class=coinico></span>"+r.g);if(r.c)a.push("💎"+r.c);if(r.h)a.push("❤️"+r.h);if(r.s)Object.entries(r.s).forEach(([k,n])=>a.push(CROPS[k].emoji+seedName(k)+"×"+n));return a.join(" ");}
 function claimDaily(){
+  if(timeWait())return;
   const today=todayStr();
   if(G.lastClaim===today){toast("今天已經領過囉");return;}
   G.streak = (G.lastClaim===yesterdayStr()) ? (G.streak||0)+1 : 1; // 連續或重置
@@ -1710,7 +1769,7 @@ function questEnsure(){
   return G.quest;
 }
 function questProg(k,n){
-  if(!G||VISIT.on&&k!=="help")return;
+  if(!G)return;   // 拜訪中也要計（在好友農舍送禮、開倉庫賣東西都算）
   const q=questEnsure(); let changed=false;
   q.list.forEach(function(it){
     if(it.k!==k||it.have>=it.need)return;
@@ -1725,6 +1784,7 @@ function questClaimable(){ const q=questEnsure(); let n=q.list.filter(it=>it.hav
 function questBadge(){ let n=0; try{n=questClaimable();}catch(e){}
   ["qBadge1","qBadge2"].forEach(id=>{const b=document.getElementById(id); if(b){b.textContent=n; b.classList.toggle("on",n>0);}}); }
 function questClaim(i){
+  if(timeWait())return;
   const q=questEnsure(), it=q.list[i]; if(!it||it.cl||it.have<it.need)return;
   const r=questReward(); it.cl=1; G.gold+=r.g; gainXp(r.x);
   log("📋 領取任務獎勵 "+CO+r.g+" ⭐"+r.x,"g"); toast("📋 "+CO+"+"+r.g+" ⭐+"+r.x);
@@ -1949,7 +2009,7 @@ function checkAch(){
   ACH.forEach(a=>{
     if(G.ach[a.id])return;
     let ok=false; try{ok=!!a.c();}catch(e){}
-    if(ok){ G.ach[a.id]=Date.now(); toast("🏆 達成成就:"+a.n+"!"); log("🏆 達成成就【"+a.n+"】"+a.d,"b"); }
+    if(ok){ G.ach[a.id]=gameNow(); toast("🏆 達成成就:"+a.n+"!"); log("🏆 達成成就【"+a.n+"】"+a.d,"b"); }
   });
 }
 function openProfile(tab){
@@ -2100,14 +2160,14 @@ function bWant(kind,key,round){
 }
 /* 補齊「從紀元到今天」的每日種子，以及今天已經走過的每一段 */
 function bEnsure(ts){
-  ts=ts||Date.now(); const day=mktDay(ts), m=mktMin(ts);
+  ts=ts||gameNow(); const day=mktDay(ts), m=mktMin(ts);
   for(let d=1;d<=day;d++)bWant("day",d,drRoundAt(mktTs(d,0)));
   if(m>=0){ const kNow=Math.floor(m/SEG_MIN);
     for(let k=0;k<=kNow;k++)bWant("seg",day+":"+k,drRoundAt(mktTs(day,k*SEG_MIN))); }
 }
 function bHaveDays(day){ for(let d=1;d<=day;d++)if(BSEED.day[d]==null)return false; return true; }
 /* 行情是否即時：當前這一段的種子已到手 */
-function mktLive(ts){ ts=ts||Date.now(); const day=mktDay(ts), m=mktMin(ts);
+function mktLive(ts){ ts=ts||gameNow(); const day=mktDay(ts), m=mktMin(ts);
   if(!bHaveDays(day))return false;
   if(m<0)return true;                                             // 休市不需要新種子
   return BSEED.seg[day+":"+Math.floor(m/SEG_MIN)]!=null; }
@@ -2160,7 +2220,7 @@ function mktOpen(t,day){
 const mktIntraCache={};
 function mktIntra(t,day){
   const o=mktOpen(t,day); if(o==null)return null;
-  const now=Date.now(), isToday=(day===mktDay(now));
+  const now=gameNow(), isToday=(day===mktDay(now));
   const mNow=isToday?mktMin(now):MKT_MINS;
   const kNow=mNow<0?-1:Math.min(SEG_N-1,Math.floor(mNow/SEG_MIN));
   const cached=mktIntraCache[t];
@@ -2181,17 +2241,17 @@ function mktIntra(t,day){
   const res={day:day,k:k,arr:arr,open:o,evs:evs};
   mktIntraCache[t]=res; return res;
 }
-function mktPrice(t,ts){ ts=ts||Date.now();
+function mktPrice(t,ts){ ts=ts||gameNow();
   const R=mktIntra(t,mktDay(ts)); if(!R)return null;
   const last=R.arr.length-1, mf=mktMinF(ts);
   if(mf<0||mf>=last)return mktR2(R.arr[last]);
   const m=Math.floor(mf), f=mf-m;                                  // 分鐘之間線性內插，價格才不會一秒一跳
   return mktR2(R.arr[m]+(R.arr[m+1]-R.arr[m])*f);
 }
-function mktPrevClose(t,ts){ return mktOpen(t,mktDay(ts||Date.now())); }   // 基準＝今日開盤
+function mktPrevClose(t,ts){ return mktOpen(t,mktDay(ts||gameNow())); }   // 基準＝今日開盤
 /* 圖表資料：本機現算。缺種子的區間就不畫，不會假造 */
 function mktBars(t,days,step){
-  const now=Date.now(), day=mktDay(now), out=[];
+  const now=gameNow(), day=mktDay(now), out=[];
   for(let d=Math.max(1,day-(days-1));d<=day;d++){
     const R=(d===day)?mktIntra(t,d):mktIntraDay(t,d);
     if(!R)continue;
@@ -2216,7 +2276,7 @@ function mktIntraDay(t,day){
   const res=arr.length>1?{day:day,arr:arr,open:o}:null;
   return (mktPastCache[key]=res);
 }
-function mktSpark(t,ts){ const R=mktIntra(t,mktDay(ts||Date.now())); if(!R)return null;
+function mktSpark(t,ts){ const R=mktIntra(t,mktDay(ts||gameNow())); if(!R)return null;
   const last=R.arr.length-1, step=Math.max(1,Math.floor(last/40)), sp=[];
   for(let i=0;i<=last;i+=step)sp.push(mktR2(R.arr[i]));
   if(sp[sp.length-1]!==mktR2(R.arr[last]))sp.push(mktR2(R.arr[last]));
@@ -2226,7 +2286,7 @@ let sparkTs=0;
 function mktSync(){
   if(!G||!G.stocks)return;
   bEnsure();
-  const now=Date.now(), live=mktLive(now), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
+  const now=gameNow(), live=mktLive(now), doSpark=(now-sparkTs>10000); if(doSpark)sparkTs=now;
   allInst().forEach(function(s){ const st=G.stocks[s.t]; if(!st)return;
     const px=mktPrice(s.t,now), op=mktOpen(s.t,mktDay(now));
     if(px!=null)st.price=px;                                       // 拿不到就凍結在最後已知價
@@ -2249,7 +2309,7 @@ function mktSync(){
 const CROP_VOL=0.075, CROP_CAP=0.15, CROP_MKT_VOL=0.030;   // 個股波動 σ7.5%、上限 ±15%、大盤同漲跌 σ3%
 const CROP_HINT_BIAS=0.042;   // 展望對實現值的偏移量，調到讓展望約七成準（見下方說明）
 function cropSeed(k){ let h=0; for(let i=0;i<k.length;i++)h=(Math.imul(h,31)+k.charCodeAt(i))|0; return h^0x5f3a; }
-function cropDay(ts){ ts=ts||Date.now(); const d=mktDay(ts); return mktMin(ts)<0?d-1:d; }   // 09:00 前算前一日行情
+function cropDay(ts){ ts=ts||gameNow(); const d=mktDay(ts); return mktMin(ts)<0?d-1:d; }   // 09:00 前算前一日行情
 /* 明日展望：由「前一日」的 beacon 決定，所以今天就公布得出來。
    而明天的實現值會朝展望方向偏移 CROP_HINT_BIAS —— 因果是「展望在前、價格在後」，
    跟股票新聞同一套邏輯。這樣展望才是真的預期，不是把答案先印出來。 */
@@ -2292,7 +2352,7 @@ const DIV_RATE={"2881":0.008,"2002":0.006};   // 每週配息率（佔市值）
 function divWeek(day){ return Math.floor(day/7); }
 function divCheck(){
   if(!G||!G.stocks)return;
-  const now=Date.now(), day=mktDay(now);
+  const now=gameNow(), day=mktDay(now);
   if(mktMin(now)<0)return;                       // 開盤後才發
   if(!bHaveDays(day))return;
   const wk=divWeek(day);
@@ -2326,7 +2386,7 @@ function pnlUnrealized(){
     v+=(st.price-st.avg)*(st.shares>0?1:-1)*Math.abs(st.shares); });
   return Math.round(v);
 }
-function rankWeekKey(){ return "w"+divWeek(mktDay(Date.now())); }
+function rankWeekKey(){ return "w"+divWeek(mktDay(gameNow())); }
 function rankPush(){
   try{
     if(typeof fbDB==="undefined"||!fbDB||typeof fbUser==="undefined"||!fbUser)return;
@@ -2335,7 +2395,7 @@ function rankPush(){
     fbDB.ref("ranks/"+wk+"/"+fbUser.uid).set({
       name:(typeof myName==="function"?myName():"農友"),
       real:Math.round(G.pnlReal||0), unreal:pnlUnrealized(),
-      lv:G.level||1, ts:Date.now() });
+      lv:G.level||1, ts:gameNow() });
   }catch(e){}
 }
 let rankData=null, rankTs=0;
@@ -3262,7 +3322,7 @@ function nTimeLabel(day,minute){
          ("0"+d.getUTCHours()).slice(-2)+":"+("0"+d.getUTCMinutes()).slice(-2); }
 function loadFinNews(){
   const el=document.getElementById("shNewsList"); if(!el)return;
-  const now=Date.now(), day=mktDay(now), m=mktMin(now);
+  const now=gameNow(), day=mktDay(now), m=mktMin(now);
   if(!bHaveDays(day)){ el.innerHTML='<div class="nt" style="padding:10px">行情連線中…</div>'; return; }
   const kNow=m<0?SEG_N-1:Math.floor(m/SEG_MIN);
   const evs=nEventsOfDay(day,kNow).slice().reverse();           // 新的在上
@@ -3423,6 +3483,7 @@ function futHedgeHint(){
     '　賣出 '+tot+' 單位即可把這批的價格鎖在現價</span>';
 }
 function placeOrder(side){
+  if(timeWait())return;
   // 行情中斷時禁止交易：若允許用最後已知價下單，等於留一個「斷網就能撿便宜」的後門
   if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
   const st=G.stocks[curStock];
@@ -3480,7 +3541,7 @@ function execTrade(t,side,qty,price,lev){
   }
   renderHUD();saveGame();renderStockUI();
 }
-function closePosition(t){if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
+function closePosition(t){if(timeWait())return;if(!mktLive()){toast("⚠️ 行情連線中斷，暫停交易");return;}
   const st=G.stocks[t];if(!st||!st.shares)return;execTrade(t,st.shares>0?-1:1,Math.abs(st.shares),st.price);}
 function cancelOrder(id){G.stockOrders=(G.stockOrders||[]).filter(o=>o.id!==id);saveGame();renderStockUI();toast("已取消掛單");}
 function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單 → 檢查斷頭
@@ -3518,12 +3579,12 @@ function stockTick(){   // 每個遊戲心跳：更新行情 → 撮合限價單
       }});
   }
   // 新聞只在「換段」時重畫（每 10 分鐘），不必每 1.5 秒重建整份清單
-  if(stockOpen&&stockView==="home"){ const m=mktMin(Date.now()), k=m<0?-1:Math.floor(m/SEG_MIN);
+  if(stockOpen&&stockView==="home"){ const m=mktMin(gameNow()), k=m<0?-1:Math.floor(m/SEG_MIN);
     if(k!==newsK){ newsK=k; loadFinNews(); } }
   if(stockOpen){ if(stockView==="home")renderStockHome();
     else{ renderStockUI();
       // 圖表最後一點跟著跳動（不重畫整張，也不發任何請求）
-      if(lwSeries&&chartRange==="24H"&&mktLive()){ const now=Date.now(), m=mktMin(now), px=mktPrice(curStock,now);
+      if(lwSeries&&chartRange==="24H"&&mktLive()){ const now=gameNow(), m=mktMin(now), px=mktPrice(curStock,now);
         if(m>=0&&px!=null)try{lwSeries.update({time:mktTs(mktDay(now),m)+CHART_TZOFF,value:px});}catch(e){} } } }
 }
 /* Yahoo 報價與 RSS 新聞都已移除，兩個 CORS 代理依賴也一併拿掉。
@@ -3992,7 +4053,7 @@ function fHazM(){const lv=fLv();const base=lv>=9?0.6:lv>=8?0.7:lv>=4?0.8:1;
   return base*(1-decoHazCut());}   // 田地異常發生率倍率（含莊園裝飾）
 function fQtyB(){return 0;}   // 原本 Lv8 給 +1 顆收成，那讓高階玩家產出再多 20%，已移除
 function fXpB(){return (fLv()>=10?0.10:0)+decoXpB();}                  // 全經驗加成（含莊園裝飾）
-function buffOn(k){const b=G.buffs||{};const t=Date.now();return !!((b[k]&&b[k]>t)||(b.all&&b.all>t));}
+function buffOn(k){const b=G.buffs||{};const t=gameNow();return !!((b[k]&&b[k]>t)||(b.all&&b.all>t));}
 function upFactory(){
   const nl=G.factory.lv+1, c=FLV[nl]; if(!c){toast("工廠已滿級");return;}
   if(charmAll()<c.charm){toast("魅力不足（需 ❤️"+c.charm+"）");return;}
@@ -4007,7 +4068,7 @@ function fCraft(k){
   if(G.factory.q.length>=fSlots()){toast("加工佇列已滿");return;}
   for(const m in r.need){if((G.harvest[m]||0)<r.need[m]){toast("原料不足："+CROPS[m].name);return;}}
   for(const m in r.need){G.harvest[m]-=r.need[m];if(G.harvest[m]<=0)delete G.harvest[m];}
-  G.factory.q.push({k:k,end:Date.now()+Math.round(r.time*fSpeed())*1000});
+  G.factory.q.push({k:k,end:gameNow()+Math.round(r.time*fSpeed())*1000});
   log("🏭 開始加工 "+r.emoji+r.name,"b"); saveGame(); openFactory();
 }
 function fSell(k){
@@ -4020,7 +4081,7 @@ function fSell(k){
 function fUse(k){
   if(!(G.goods[k]>0))return; const r=FGOODS[k]; if(!r.buff)return;
   G.goods[k]--; if(G.goods[k]<=0)delete G.goods[k];
-  const until=Date.now()+r.buff.min*60000;
+  const until=gameNow()+r.buff.min*60000;
   if(r.buff.k==="all")["grow","sell","animal","xp"].forEach(b=>{G.buffs[b]=Math.max(G.buffs[b]||0,until);});
   else G.buffs[r.buff.k]=Math.max(G.buffs[r.buff.k]||0,until);
   log("使用 "+r.emoji+r.name+"："+r.buff.desc,"b"); toast(r.buff.desc);
@@ -4028,7 +4089,7 @@ function fUse(k){
 }
 function openFactory(){
   if(typeof editOn!=="undefined"&&editOn)return;   // 佈局編輯中不開面板
-  const f=G.factory, now=Date.now();
+  const f=G.factory, now=gameNow();
   let h='<h2>🏭 農產加工廠 Lv.'+f.lv+' <button class="x" onclick="closeM()">×</button></h2><div class="body" id="factPanel">';
   const c=FLV[f.lv+1];
   if(c){const can=G.gold>=c.gold&&G.charm>=c.charm;
@@ -4275,7 +4336,7 @@ function upkeepDaily(){
 /* 記錄「今天有收成」—— 維護費只對這些日子收（作物、動物收成都算） */
 function upkeepMark(){
   if(!G)return;
-  const d=mktDay(Date.now());
+  const d=mktDay(gameNow());
   if(!Array.isArray(G.upAct))G.upAct=[];
   if(G.upAct.indexOf(d)<0){ G.upAct.push(d); if(G.upAct.length>14)G.upAct=G.upAct.slice(-14); }
 }
@@ -4294,7 +4355,7 @@ function upkeepPay(n){
 /* 每日 09:00 之後第一次進遊戲時結算（沿用行情的日界，時區固定 UTC+8）*/
 function upkeepCheck(){
   if(!G||!Array.isArray(G.plots))return;
-  const now=Date.now(), day=mktDay(now);
+  const now=gameNow(), day=mktDay(now);
   if(mktMin(now)<0)return;
   if(G.upDay==null){ G.upDay=day; return; }      // 第一次只記日期，不補收歷史
   if(G.upDay>=day)return;
@@ -4502,7 +4563,7 @@ function codeFromUid(uid,salt){
 function ensureProfile(){
   if(!friendReady())return;
   const fin=function(){
-    fbDB.ref("profiles/"+fbUser.uid).update({name:myName(),level:G.level||1,code:G.myCode,ts:Date.now()})
+    fbDB.ref("profiles/"+fbUser.uid).update({name:myName(),level:G.level||1,code:G.myCode,ts:gameNow()})
       .catch(function(e){log("⚠️ 建立好友名片失敗："+(e&&e.message||e),"r");});
   };
   if(G.myCode){fin();return;}
@@ -4566,9 +4627,9 @@ function addPalByCode(){
       saveGame();
       // 雙向好友：寫進共用 friends 節點，對方載入時就會把你也加進好友清單
       try{
-        fbDB.ref("friends/"+fbUser.uid+"/"+uid).set({name:G.pals[uid].name,lv:G.pals[uid].lv,ts:Date.now()})
+        fbDB.ref("friends/"+fbUser.uid+"/"+uid).set({name:G.pals[uid].name,lv:G.pals[uid].lv,ts:gameNow()})
           .catch(function(e){log("⚠️ 好友節點寫入失敗（可能是資料庫規則未含 friends）："+(e&&e.message||e),"r");});
-        fbDB.ref("friends/"+uid+"/"+fbUser.uid).set({name:myName(),lv:G.level||1,ts:Date.now()})
+        fbDB.ref("friends/"+uid+"/"+fbUser.uid).set({name:myName(),lv:G.level||1,ts:gameNow()})
           .catch(function(e){log("⚠️ 對方好友節點寫入失敗："+(e&&e.message||e),"r");});
       }catch(e){}
       toast("已加入好友 "+G.pals[uid].name);
@@ -4586,16 +4647,17 @@ let palSyncTs=0;
    收的人在 loadAllPlayers 讀名冊時順便領取。
    —— 不寫進對方的 users/ 存檔：對方在線時整份 set() 會把別人寫進去的東西蓋掉，
       而且名片本來就是用 update() 寫，也不需要新增資料庫規則。 */
-const HELP_DAILY=20;                       // 每天前 20 次幫忙有金幣獎勵（避免對電腦好友無限刷）
+const HELP_DAILY=20;                       // 每天前 20 次幫忙有金幣與經驗（避免對電腦好友無限刷）
+const NPC_STEAL_DAILY=10;                  // 每天最多偷電腦好友 10 次（實測不限次數時，Lv.1 進出偷菜每小時 3.1 萬，比種滿 6 塊田還多 40%）
 function helpCoin(){ return 5+(G.level||1)*2; }
-function socialDay(){ const t=todayStr(); if(G.helpDay!==t){G.helpDay=t;G.helpN=0;} return t; }
-function helpReward(n,who){   // 幫別人照顧 n 處 → 經驗 n，前 HELP_DAILY 次另給金幣
+function socialDay(){ const t=todayStr(); if(G.helpDay!==t){G.helpDay=t;G.helpN=0;G.npcStealN=0;} return t; }
+function helpReward(n,who){   // 幫別人照顧 n 處 → 前 HELP_DAILY 次給經驗＋金幣
   socialDay(); const paid=Math.max(0,Math.min(n,HELP_DAILY-(G.helpN||0)));
-  G.helpN=(G.helpN||0)+n; gainXp(n);
+  G.helpN=(G.helpN||0)+n; if(paid)gainXp(paid);
   const coin=paid*helpCoin(); if(coin)G.gold+=coin;
   if(typeof questProg==="function")questProg("help",n);
   if(typeof sfx==="function")sfx("care");
-  const msg="幫 "+who+" 照顧 🤝 +"+n+" 經驗"+(coin?("、"+CO+coin):"（今日金幣獎勵已滿）");
+  const msg="幫 "+who+" 照顧 🤝"+(paid?(" +"+paid+" 經驗、"+CO+coin):"（今日獎勵已滿，謝謝幫忙！）");
   log(msg,"g"); toast(msg);
 }
 /* 禮物內容：雙方等級都能種的作物種子 ×3，或普通肥料 ×1 */
@@ -4674,7 +4736,7 @@ function openFriends(){
   h+='<div style="display:flex;align-items:center;gap:8px;background:'+(gs.length?'#fff3c4':'#faf6ec')+';border:2px solid '+(gs.length?'#f5b733':'#eee3cf')+';border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px">'+
      '<div style="flex:1"><b>📬 禮物箱（'+gs.length+'）</b><div style="font-size:12px;color:#8d7b6a">'+
      (gs.length?gs.slice(0,4).map(g=>g.from+"："+(g.k==="coin"?("幫忙謝禮 "+CO+g.n):giftText(g))).join("<br>")+(gs.length>4?"<br>…":""):"電腦好友每天會送禮，真實好友送的也會出現在這裡")+
-     '</div><div style="font-size:12px;color:#8d7b6a;margin-top:3px">🤝 今日幫忙獎勵 '+Math.min(G.helpN||0,HELP_DAILY)+'/'+HELP_DAILY+' 次（每次 '+CO+helpCoin()+'）</div></div>'+
+     '</div><div style="font-size:12px;color:#8d7b6a;margin-top:3px">🤝 今日幫忙獎勵 '+Math.min(G.helpN||0,HELP_DAILY)+'/'+HELP_DAILY+' 次（每次 '+CO+helpCoin()+'）｜ ✋ 偷電腦好友 '+Math.min(G.npcStealN||0,NPC_STEAL_DAILY)+'/'+NPC_STEAL_DAILY+' 次</div></div>'+
      (gs.length?'<button class="pbtn gold" onclick="claimGifts()">全部領取</button>':'')+'</div>';
   const giftBtn=function(id){ const sent=(G.giftSent||{})[id]===todayStr();
     return '<button class="pbtn'+(sent?'':' gold')+'" '+(sent?'disabled style="opacity:.55"':'')+' onclick="sendGift(\''+id+'\')">'+(sent?'已送':'🎁 送禮')+'</button>'; };
@@ -4744,7 +4806,7 @@ function startVisit(){
   const vn=document.getElementById("visitName"); if(vn)vn.textContent=VISIT.name+" 的農場";
   if(G.tool!=="hand"&&G.tool!=="care")G.tool="hand";
   render(); renderDecos(); centerField();
-  toast("✋ 偷成熟作物｜🚿 幫忙照顧"+((VISIT.dog&&VISIT.dog.fedUntil&&VISIT.dog.fedUntil>Date.now())?"（⚠️ 小心他的看門狗）":""));
+  toast("✋ 偷成熟作物｜🚿 幫忙照顧"+((VISIT.dog&&VISIT.dog.fedUntil&&VISIT.dog.fedUntil>gameNow())?"（⚠️ 小心他的看門狗）":""));
 }
 /* 拜訪時點好友的農舍：顯示對方資料與農場目前狀態 */
 function openVisitProfile(){
@@ -4753,8 +4815,8 @@ function openVisitProfile(){
   const planted=ps.filter(p=>p.crop&&(!p.state||p.state==="planted"));
   const ripe=planted.filter(p=>p.ripe), canSteal=ripe.filter(p=>(p.stolen||0)<2).length;
   const needCare=planted.filter(p=>p.dry||p.weed||p.bug).length, growing=planted.length-ripe.length;
-  const dog=VISIT.dog, dogFedNow=!!(dog&&dog.fedUntil&&dog.fedUntil>Date.now());
-  const ago=function(ts){ if(!ts)return "—"; const m=Math.floor((Date.now()-ts)/60000);
+  const dog=VISIT.dog, dogFedNow=!!(dog&&dog.fedUntil&&dog.fedUntil>gameNow());
+  const ago=function(ts){ if(!ts)return "—"; const m=Math.floor((gameNow()-ts)/60000);
     return m<1?"剛剛":m<60?(m+" 分鐘前"):m<1440?(Math.floor(m/60)+" 小時前"):(Math.floor(m/1440)+" 天前"); };
   const box=function(k,v){return '<div class="pbox"><small>'+k+'</small><b>'+v+'</b></div>';};
   let h='<h2>🏡 '+(I.av||"🧑‍🌾")+' '+I.name+' 的農舍 <button class="x" onclick="closeM()">×</button></h2><div class="body">';
@@ -4798,6 +4860,8 @@ function visitTap(i){
     }else{
       if(!p.ripe){toast("還沒成熟，不能偷");return;}
       if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
+      socialDay(); if((G.npcStealN||0)>=NPC_STEAL_DAILY){toast("今天偷電腦好友的次數用完了（每天 "+NPC_STEAL_DAILY+" 次）");return;}
+      G.npcStealN=(G.npcStealN||0)+1;
       if(Math.random()<0.18){const fine=15+Math.floor(Math.random()*30);G.gold=Math.max(0,G.gold-fine);log("你在 "+VISIT.name+" 家偷菜被狗咬了！🐕 掉了 "+CO+fine,"r");toast("被狗咬！掉錢 😱");}
       else{const q=1+Math.floor(Math.random()*3);p.stolen++;np.stolen=(np.stolen||0)+1;const c=CROPS[p.crop];G.harvest[p.crop]=(G.harvest[p.crop]||0)+q;gainXp(2);log("偷到 "+VISIT.name+" 的 "+c.emoji+c.name+" ×"+q+"！😏","b");toast("偷到 "+c.name+" ×"+q);}
     }
@@ -4824,7 +4888,7 @@ function visitTap(i){
     if(!p.ripe){toast("還沒成熟，不能偷");return;}
     if((p.stolen||0)>=2){toast("這塊已被偷光了");return;}
     const dog=VISIT.dog;   // 對方存檔裡的真實看門狗
-    if(dog&&dog.fedUntil&&dog.fedUntil>Date.now()&&Math.random()<dogBiteChance(dog.level||1)){
+    if(dog&&dog.fedUntil&&dog.fedUntil>gameNow()&&Math.random()<dogBiteChance(dog.level||1)){
       const fine=Math.round((15+Math.random()*30)*(1+((dog.level||1)-1)*0.6));
       G.gold=Math.max(0,G.gold-fine);renderHUD();saveGame();
       fbDB.ref("users/"+VISIT.uid+"/gold").transaction(function(g){return (g||0)+fine;});
@@ -4850,8 +4914,8 @@ function visitTap(i){
 
 /* ============ 養狗 ============ */
 const DOG_FEED_MS=12*3600*1000; // 餵一次飽 12 小時
-function dogFed(){return !!(G.dog && G.dog.fedUntil && G.dog.fedUntil>Date.now());}
-function dogFedLeftText(){if(!dogFed())return"";const ms=G.dog.fedUntil-Date.now();const hh=Math.floor(ms/3600000);const mm=Math.floor((ms%3600000)/60000);return hh>0?(hh+" 小時 "+mm+" 分"):(mm+" 分");}
+function dogFed(){return !!(G.dog && G.dog.fedUntil && G.dog.fedUntil>gameNow());}
+function dogFedLeftText(){if(!dogFed())return"";const ms=G.dog.fedUntil-gameNow();const hh=Math.floor(ms/3600000);const mm=Math.floor((ms%3600000)/60000);return hh>0?(hh+" 小時 "+mm+" 分"):(mm+" 分");}
 function dogBiteChance(lv){return Math.min(0.55, 0.30+((lv||1)-1)*0.0625);} // Lv1=30%…Lv5=55%（最高5等、最高55%）
 function dogUpCost(lv){return 3000*(lv||1);}
 function dogBody(){   // 養狗內容（房屋面板分頁用）
@@ -4869,7 +4933,7 @@ function dogBody(){   // 養狗內容（房屋面板分頁用）
 }
 function openDog(){ openProfile('dog'); }   // 舊入口導向房屋面板的養狗分頁
 function buyDog(cur){if(cur==="gold"){if(G.gold<1500)return;G.gold-=1500;}else{if(G.credit<3)return;G.credit-=3;}G.dog={fedUntil:0,level:1};log("買了一隻看門狗 🐕","g");renderHUD();saveGame();openDog();}
-function feedDog(){if(G.gold<300){toast("金幣不足");return;}G.gold-=300;G.dog.fedUntil=Date.now()+DOG_FEED_MS;toast("狗狗吃飽了 🦴 守護 12 小時");renderHUD();saveGame();openDog();}
+function feedDog(){if(G.gold<300){toast("金幣不足");return;}G.gold-=300;G.dog.fedUntil=gameNow()+DOG_FEED_MS;toast("狗狗吃飽了 🦴 守護 12 小時");renderHUD();saveGame();openDog();}
 function upgradeDog(){if(!G.dog)return;const lv=G.dog.level||1;if(lv>=5)return;const cost=dogUpCost(lv);if(G.gold<cost)return;G.gold-=cost;G.dog.level=lv+1;log("看門狗升級到 Lv."+(lv+1)+"！","g");toast("🐕 升級 Lv."+(lv+1));renderHUD();saveGame();openDog();}
 
 /* ============ 玩法 ============ */
@@ -4880,7 +4944,7 @@ function openHelp(){
   '<b>照顧</b>：地偶爾會變乾💧、長草🌿、生蟲🐜，會拖慢成長（發生頻率已調低）。選右側 🚿 照顧工具點田地，會自動一次澆水／除草／除蟲。照顧好收成多一顆。大毛毛蟲🐛要噴 5 次，或用💎大蟲殺蟲劑一次解決。成熟作物可用右側 🧺 一鍵收成全部收下。<br><br>'+
   '<b>偷菜</b>：作物成熟後有 <b>3 分鐘</b>安全時間，放超過就可能被電腦好友偷走（每塊最多 2 次）。餵飽看門狗可以擋小偷。<br><br>'+
   '<b>兩種貨幣</b>：<span class=coinico></span>金幣買大部分；💎藍幣是課金幣。<br><br>'+
-  '<b>👑 好友</b>：登入帳號後會有一組 6 碼好友代碼，和朋友交換代碼互加好友，就能前往對方的<b>真實農場</b>：✋偷成熟作物（每塊最多被偷 2 次，小心對方的看門狗）、🚿幫忙澆水/除草/殺蟲（每天前 20 次另有金幣，對方也會收到謝禮）。每天可以對每位好友 🎁送禮一次，電腦好友也會每天送你禮物，到 👑好友 的禮物箱領取。沒登入也可以跟🤖電腦好友練習。<br><br>'+
+  '<b>👑 好友</b>：登入帳號後會有一組 6 碼好友代碼，和朋友交換代碼互加好友，就能前往對方的<b>真實農場</b>：✋偷成熟作物（每塊最多被偷 2 次，小心對方的看門狗）、🚿幫忙澆水/除草/殺蟲（每天前 20 次另有金幣，對方也會收到謝禮）。每天可以對每位好友 🎁送禮一次，電腦好友也會每天送你禮物，到 👑好友 的禮物箱領取。沒登入也可以跟🤖電腦好友練習（每天最多偷電腦好友 10 次）。<br><br>'+
   '<b>養狗</b>：🐕餵一次飽 12 小時，期間會咬偷菜的朋友，你撿掉落的錢。<br><br>'+
   '<b>🐾 牧場</b>：切到「🐮 牧場」分頁看你的動物在草原走動。動物到 🛒 商店 → 🐮 動物 分頁購買（雞🥚、牛🥛、羊🧶、豬🥓、蜜蜂🍯）；產物出現在動物頭上時點一下即可收成換 <span class=coinico></span>。可拖移瀏覽，容量隨等級提升。<br><br>'+
   '<b>肥料</b>：💩加速成長，或被偷前搶先催熟。低階作物衝經驗、高階作物賺錢。<br><br>'+
@@ -5080,13 +5144,13 @@ function tick(){
   });
   // 工廠加工完成
   let factoryDone=false;  if(G.factory&&Array.isArray(G.factory.q)&&G.factory.q.length){
-    const nowT=Date.now(); const done=G.factory.q.filter(x=>x.end<=nowT);
+    const nowT=gameNow(); const done=G.factory.q.filter(x=>x.end<=nowT);
     if(done.length){ factoryDone=true; G.factory.q=G.factory.q.filter(x=>x.end>nowT);
       done.forEach(x=>{const r=FGOODS[x.k]; if(!r)return;
         G.goods[x.k]=(G.goods[x.k]||0)+1; questProg("craft",1);
         log("🏭 加工完成 "+r.emoji+r.name+"！","g"); toast("🏭 "+r.name+" 完成");}); } }
   { const mk=document.getElementById("mask");   // 面板「真的開著」（遮罩顯示中）才刷新倒數，避免關閉後又自己跳出
-    const fp=document.getElementById("factPanel");    if(fp&&mk&&mk.classList.contains("on")){      if(factoryDone)openFactory();      else fp.querySelectorAll("[data-factory-end]").forEach(el=>{        const end=Number(el.getAttribute("data-factory-end"))||0;        el.textContent="⏳ 加工中…剩 "+Math.max(0,Math.ceil((end-Date.now())/1000))+"s";      });    } }
+    const fp=document.getElementById("factPanel");    if(fp&&mk&&mk.classList.contains("on")){      if(factoryDone)openFactory();      else fp.querySelectorAll("[data-factory-end]").forEach(el=>{        const end=Number(el.getAttribute("data-factory-end"))||0;        el.textContent="⏳ 加工中…剩 "+Math.max(0,Math.ceil((end-gameNow())/1000))+"s";      });    } }
   // 熱氣球逾時保險：任何原因卡住（分頁休眠、動畫沒觸發）超過預定時間就強制回收並重新排程
   if(balloonActive&&balloonEnd&&Date.now()>balloonEnd+2000){ hideBalloon(); scheduleBalloon(); }
   stockTick();   // 股價波動＋限價單撮合
