@@ -29,10 +29,7 @@ PAT 存在 `.git/.git-credentials`（權限 600，不會被上傳）。
 
 | 路徑 | 說明 |
 |---|---|
-| `happy-farm.html` | **主要遊戲本體**，單一檔案，約 3600 行 / 250KB |
-| `happy-farm-iso/` | 等角視野新版本（canvas world layer），2026-08 開發中 |
-| `happy-farm-v2/` | 模組化重構版本（js/ css/ 拆檔） |
-| `farmstead/` | 另一個實驗版本，含 Python 素材產生腳本 |
+| `happy-farm.html` | **唯一的遊戲本體**，單一檔案，約 5900 行 / 400KB（2026-09 已移除 iso / v2 / farmstead 試作版） |
 | `animal/` `building/` `background/` `fence/` | 共用素材圖 |
 | `manifest.json` `sw.js` `icon-*.png` | PWA 設定 |
 | `SESSION-PACKAGE-*.md` | 歷次開發紀錄 |
